@@ -11,7 +11,8 @@
     "db:bootstrap": "tsx db/bootstrap.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "seed": "tsx db/seed.ts"
+    "seed": "tsx db/seed.ts",
+    "ens:bootstrap": "tsx scripts/bootstrap-ens.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
