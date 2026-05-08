@@ -16,6 +16,9 @@ export function SiteHeader() {
             <Link href="/" className="hover:text-ink transition-colors">
               Discover
             </Link>
+            <Link href="/dashboard" className="hover:text-ink transition-colors">
+              Dashboard
+            </Link>
             <Link href="/brain" className="hover:text-ink transition-colors">
               Brain
             </Link>
