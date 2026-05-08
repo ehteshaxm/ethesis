@@ -207,11 +207,15 @@ export function LaunchWizard() {
     let recordsTxHash: string | undefined;
     let chain: "mainnet" | "sepolia" = "mainnet";
 
+    const envChain =
+      (process.env.NEXT_PUBLIC_ENS_CHAIN as "mainnet" | "sepolia" | undefined) ??
+      "mainnet";
+
     try {
       const result = await registration.register({
         label: slug,
         parentEnsName: ownerEns,
-        chain: "mainnet",
+        chain: envChain,
         description: draft.description,
         pitch: draft.pitch,
         category: draft.category,
