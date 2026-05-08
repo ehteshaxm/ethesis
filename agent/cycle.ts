@@ -27,6 +27,7 @@ import { isPinataConfigured } from "./ipfs";
 import { deriveAgentAccount, ventureSlug } from "./wallet";
 import { checkAndTrigger, type TriggerResult } from "./triggers";
 import { isCtrngConfigured } from "./ctrng";
+import { emitTeeEvent, getCycleQuote } from "./tee";
 
 export interface CycleResult {
   ventureEnsName: string;
@@ -41,6 +42,8 @@ export interface CycleResult {
   apifyMode: "x402" | "token" | "mock";
   apifyCostUsd: number;
   cosmicNonceSource?: string;
+  /** Set when the agent ran inside a DStack TEE — TDX quote bound to the attestation. */
+  teeQuote?: { quote: string; reportData: string };
   trigger: TriggerResult;
   durationMs: number;
 }
@@ -171,6 +174,20 @@ export async function runCycleForVenture(
     ensTextRecordKey: ensResult.recordKey,
   });
 
+  // ─── TEE: bind a TDX quote to this attestation if running in CVM ──
+  const teeQuote = await getCycleQuote({
+    ipfsCid,
+    agentAddress: account.address,
+    ventureEnsName,
+  });
+  if (teeQuote) {
+    // Emit to RTMR3 so the cumulative event log includes this cycle.
+    await emitTeeEvent(
+      "ethesis.attestation",
+      `${ventureEnsName}|${ordinal}|${ipfsCid}`,
+    );
+  }
+
   // Log the attestation creation to the activity log too.
   await db.insert(schema.agentActivityLog).values({
     ventureId: venture.id,
@@ -183,6 +200,9 @@ export async function runCycleForVenture(
       ensTxHash: ensResult.txHash,
       ensWritten: ensResult.written,
       ensSkipReason: ensResult.reason,
+      teeQuote: teeQuote
+        ? { quote: teeQuote.quote, reportData: teeQuote.reportData }
+        : null,
     },
     txHash: ensResult.txHash ?? undefined,
   });
@@ -220,6 +240,9 @@ export async function runCycleForVenture(
     apifyMode: apify.mode,
     apifyCostUsd: apify.costUsd,
     cosmicNonceSource: signed.cosmicNonce?.source,
+    teeQuote: teeQuote
+      ? { quote: teeQuote.quote, reportData: teeQuote.reportData }
+      : undefined,
     trigger,
     durationMs: Date.now() - start,
   };

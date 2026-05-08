@@ -19,6 +19,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
     "@neondatabase/serverless": "^1.1.0",
+    "@phala/dstack-sdk": "^0.5.7",
     "@rainbow-me/rainbowkit": "^2.2.11",
     "@spacecomputer-io/orbitport-sdk-ts": "^0.2.1",
     "@tanstack/react-query": "^5.100.9",

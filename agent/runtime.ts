@@ -11,6 +11,7 @@ config({ path: ".env.local", override: true });
 import { db, schema } from "./db";
 import { eq } from "drizzle-orm";
 import { runCycleForVenture, reportAgentConfig } from "./cycle";
+import { getTeeInfo } from "./tee";
 
 const CYCLE_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours per spec
 const TICK_INTERVAL_MS = 60 * 1000; // check for due ventures every minute
@@ -54,6 +55,20 @@ async function main() {
   console.log(`  Pinata:       ${cfg.pinata ? "configured" : "MOCK (no JWT)"}`);
   console.log(`  ENS writer:   ${cfg.ens ? "configured" : "skipped (no platform key)"}`);
   console.log(`  Cycle:        every ${CYCLE_INTERVAL_MS / 3600000}h per venture`);
+
+  const teeInfo = await getTeeInfo();
+  if (teeInfo) {
+    console.log("");
+    console.log("─── Phala TDX TEE attached ───");
+    console.log(`  app_id:         ${teeInfo.appId}`);
+    console.log(`  instance_id:    ${teeInfo.instanceId}`);
+    console.log(`  compose_hash:   ${teeInfo.composeHash}`);
+    if (teeInfo.mrAggregated) console.log(`  mr_aggregated:  ${teeInfo.mrAggregated}`);
+    if (teeInfo.osImageHash) console.log(`  os_image_hash:  ${teeInfo.osImageHash}`);
+    console.log("  Each cycle will bind a TDX quote to its attestation.");
+  } else {
+    console.log("  TEE:          NOT detected — running outside Phala TDX");
+  }
   console.log("");
 
   // Run a tick immediately, then on TICK_INTERVAL.
