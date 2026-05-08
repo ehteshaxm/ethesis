@@ -17,10 +17,9 @@ import {
   FileText,
 } from "lucide-react";
 import { umia } from "@/lib/umia";
-import { cn, formatEth, hashString, identiconColors } from "@/lib/utils";
+import { cn, formatEth, identiconColors } from "@/lib/utils";
 import { LaunchAnimation } from "./LaunchAnimation";
 import { UmiaCliHandoff } from "./UmiaCliHandoff";
-import { useVentureRegistration } from "@/hooks/use-venture-registration";
 
 // ─── Draft model ────────────────────────────────────────────────────
 
@@ -167,82 +166,119 @@ export function LaunchWizard() {
   const [step, setStep] = useState<number>(1);
   const [draft, setDraft] = useState<Draft>(INITIAL_DRAFT);
   const [phase, setPhase] = useState<Phase>("form");
+  const [provisionStep, setProvisionStep] = useState<number>(0);
+  const [provisionError, setProvisionError] = useState<string | null>(null);
   const [submitResult, setSubmitResult] = useState<{
     auctionId: string;
     treasuryAddress: string;
     tokenAddress: string;
     txHash: string;
     ensSubname: string;
-    createTxHash?: string;
-    recordsTxHash?: string;
+    agentEnsName: string;
+    agentWalletAddress: string;
+    txHashes?: {
+      ventureCreate: string;
+      ventureRecords: string;
+      agentCreate: string;
+      agentRecords: string;
+    };
     chain: "mainnet" | "sepolia";
   } | null>(null);
 
-  // The new subname lives under the connected user's primary ENS — same
-  // pattern as grmkris/ethglobal-cannes-2026-groundtruth (e.g.
-  // `protein-folding.vitalik.eth`).
+  // Platform mode: subname lives under `ethesis.eth` (or whatever
+  // PLATFORM_ENS_NAME the server is configured for). The platform pays
+  // gas; the user just signs SIWE via wallet connect.
+  const platformParent =
+    process.env.NEXT_PUBLIC_PLATFORM_ENS_NAME ?? "ethesis.eth";
   const ensSubname = useMemo(() => {
-    const slug = slugify(draft.title);
-    return ownerEns ? `${slug}.${ownerEns}` : `${slug}.ethesis.eth`;
-  }, [draft.title, ownerEns]);
+    return `${slugify(draft.title)}.${platformParent}`;
+  }, [draft.title, platformParent]);
 
   const canAdvance = isStepValid(step, draft);
 
-  const registration = useVentureRegistration();
-
   const onLaunch = async () => {
-    if (!address || !ownerEns) return;
+    if (!address) return;
     setPhase("submitting");
+    setProvisionStep(0);
+    setProvisionError(null);
 
-    // Derive a deterministic agent wallet from owner + label. Real agent
-    // runtime would BIP-44 this from a master seed; for the demo a stable
-    // hash-derived address keeps the text record meaningful.
     const slug = slugify(draft.title);
-    const agentWalletAddress = derivedAgentAddress(address, slug);
     const symbol = draft.tokenSymbol || draft.title.slice(0, 4).toUpperCase();
+    const ventureUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/v/${slug}.${platformParent}`;
 
-    // Try real ENS registration first. Falls back to mock if user rejects
-    // or the parent isn't owned by the connected wallet.
-    let createTxHash: string | undefined;
-    let recordsTxHash: string | undefined;
-    let chain: "mainnet" | "sepolia" = "mainnet";
+    // Optimistic step animation — the API takes ~30s on Sepolia for 4
+    // sequential txns; we tick the visual indicator while we wait.
+    let provisionStepIndex = 0;
+    const tick = setInterval(() => {
+      provisionStepIndex = Math.min(3, provisionStepIndex + 1);
+      setProvisionStep(provisionStepIndex);
+    }, 7000);
 
-    const envChain =
-      (process.env.NEXT_PUBLIC_ENS_CHAIN as "mainnet" | "sepolia" | undefined) ??
-      "mainnet";
+    let result: {
+      ventureEnsName: string;
+      agentEnsName: string;
+      agentWalletAddress: string;
+      txHashes: {
+        ventureCreate: string;
+        ventureRecords: string;
+        agentCreate: string;
+        agentRecords: string;
+      };
+      chain: "mainnet" | "sepolia";
+    };
 
     try {
-      const result = await registration.register({
-        label: slug,
-        parentEnsName: ownerEns,
-        chain: envChain,
-        description: draft.description,
-        pitch: draft.pitch,
-        category: draft.category,
-        tokenSymbol: symbol,
-        tokenSupply: draft.tokenSupply,
-        activationThresholdEth: draft.activationThresholdEth,
-        sources: JSON.stringify(
-          draft.sources.map((s) => ({ type: s.type, identifier: s.identifier })),
-        ),
-        agentWalletAddress: agentWalletAddress,
-        ventureUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/v/${slug}.${ownerEns}`,
+      const res = await fetch("/api/launch/provision-ens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: slug,
+          ownerAddress: address,
+          ownerEns: ownerEns ?? null,
+          description: draft.description,
+          pitch: draft.pitch,
+          category: draft.category,
+          tokenSymbol: symbol,
+          tokenSupply: draft.tokenSupply,
+          activationThresholdEth: draft.activationThresholdEth,
+          sources: JSON.stringify(
+            draft.sources.map((s) => ({
+              type: s.type,
+              identifier: s.identifier,
+            })),
+          ),
+          ventureUrl,
+        }),
       });
-      createTxHash = result.createTxHash;
-      recordsTxHash = result.recordsTxHash;
-      chain = result.chain;
-    } catch {
-      // User rejected, parent unwrapped, or RPC error — keep the wizard
-      // open so they can retry. Don't silently fall through to the mock.
-      setPhase("form");
+      clearInterval(tick);
+
+      const json = await res.json();
+      if (!res.ok) {
+        const message =
+          (json as { error?: string; missing?: string[] })?.error ??
+          "Provisioning failed.";
+        const missing = (json as { missing?: string[] })?.missing ?? [];
+        setProvisionError(
+          missing.length
+            ? `${message} Missing env: ${missing.join(", ")}`
+            : message,
+        );
+        return;
+      }
+      result = json as typeof result;
+      setProvisionStep(4);
+    } catch (err) {
+      clearInterval(tick);
+      const message =
+        (err as { message?: string })?.message ?? "Network error.";
+      setProvisionError(message);
       return;
     }
 
-    // After ENS records land, also fire the (mocked) Umia auction call so
-    // the rest of the app sees the venture as an open auction. Once Umia
-    // ships an SDK, LiveUmiaService takes over here.
+    // ENS provisioned. Now fire the (mocked) Umia auction call so the rest
+    // of the app sees this as an open auction.
     const auction = await umia.openAuction({
-      ventureEnsName: ensSubname,
+      ventureEnsName: result.ventureEnsName,
       ownerAddress: address,
       tokenSymbol: symbol,
       tokenSupply: draft.tokenSupply.toString(),
@@ -255,10 +291,11 @@ export function LaunchWizard() {
       treasuryAddress: auction.treasuryAddress,
       tokenAddress: auction.tokenAddress,
       txHash: auction.txHash,
-      ensSubname,
-      createTxHash,
-      recordsTxHash,
-      chain,
+      ensSubname: result.ventureEnsName,
+      agentEnsName: result.agentEnsName,
+      agentWalletAddress: result.agentWalletAddress,
+      txHashes: result.txHashes,
+      chain: result.chain,
     });
   };
 
@@ -268,12 +305,17 @@ export function LaunchWizard() {
   }, []);
 
   if (phase === "submitting") {
-    if (registration.isPending || registration.error) {
+    if (!submitResult) {
       return (
         <FullScreen>
-          <RegistrationProgress
+          <PlatformProvisionProgress
             ensSubname={ensSubname}
-            registration={registration}
+            step={provisionStep}
+            error={provisionError}
+            onRetry={() => {
+              setProvisionError(null);
+              setPhase("form");
+            }}
           />
         </FullScreen>
       );
@@ -1295,89 +1337,107 @@ function ReviewCard({
   );
 }
 
-// ─── Registration progress (real TXs) ─────────────────────────────
+// ─── Platform-mode progress (server-signed) ────────────────────────
 
-function RegistrationProgress({
+function PlatformProvisionProgress({
   ensSubname,
-  registration,
+  step,
+  error,
+  onRetry,
 }: {
   ensSubname: string;
-  registration: ReturnType<typeof useVentureRegistration>;
+  step: number;
+  error: string | null;
+  onRetry: () => void;
 }) {
-  const { step, txHashes, error } = registration;
-
   const steps = [
-    {
-      label: "Sign tx 1 — create ENS subname",
-      detail: txHashes.create
-        ? `tx ${shorten(txHashes.create, 6)}`
-        : "Confirm in your wallet…",
-      state: step >= 1 ? "done" : step === 0 ? "active" : "pending",
-    },
-    {
-      label: "Sign tx 2 — write text records",
-      detail: txHashes.records
-        ? `tx ${shorten(txHashes.records, 6)}`
-        : step >= 1
-          ? "Confirm in your wallet…"
-          : "Awaiting subname creation",
-      state: step >= 3 ? "done" : step === 2 ? "active" : "pending",
-    },
-  ] as const;
-
+    "Creating venture subname",
+    "Writing venture text records",
+    "Creating agent subname",
+    "Writing agent text records",
+  ];
   return (
     <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-8">
       <p className="text-[11px] uppercase tracking-wider text-accent-ink font-medium">
-        Registering on ENS
+        {error ? "Provisioning failed" : "Provisioning on ENS"}
       </p>
       <p className="mt-1 font-mono text-base text-ink">{ensSubname}</p>
 
       <ul className="mt-6 space-y-3">
-        {steps.map((s, i) => (
-          <li key={i} className="flex items-start gap-3">
-            <span
-              className={cn(
-                "mt-0.5 flex h-5 w-5 items-center justify-center rounded-full shrink-0",
-                s.state === "done"
-                  ? "bg-verify text-white"
-                  : s.state === "active"
-                    ? "bg-accent/15 text-accent-ink"
-                    : "bg-surface-2 text-ink-subtle",
-              )}
-            >
-              {s.state === "done" ? (
-                <span className="h-2 w-2 rounded-full bg-white" />
-              ) : s.state === "active" ? (
-                <span className="h-2 w-2 rounded-full bg-accent animate-heartbeat" />
-              ) : (
-                <span className="h-1.5 w-1.5 rounded-full bg-ink-subtle/60" />
-              )}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p
+        {steps.map((label, i) => {
+          const state = error
+            ? i < step
+              ? "done"
+              : i === step
+                ? "failed"
+                : "pending"
+            : i < step
+              ? "done"
+              : i === step
+                ? "active"
+                : "pending";
+          return (
+            <li key={i} className="flex items-center gap-3">
+              <span
                 className={cn(
-                  "text-sm",
-                  s.state === "active"
-                    ? "text-ink font-medium"
-                    : s.state === "done"
-                      ? "text-ink"
-                      : "text-ink-subtle",
+                  "flex h-5 w-5 items-center justify-center rounded-full shrink-0 transition-colors",
+                  state === "done"
+                    ? "bg-verify text-white"
+                    : state === "active"
+                      ? "bg-accent/15 text-accent-ink"
+                      : state === "failed"
+                        ? "bg-dispute/15 text-dispute-ink"
+                        : "bg-surface-2 text-ink-subtle",
                 )}
               >
-                {s.label}
-              </p>
-              <p className="text-[11px] text-ink-subtle font-mono mt-0.5">
-                {s.detail}
-              </p>
-            </div>
-          </li>
-        ))}
+                {state === "done" ? (
+                  <span className="h-2 w-2 rounded-full bg-white" />
+                ) : state === "active" ? (
+                  <span className="h-2 w-2 rounded-full bg-accent animate-heartbeat" />
+                ) : state === "failed" ? (
+                  <span className="text-[10px] font-bold">!</span>
+                ) : (
+                  <span className="h-1.5 w-1.5 rounded-full bg-ink-subtle/60" />
+                )}
+              </span>
+              <span
+                className={cn(
+                  "text-sm",
+                  state === "active"
+                    ? "text-ink font-medium"
+                    : state === "done"
+                      ? "text-ink"
+                      : state === "failed"
+                        ? "text-dispute-ink"
+                        : "text-ink-subtle",
+                )}
+              >
+                {label}
+              </span>
+            </li>
+          );
+        })}
       </ul>
 
       {error && (
-        <div className="mt-4 rounded-md border border-dispute/30 bg-dispute/10 p-3 text-xs text-dispute-ink">
-          {error}
+        <div className="mt-5 space-y-3">
+          <div className="rounded-md border border-dispute/30 bg-dispute/10 p-3 text-xs text-dispute-ink leading-relaxed">
+            {error}
+          </div>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="w-full rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-ink transition-colors"
+          >
+            Back to wizard
+          </button>
         </div>
+      )}
+      {!error && (
+        <p className="mt-4 text-[11px] text-ink-subtle text-center leading-relaxed">
+          The platform wallet is signing 4 transactions on Sepolia. This takes
+          ~30 seconds.
+        </p>
       )}
     </div>
   );
@@ -1398,8 +1458,14 @@ function SuccessCard({
     tokenAddress: string;
     txHash: string;
     ensSubname: string;
-    createTxHash?: string;
-    recordsTxHash?: string;
+    agentEnsName: string;
+    agentWalletAddress: string;
+    txHashes?: {
+      ventureCreate: string;
+      ventureRecords: string;
+      agentCreate: string;
+      agentRecords: string;
+    };
     chain: "mainnet" | "sepolia";
   };
   ownerEns: string;
@@ -1440,21 +1506,13 @@ function SuccessCard({
       </p>
 
       <div className="mt-6 space-y-1.5 rounded-md border border-border bg-surface-2/50 p-3 text-xs">
-        <KV label="ENS subname" value={result.ensSubname} mono />
-        {result.createTxHash && (
-          <KV
-            label="Subname tx"
-            value={shorten(result.createTxHash, 6)}
-            mono
-          />
-        )}
-        {result.recordsTxHash && (
-          <KV
-            label="Records tx"
-            value={shorten(result.recordsTxHash, 6)}
-            mono
-          />
-        )}
+        <KV label="Venture ENS" value={result.ensSubname} mono />
+        <KV label="Agent ENS" value={result.agentEnsName} mono />
+        <KV
+          label="Agent wallet"
+          value={shorten(result.agentWalletAddress, 6)}
+          mono
+        />
         <KV label="Auction ID" value={result.auctionId} mono />
         <KV label="Token contract" value={shorten(result.tokenAddress)} mono />
         <KV
@@ -1464,6 +1522,43 @@ function SuccessCard({
         />
       </div>
 
+      {result.txHashes && (
+        <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+          <a
+            href={etherscanTxUrl(result.txHashes.ventureCreate, result.chain)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md border border-border bg-surface px-3 py-1.5 font-mono text-ink-muted hover:bg-surface-2 transition-colors truncate"
+          >
+            tx1 venture · {shorten(result.txHashes.ventureCreate, 4)}
+          </a>
+          <a
+            href={etherscanTxUrl(result.txHashes.ventureRecords, result.chain)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md border border-border bg-surface px-3 py-1.5 font-mono text-ink-muted hover:bg-surface-2 transition-colors truncate"
+          >
+            tx2 records · {shorten(result.txHashes.ventureRecords, 4)}
+          </a>
+          <a
+            href={etherscanTxUrl(result.txHashes.agentCreate, result.chain)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md border border-border bg-surface px-3 py-1.5 font-mono text-ink-muted hover:bg-surface-2 transition-colors truncate"
+          >
+            tx3 agent · {shorten(result.txHashes.agentCreate, 4)}
+          </a>
+          <a
+            href={etherscanTxUrl(result.txHashes.agentRecords, result.chain)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md border border-border bg-surface px-3 py-1.5 font-mono text-ink-muted hover:bg-surface-2 transition-colors truncate"
+          >
+            tx4 agent records · {shorten(result.txHashes.agentRecords, 4)}
+          </a>
+        </div>
+      )}
+
       <div className="mt-3 flex items-center gap-2 text-xs">
         <a
           href={`https://app.ens.domains/${result.ensSubname}?tab=records`}
@@ -1471,18 +1566,16 @@ function SuccessCard({
           rel="noopener noreferrer"
           className="rounded-md border border-border-strong bg-surface px-3 py-1.5 font-medium text-ink hover:bg-surface-2 transition-colors"
         >
-          View on ens.domains →
+          Venture records →
         </a>
-        {result.createTxHash && (
-          <a
-            href={`https://${result.chain === "sepolia" ? "sepolia." : ""}etherscan.io/tx/${result.createTxHash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md border border-border-strong bg-surface px-3 py-1.5 font-medium text-ink hover:bg-surface-2 transition-colors"
-          >
-            View on Etherscan →
-          </a>
-        )}
+        <a
+          href={`https://app.ens.domains/${result.agentEnsName}?tab=records`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-md border border-border-strong bg-surface px-3 py-1.5 font-medium text-ink hover:bg-surface-2 transition-colors"
+        >
+          Agent records →
+        </a>
       </div>
 
       <div className="mt-5">
@@ -1652,20 +1745,11 @@ function slugify(s: string): string {
     .slice(0, 32) || "venture";
 }
 
-/**
- * Deterministic agent-wallet address from owner + slug. Stable across
- * renders so the text record we write doesn't change on each form keystroke.
- * Real agent runtime should derive via BIP-44 from a master seed.
- */
-function derivedAgentAddress(owner: string, slug: string): `0x${string}` {
-  const seed = `${owner.toLowerCase()}|${slug}|ethesis-agent-v1`;
-  let s = hashString(seed);
-  let hex = "";
-  for (let i = 0; i < 5; i++) {
-    s = (s * 1664525 + 1013904223) >>> 0;
-    hex += s.toString(16).padStart(8, "0");
-  }
-  return `0x${hex.slice(0, 40)}` as `0x${string}`;
+function etherscanTxUrl(
+  txHash: string,
+  chain: "mainnet" | "sepolia",
+): string {
+  return `https://${chain === "sepolia" ? "sepolia." : ""}etherscan.io/tx/${txHash}`;
 }
 
 // ─── Validation ────────────────────────────────────────────────────
