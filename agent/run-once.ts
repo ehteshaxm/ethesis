@@ -34,6 +34,9 @@ async function main() {
   console.log(`  Type:             ${result.attestationType}`);
   console.log(`  Ordinal:          #${result.ordinal}`);
   console.log(`  Outputs observed: ${result.observedOutputs}`);
+  console.log(
+    `  Apify mode:       ${result.apifyMode}  (cost: $${result.apifyCostUsd.toFixed(4)})`,
+  );
   console.log(`  IPFS CID:         ${result.ipfsCid}`);
   if (result.ensWritten) {
     console.log(`  ENS write tx:     ${result.ensTxHash}`);

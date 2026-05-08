@@ -1,13 +1,29 @@
-// Apify client wrapper. Calls our two custom Actors when APIFY_TOKEN is
-// set; falls back to deterministic mock data otherwise so the agent loop
-// can run end-to-end during development.
+// Apify client wrapper. Three modes, in priority order:
+//
+//   1. x402 mode  — set X402_ENABLED=1 + APIFY_X402_ACTOR=<owner/actor>.
+//      Pays per call in USDC on Base mainnet using x402-fetch. Wallet is
+//      the agent's derived EOA (from AGENT_MASTER_SEED + venture slug).
+//      Apify natively supports x402 via the X-APIFY-PAYMENT-PROTOCOL
+//      header. ~$0.05/call. Real money — no testnet.
+//
+//   2. token mode — set APIFY_TOKEN + APIFY_ACTOR_ID_OUTPUT_WATCHER.
+//      Standard apify-client SDK call against any Actor.
+//
+//   3. mock mode  — no env. Returns deterministic fake outputs so the
+//      agent loop runs end-to-end without any external dependencies.
+//
+// All modes return the same `OutputWatcherResult` shape so the rest of
+// the cycle is mode-agnostic.
 
 import { ApifyClient } from "apify-client";
+import { withPaymentInterceptor } from "x402-fetch";
+import { privateKeyToAccount } from "viem/accounts";
+import type { Hex } from "viem";
 
 export interface OutputWatcherSource {
   type: "github" | "arxiv" | "huggingface" | "openreview" | "x" | "substack";
   identifier: string;
-  since?: string; // ISO8601
+  since?: string;
 }
 
 export interface ScrapedOutput {
@@ -25,62 +41,141 @@ export interface OutputWatcherResult {
   outputs: ScrapedOutput[];
   fetchedAt: string;
   sourceStats: { type: string; count: number }[];
+  /** Mode that produced these results. */
+  mode: "x402" | "token" | "mock";
+  /** Cost paid for this call (USDC on Base for x402, est. for token, 0 for mock). */
   costUsd: number;
+  /** Underlying Apify actor invoked, if real. */
+  actorId?: string;
+  /** Apify run ID, if real. */
+  runId?: string;
 }
 
-let _client: ApifyClient | null = null;
-
-function getClient(): ApifyClient | null {
-  const token = process.env.APIFY_TOKEN;
-  if (!token) return null;
-  if (!_client) _client = new ApifyClient({ token });
-  return _client;
-}
-
-export async function callOutputWatcher(args: {
+export interface CallOutputWatcherArgs {
   sources: OutputWatcherSource[];
   milestoneKeywords?: string[];
   ventureSlug: string;
-}): Promise<OutputWatcherResult> {
-  const actorId = process.env.APIFY_ACTOR_ID_OUTPUT_WATCHER;
-  const client = getClient();
+  /** Agent's deterministic private key — required for x402 mode. */
+  agentPrivateKey?: Hex;
+}
 
-  if (client && actorId) {
-    return callRealOutputWatcher(client, actorId, args);
+const APIFY_API_BASE = "https://api.apify.com/v2";
+
+export async function callOutputWatcher(
+  args: CallOutputWatcherArgs,
+): Promise<OutputWatcherResult> {
+  const x402Enabled = process.env.X402_ENABLED === "1";
+  const x402Actor = process.env.APIFY_X402_ACTOR;
+  const token = process.env.APIFY_TOKEN;
+  const tokenActor = process.env.APIFY_ACTOR_ID_OUTPUT_WATCHER;
+
+  if (x402Enabled && x402Actor && args.agentPrivateKey) {
+    try {
+      return await callViaX402(args, x402Actor, args.agentPrivateKey);
+    } catch (err) {
+      console.warn(
+        "[apify] x402 call failed, falling through:",
+        (err as { message?: string })?.message ?? err,
+      );
+    }
   }
 
-  // Mock path — deterministic, useful while building or when Apify is offline
+  if (token && tokenActor) {
+    try {
+      return await callViaToken(args, token, tokenActor);
+    } catch (err) {
+      console.warn(
+        "[apify] token call failed, falling through to mock:",
+        (err as { message?: string })?.message ?? err,
+      );
+    }
+  }
+
   return mockOutputWatcher(args);
 }
 
-async function callRealOutputWatcher(
-  client: ApifyClient,
-  actorId: string,
-  args: {
-    sources: OutputWatcherSource[];
-    milestoneKeywords?: string[];
-  },
+// ─── x402 path ──────────────────────────────────────────────────────
+
+async function callViaX402(
+  args: CallOutputWatcherArgs,
+  actor: string,
+  agentPrivateKey: Hex,
 ): Promise<OutputWatcherResult> {
-  const run = await client.actor(actorId).call({
-    sources: args.sources,
-    milestoneKeywords: args.milestoneKeywords ?? [],
-    maxResults: 50,
+  const account = privateKeyToAccount(agentPrivateKey);
+  const fetchWithPay = withPaymentInterceptor(fetch, account);
+
+  const slug = actor.replace("/", "~");
+  const url = `${APIFY_API_BASE}/acts/${slug}/run-sync-get-dataset-items`;
+
+  // Each Actor's input shape differs. For the demo we use a generic
+  // "search" payload that the chosen Actor (e.g. apify/rag-web-browser)
+  // can interpret. Tune APIFY_X402_INPUT or override per-source if needed.
+  const input = buildActorInput(args, actor);
+
+  const res = await fetchWithPay(url, {
+    method: "POST",
+    headers: {
+      "X-APIFY-PAYMENT-PROTOCOL": "X402",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
   });
-  const dataset = await client.dataset(run.defaultDatasetId).listItems();
-  const outputs = dataset.items as unknown as ScrapedOutput[];
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Apify x402 ${res.status}: ${text.slice(0, 256)}`);
+  }
+
+  const items = (await res.json()) as unknown[];
+  const outputs = normaliseScrapedItems(items);
+
+  // x402-fetch puts the settled-payment receipt in a custom response header.
+  const paymentResponseHeader =
+    res.headers.get("X-PAYMENT-RESPONSE") ??
+    res.headers.get("payment-response");
+  const costUsd = paymentResponseHeader
+    ? parsePaymentCost(paymentResponseHeader)
+    : 0.05;
 
   return {
     outputs,
     fetchedAt: new Date().toISOString(),
     sourceStats: tallyByType(outputs),
-    costUsd: 0.18, // placeholder until x402 reports real cost
+    mode: "x402",
+    costUsd,
+    actorId: actor,
+    runId: res.headers.get("x-apify-request-id") ?? undefined,
   };
 }
 
-function mockOutputWatcher(args: {
-  sources: OutputWatcherSource[];
-  ventureSlug: string;
-}): OutputWatcherResult {
+// ─── Token path ─────────────────────────────────────────────────────
+
+async function callViaToken(
+  args: CallOutputWatcherArgs,
+  token: string,
+  actorId: string,
+): Promise<OutputWatcherResult> {
+  const client = new ApifyClient({ token });
+  const input = buildActorInput(args, actorId);
+
+  const run = await client.actor(actorId).call(input);
+  const dataset = await client.dataset(run.defaultDatasetId).listItems();
+  const outputs = normaliseScrapedItems(dataset.items as unknown[]);
+
+  return {
+    outputs,
+    fetchedAt: new Date().toISOString(),
+    sourceStats: tallyByType(outputs),
+    mode: "token",
+    costUsd: 0.05, // estimated; precise cost lives in apify usage reports
+    actorId,
+    runId: run.id,
+  };
+}
+
+// ─── Mock path ──────────────────────────────────────────────────────
+
+function mockOutputWatcher(args: CallOutputWatcherArgs): OutputWatcherResult {
   const outputs: ScrapedOutput[] = [];
   const now = new Date();
   const slug = args.ventureSlug;
@@ -128,8 +223,131 @@ function mockOutputWatcher(args: {
     outputs,
     fetchedAt: now.toISOString(),
     sourceStats: tallyByType(outputs),
+    mode: "mock",
     costUsd: 0,
   };
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────
+
+/**
+ * Build the Actor-specific input payload from our generic source list.
+ * Different Actors expect different schemas; this supports the most common
+ * ones via heuristic match. Extend as new Actors are wired in.
+ */
+function buildActorInput(args: CallOutputWatcherArgs, actor: string): unknown {
+  const a = actor.toLowerCase();
+
+  // RAG Web Browser — takes a query + max results
+  if (a.includes("rag-web-browser") || a.includes("rag_web_browser")) {
+    const query = args.sources
+      .map((s) => `${s.type}:${s.identifier}`)
+      .join(" OR ");
+    return { query, maxResults: 5 };
+  }
+
+  // Website content crawler — takes startUrls
+  if (a.includes("website-content-crawler") || a.includes("web-scraper")) {
+    return {
+      startUrls: args.sources.map((s) => ({
+        url: sourceToUrl(s),
+      })),
+      maxRequestsPerCrawl: 10,
+    };
+  }
+
+  // Generic fallback: pass everything through as-is.
+  return {
+    sources: args.sources,
+    milestoneKeywords: args.milestoneKeywords ?? [],
+    maxResults: 50,
+    ventureSlug: args.ventureSlug,
+  };
+}
+
+function sourceToUrl(s: OutputWatcherSource): string {
+  switch (s.type) {
+    case "github":
+      return `https://github.com/${s.identifier}`;
+    case "arxiv":
+      return `https://arxiv.org/a/${s.identifier}`;
+    case "huggingface":
+      return `https://huggingface.co/${s.identifier}`;
+    case "openreview":
+      return `https://openreview.net/profile?id=${s.identifier}`;
+    case "x":
+      return `https://x.com/${s.identifier.replace(/^@/, "")}`;
+    case "substack":
+      return s.identifier.startsWith("http")
+        ? s.identifier
+        : `https://${s.identifier}.substack.com`;
+  }
+}
+
+/**
+ * Coerce a generic Apify dataset item into our ScrapedOutput shape.
+ * Apify Actors return wildly different schemas; this picks the
+ * usual fields and falls back gracefully.
+ */
+function normaliseScrapedItems(items: unknown[]): ScrapedOutput[] {
+  return items.slice(0, 50).map((raw): ScrapedOutput => {
+    const item = (raw ?? {}) as Record<string, unknown>;
+    const url = String(item.url ?? item.link ?? item.href ?? "");
+    return {
+      source: guessSource(url),
+      outputType: guessOutputType(url, String(item.type ?? "")),
+      identifier: String(item.id ?? item.identifier ?? url ?? "unknown"),
+      title: String(item.title ?? item.name ?? item.headline ?? "Untitled"),
+      body: String(item.body ?? item.text ?? item.markdown ?? "").slice(0, 1024),
+      url,
+      publishedAt: String(
+        item.publishedAt ?? item.date ?? new Date().toISOString(),
+      ),
+      matchedMilestoneKeywords: [],
+    };
+  });
+}
+
+function guessSource(url: string): OutputWatcherSource["type"] {
+  if (url.includes("github.com")) return "github";
+  if (url.includes("arxiv.org")) return "arxiv";
+  if (url.includes("huggingface.co")) return "huggingface";
+  if (url.includes("openreview.net")) return "openreview";
+  if (url.includes("substack.com")) return "substack";
+  if (url.includes("x.com") || url.includes("twitter.com")) return "x";
+  return "github";
+}
+
+function guessOutputType(
+  url: string,
+  hint: string,
+): ScrapedOutput["outputType"] {
+  if (hint && ["commit", "paper", "release", "post", "model", "dataset"].includes(hint)) {
+    return hint as ScrapedOutput["outputType"];
+  }
+  if (url.includes("/commit/")) return "commit";
+  if (url.includes("arxiv.org")) return "paper";
+  if (url.includes("/releases/")) return "release";
+  if (url.includes("huggingface.co")) return "model";
+  return "post";
+}
+
+function parsePaymentCost(headerValue: string): number {
+  // x402-fetch usually base64-encodes a JSON receipt. Try to decode and
+  // extract amount; fall back to a best-effort numeric parse.
+  try {
+    const decoded = Buffer.from(headerValue, "base64").toString("utf8");
+    const json = JSON.parse(decoded) as {
+      amount?: number | string;
+      total?: number | string;
+    };
+    const amount = json.amount ?? json.total;
+    if (typeof amount === "number") return amount;
+    if (typeof amount === "string") return parseFloat(amount) || 0.05;
+  } catch {
+    /* ignore */
+  }
+  return 0.05;
 }
 
 function tallyByType(
@@ -160,5 +378,20 @@ function hexish(seed: string, len: number): string {
 }
 
 export function isApifyConfigured(): boolean {
-  return Boolean(process.env.APIFY_TOKEN && process.env.APIFY_ACTOR_ID_OUTPUT_WATCHER);
+  if (process.env.X402_ENABLED === "1" && process.env.APIFY_X402_ACTOR) {
+    return true;
+  }
+  return Boolean(
+    process.env.APIFY_TOKEN && process.env.APIFY_ACTOR_ID_OUTPUT_WATCHER,
+  );
+}
+
+export function apifyMode(): "x402" | "token" | "mock" {
+  if (process.env.X402_ENABLED === "1" && process.env.APIFY_X402_ACTOR) {
+    return "x402";
+  }
+  if (process.env.APIFY_TOKEN && process.env.APIFY_ACTOR_ID_OUTPUT_WATCHER) {
+    return "token";
+  }
+  return "mock";
 }

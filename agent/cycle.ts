@@ -9,10 +9,12 @@
 //   7. Insert attestation row into Neon for the Pulse tab to read
 
 import { eq, desc } from "drizzle-orm";
+import { keccak256, toBytes, type Hex } from "viem";
 import { db, schema } from "./db";
 import {
   callOutputWatcher,
   isApifyConfigured,
+  apifyMode,
   type OutputWatcherSource,
 } from "./apify-client";
 import {
@@ -34,7 +36,19 @@ export interface CycleResult {
   ensWritten: boolean;
   ensSkipReason?: string;
   observedOutputs: number;
+  apifyMode: "x402" | "token" | "mock";
+  apifyCostUsd: number;
   durationMs: number;
+}
+
+/**
+ * Same algo as wallet.ts:deriveAgentAccount, but returns the private key
+ * directly so we can pass it into the x402 fetch interceptor.
+ */
+function deriveAgentPrivateKey(slug: string): Hex {
+  const masterSeed = process.env.AGENT_MASTER_SEED;
+  if (!masterSeed) throw new Error("AGENT_MASTER_SEED not set");
+  return keccak256(toBytes(`ethesis-agent-v1|${slug}|${masterSeed}`));
 }
 
 export async function runCycleForVenture(
@@ -76,6 +90,22 @@ export async function runCycleForVenture(
         : [],
     ),
     ventureSlug: slug,
+    agentPrivateKey: deriveAgentPrivateKey(slug),
+  });
+
+  // Log the Apify call to the activity log so the agent tab can show it
+  // (and so the venture's funders can see what their treasury paid for).
+  await db.insert(schema.agentActivityLog).values({
+    ventureId: venture.id,
+    activityType: "apify_query",
+    details: {
+      mode: apify.mode,
+      actorId: apify.actorId ?? null,
+      runId: apify.runId ?? null,
+      sources: apifySources.map((s) => `${s.type}:${s.identifier}`),
+      outputCount: apify.outputs.length,
+    },
+    costUsd: apify.costUsd,
   });
 
   // ─── 3. Generate attestation via Claude ──────────────────────────
@@ -137,6 +167,22 @@ export async function runCycleForVenture(
     ensTextRecordKey: ensResult.recordKey,
   });
 
+  // Log the attestation creation to the activity log too.
+  await db.insert(schema.agentActivityLog).values({
+    ventureId: venture.id,
+    activityType: "attestation_generated",
+    details: {
+      ordinal,
+      type: signed.type,
+      ipfsCid,
+      ensRecordKey: ensResult.recordKey,
+      ensTxHash: ensResult.txHash,
+      ensWritten: ensResult.written,
+      ensSkipReason: ensResult.reason,
+    },
+    txHash: ensResult.txHash ?? undefined,
+  });
+
   await db
     .update(schema.ventures)
     .set({ agentLastSyncAt: new Date() })
@@ -152,6 +198,8 @@ export async function runCycleForVenture(
     ensWritten: ensResult.written,
     ensSkipReason: ensResult.reason,
     observedOutputs: apify.outputs.length,
+    apifyMode: apify.mode,
+    apifyCostUsd: apify.costUsd,
     durationMs: Date.now() - start,
   };
 }
@@ -159,12 +207,14 @@ export async function runCycleForVenture(
 /** Surface what the agent has and hasn't been configured with. */
 export function reportAgentConfig(): {
   apify: boolean;
+  apifyMode: "x402" | "token" | "mock";
   pinata: boolean;
   ens: boolean;
   anthropic: boolean;
 } {
   return {
     apify: isApifyConfigured(),
+    apifyMode: apifyMode(),
     pinata: isPinataConfigured(),
     ens: isEnsWriterConfigured(),
     anthropic: Boolean(process.env.ANTHROPIC_API_KEY),

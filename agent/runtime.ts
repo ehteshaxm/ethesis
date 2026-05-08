@@ -42,7 +42,15 @@ async function main() {
   const cfg = reportAgentConfig();
   console.log("─── ETHesis agent runtime ───");
   console.log(`  Anthropic:    ${cfg.anthropic ? "configured" : "MOCK (no API key)"}`);
-  console.log(`  Apify:        ${cfg.apify ? "configured" : "MOCK (no token)"}`);
+  console.log(
+    `  Apify:        ${cfg.apifyMode}${
+      cfg.apifyMode === "x402"
+        ? ` — pays USDC on Base via x402 (Actor: ${process.env.APIFY_X402_ACTOR})`
+        : cfg.apifyMode === "token"
+          ? ` — Actor: ${process.env.APIFY_ACTOR_ID_OUTPUT_WATCHER}`
+          : ""
+    }`,
+  );
   console.log(`  Pinata:       ${cfg.pinata ? "configured" : "MOCK (no JWT)"}`);
   console.log(`  ENS writer:   ${cfg.ens ? "configured" : "skipped (no platform key)"}`);
   console.log(`  Cycle:        every ${CYCLE_INTERVAL_MS / 3600000}h per venture`);
