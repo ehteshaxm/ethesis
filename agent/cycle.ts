@@ -1,0 +1,172 @@
+// Per-venture cycle. Runs once per venture every CYCLE_INTERVAL_MS.
+//
+//   1. Read venture + milestones + sources from Neon
+//   2. Call the Apify Output Watcher Actor for the venture's sources
+//   3. Generate an attestation via Claude (with structured output)
+//   4. Sign with derived agent wallet
+//   5. Pin signed payload to IPFS via Pinata
+//   6. Write IPFS CID to ENS as `org.ethesis.attestation.{N}` text record
+//   7. Insert attestation row into Neon for the Pulse tab to read
+
+import { eq, desc } from "drizzle-orm";
+import { db, schema } from "./db";
+import {
+  callOutputWatcher,
+  isApifyConfigured,
+  type OutputWatcherSource,
+} from "./apify-client";
+import {
+  finalizeAttestation,
+  generateAttestationDraft,
+  type AttestationGeneratorInput,
+} from "./attestation";
+import { writeAttestationToEns, isEnsWriterConfigured } from "./ens-writer";
+import { isPinataConfigured } from "./ipfs";
+import { deriveAgentAccount, ventureSlug } from "./wallet";
+
+export interface CycleResult {
+  ventureEnsName: string;
+  agentEnsName: string;
+  ordinal: number;
+  attestationType: "verified" | "disputed" | "silence";
+  ipfsCid: string;
+  ensTxHash: string | null;
+  ensWritten: boolean;
+  ensSkipReason?: string;
+  observedOutputs: number;
+  durationMs: number;
+}
+
+export async function runCycleForVenture(
+  ventureEnsName: string,
+): Promise<CycleResult> {
+  const start = Date.now();
+
+  // ─── 1. Load venture + milestones + sources ───────────────────────
+  const venture = await db.query.ventures.findFirst({
+    where: eq(schema.ventures.ensName, ventureEnsName),
+  });
+  if (!venture) {
+    throw new Error(`No venture in DB matching ${ventureEnsName}`);
+  }
+  const slug = ventureSlug(ventureEnsName);
+  const agentEnsName = venture.agentEnsName ?? `auditor.${ventureEnsName}`;
+
+  const milestones = await db.query.milestones.findMany({
+    where: eq(schema.milestones.ventureId, venture.id),
+    orderBy: (m, { asc }) => asc(m.ordinal),
+  });
+
+  const sources = await db.query.connectedSources.findMany({
+    where: eq(schema.connectedSources.ventureId, venture.id),
+  });
+
+  // ─── 2. Apify Output Watcher ─────────────────────────────────────
+  const apifySources: OutputWatcherSource[] = sources.map((s) => ({
+    type: s.sourceType as OutputWatcherSource["type"],
+    identifier: s.identifier,
+    since: venture.agentLastSyncAt?.toISOString(),
+  }));
+
+  const apify = await callOutputWatcher({
+    sources: apifySources,
+    milestoneKeywords: milestones.flatMap((m) =>
+      Array.isArray(m.expectedOutputs)
+        ? (m.expectedOutputs as string[])
+        : [],
+    ),
+    ventureSlug: slug,
+  });
+
+  // ─── 3. Generate attestation via Claude ──────────────────────────
+  const attestationInput: AttestationGeneratorInput = {
+    ventureEnsName,
+    agentEnsName,
+    ventureMandate: venture.description,
+    milestones: milestones.map((m) => ({
+      ordinal: m.ordinal,
+      title: m.title,
+      successCriteria: m.successCriteria,
+      expectedOutputs: Array.isArray(m.expectedOutputs)
+        ? (m.expectedOutputs as string[])
+        : [],
+      deadlineInDays: Math.round(
+        (m.deadline.getTime() - Date.now()) / 86400000,
+      ),
+    })),
+    recentOutputs: apify.outputs,
+    recentClaims: [],
+  };
+  const draft = await generateAttestationDraft(attestationInput);
+
+  // ─── 4 + 5. Sign + pin to IPFS ───────────────────────────────────
+  const account = deriveAgentAccount(slug);
+  const { signed, ipfsCid } = await finalizeAttestation(draft, account, {
+    ventureEnsName,
+    agentEnsName,
+    observedOutputs: apify.outputs.length,
+  });
+
+  // ─── 6. Determine the next ordinal ──────────────────────────────
+  const last = await db.query.attestations.findFirst({
+    where: eq(schema.attestations.ventureId, venture.id),
+    orderBy: desc(schema.attestations.ordinal),
+  });
+  const ordinal = (last?.ordinal ?? 0) + 1;
+
+  // ─── 7. Write CID to ENS ─────────────────────────────────────────
+  const ensResult = await writeAttestationToEns({
+    agentEnsName,
+    ordinal,
+    ipfsCid,
+  });
+
+  // ─── 8. Persist to Neon ──────────────────────────────────────────
+  await db.insert(schema.attestations).values({
+    ventureId: venture.id,
+    ordinal,
+    type: signed.type,
+    milestoneOrdinal: signed.milestoneOrdinal ?? undefined,
+    summary: signed.summary,
+    evidence: signed.evidence,
+    knowledgeBaseCheck: signed.knowledgeBaseCheck ?? undefined,
+    confidence: signed.confidence,
+    signedBy: agentEnsName,
+    signature: signed.signature,
+    ipfsHash: ipfsCid,
+    ensTextRecordKey: ensResult.recordKey,
+  });
+
+  await db
+    .update(schema.ventures)
+    .set({ agentLastSyncAt: new Date() })
+    .where(eq(schema.ventures.id, venture.id));
+
+  return {
+    ventureEnsName,
+    agentEnsName,
+    ordinal,
+    attestationType: signed.type,
+    ipfsCid,
+    ensTxHash: ensResult.txHash,
+    ensWritten: ensResult.written,
+    ensSkipReason: ensResult.reason,
+    observedOutputs: apify.outputs.length,
+    durationMs: Date.now() - start,
+  };
+}
+
+/** Surface what the agent has and hasn't been configured with. */
+export function reportAgentConfig(): {
+  apify: boolean;
+  pinata: boolean;
+  ens: boolean;
+  anthropic: boolean;
+} {
+  return {
+    apify: isApifyConfigured(),
+    pinata: isPinataConfigured(),
+    ens: isEnsWriterConfigured(),
+    anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
+  };
+}
