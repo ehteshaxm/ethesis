@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface VentureTabsProps {
   ensName: string;
+  voteAlertCount?: number;
 }
 
 const TABS = [
@@ -16,7 +17,7 @@ const TABS = [
   { label: "Agent", path: "/agent" },
 ];
 
-export function VentureTabs({ ensName }: VentureTabsProps) {
+export function VentureTabs({ ensName, voteAlertCount = 0 }: VentureTabsProps) {
   const pathname = usePathname();
   const base = `/v/${ensName}`;
 
@@ -30,18 +31,27 @@ export function VentureTabs({ ensName }: VentureTabsProps) {
               t.path === ""
                 ? pathname === base || pathname === `${base}/`
                 : pathname.startsWith(href);
+            const showDot = t.label === "Vote" && voteAlertCount > 0;
             return (
               <li key={t.label}>
                 <Link
                   href={href}
                   className={cn(
-                    "inline-block px-3 py-3 text-sm transition-colors -mb-px border-b-2",
+                    "inline-flex items-center gap-1.5 px-3 py-3 text-sm transition-colors -mb-px border-b-2",
                     active
                       ? "text-ink border-ink font-medium"
                       : "text-ink-muted border-transparent hover:text-ink",
                   )}
                 >
                   {t.label}
+                  {showDot && (
+                    <span className="inline-flex items-center gap-0.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-accent animate-heartbeat" />
+                      <span className="font-mono text-[10px] text-accent-ink">
+                        {voteAlertCount}
+                      </span>
+                    </span>
+                  )}
                 </Link>
               </li>
             );
