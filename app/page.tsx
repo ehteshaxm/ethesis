@@ -1,6 +1,7 @@
 import { mockTickerItems, mockVentures } from "@/lib/mock-data";
 import { VentureCard } from "@/components/VentureCard";
 import { EnsPill } from "@/components/EnsPill";
+import { ConnectWallet } from "@/components/ConnectWallet";
 
 export default function Home() {
   const stageCounts = countByStage();
@@ -93,12 +94,7 @@ function TopBar() {
             placeholder="Search ventures…"
             className="hidden md:block w-56 rounded-md border border-border bg-surface px-3 py-1.5 text-sm placeholder:text-ink-subtle focus:outline-none focus:border-border-strong"
           />
-          <button
-            type="button"
-            className="rounded-md border border-border-strong bg-surface px-3 py-1.5 text-sm font-medium text-ink hover:bg-surface-2 transition-colors"
-          >
-            Connect
-          </button>
+          <ConnectWallet />
         </div>
       </div>
     </header>
