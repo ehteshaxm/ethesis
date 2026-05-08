@@ -5,6 +5,7 @@ import { useAccount } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { ArrowDown, ArrowUp, Check, Loader2, Wallet } from "lucide-react";
 import type { MockMarket, MarketOutcome } from "@/lib/mock-decision-markets";
+import { umia } from "@/lib/umia";
 import { cn, formatEth } from "@/lib/utils";
 
 type Phase = "idle" | "confirming" | "submitting" | "success";
@@ -49,9 +50,16 @@ export function MarketTradePanel({ market }: Props) {
     if (!selected || !validAmount || !address) return;
 
     setPhase("confirming");
-    await wait(800);
+    await wait(700);
     setPhase("submitting");
-    await wait(1300);
+
+    const result = await umia.tradeOutcome({
+      marketId: market.id,
+      ventureEnsName: market.ventureEnsName,
+      outcomeName: selected,
+      amountEth: amountNum,
+      traderAddress: address,
+    });
 
     // Optimistic TWAP nudge based on the outcome we bought.
     const nudge = Math.min(0.05, amountNum / 2);
@@ -78,13 +86,11 @@ export function MarketTradePanel({ market }: Props) {
     const normed = updated.map((o) => ({ ...o, twap: o.twap / sum }));
     setOutcomes(normed);
 
-    const matched = normed.find((o) => o.name === selected)!;
-    const shares = Math.round(amountNum / matched.twap);
     const newPosition: Position = {
       outcomeName: selected,
       amountEth: amountNum,
-      shares,
-      txHash: mockTxHash(`${address}-${selected}-${Date.now()}`),
+      shares: result.sharesAcquired,
+      txHash: result.txHash,
     };
     setPositions((p) => [newPosition, ...p]);
     setPhase("success");
@@ -406,17 +412,4 @@ function clamp01(n: number): number {
 
 function wait(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
-}
-
-function mockTxHash(seed: string): string {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) {
-    h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  let hex = "";
-  for (let i = 0; i < 8; i++) {
-    h = (h * 1664525 + 1013904223) >>> 0;
-    hex += h.toString(16).padStart(8, "0");
-  }
-  return `0x${hex.slice(0, 64)}`;
 }

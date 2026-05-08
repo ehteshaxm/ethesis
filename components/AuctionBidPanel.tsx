@@ -6,6 +6,7 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Check, Loader2, Wallet } from "lucide-react";
 import type { MockVenture } from "@/lib/mock-data";
 import type { MockBid } from "@/lib/mock-venture-detail";
+import { umia } from "@/lib/umia";
 import { cn, formatEth, identiconColors, shortAddress } from "@/lib/utils";
 
 type Phase = "idle" | "confirming" | "submitting" | "success";
@@ -47,16 +48,23 @@ export function AuctionBidPanel({ venture, initialBids, tokenSymbol }: Props) {
     if (!validAmount || !address) return;
 
     setPhase("confirming");
-    await wait(900);
+    // The "confirming" phase is the user signing in their wallet — UI-only.
+    await wait(800);
     setPhase("submitting");
-    await wait(1400);
+
+    const result = await umia.placeBid({
+      ventureEnsName: venture.ensName,
+      bidderAddress: address,
+      amountEth: amountNum,
+      impliedPriceEth: price,
+    });
 
     const newBid: MockBid = {
       bidderAddress: address,
       amountEth: amountNum,
-      tokensReceived,
+      tokensReceived: result.tokensReceived,
       placedAtMinutesAgo: 0,
-      txHash: mockTxHash(address, amountNum),
+      txHash: result.txHash,
     };
 
     setBids((prev) => [newBid, ...prev]);
@@ -384,18 +392,4 @@ function BidRow({ bid }: { bid: MockBid }) {
 
 function wait(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
-
-function mockTxHash(address: string, amount: number): string {
-  const seed = `${address}-${amount}-${Date.now()}`;
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) {
-    h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  let hex = "";
-  for (let i = 0; i < 8; i++) {
-    h = (h * 1664525 + 1013904223) >>> 0;
-    hex += h.toString(16).padStart(8, "0");
-  }
-  return `0x${hex.slice(0, 64)}`;
 }

@@ -18,6 +18,7 @@ import type {
   MockMarket,
   MarketType,
 } from "@/lib/mock-decision-markets";
+import { umia } from "@/lib/umia";
 import { MarketCard } from "./MarketCard";
 
 type ActionKey = "budget_extension" | "pivot" | "liquidation" | "spinoff" | "community";
@@ -111,11 +112,10 @@ export function OwnerActionPanel({ ventureEns, ownerEns, agentEns }: Props) {
       return;
     }
     setPhase("confirming");
-    await wait(800);
+    await wait(700);
     setPhase("submitting");
-    await wait(1300);
 
-    const newMarket = buildMarket({
+    const draft = buildMarket({
       action,
       isCommunity,
       ventureEns,
@@ -124,6 +124,26 @@ export function OwnerActionPanel({ ventureEns, ownerEns, agentEns }: Props) {
       form,
       submitterAddress: address ?? "0x0",
     });
+
+    const result = await umia.triggerMarket({
+      ventureEnsName: ventureEns,
+      triggeredByAddress: address ?? "0x0",
+      marketType: draft.marketType,
+      proposalDescription: draft.proposalDescription,
+      reason: draft.triggerReason,
+      outcomes: draft.outcomes.map((o) => ({ name: o.name })),
+      closesAt: draft.closesAt,
+      thresholdRequired: draft.thresholdRequired,
+    });
+
+    const newMarket: MockMarket = {
+      ...draft,
+      id: result.marketId,
+      supportingEvidence: [
+        ...draft.supportingEvidence,
+        { label: `tx: ${result.txHash.slice(0, 10)}…${result.txHash.slice(-8)}` },
+      ],
+    };
     setPendingMarkets((p) => [newMarket, ...p]);
     setPhase("success");
     await wait(1100);
