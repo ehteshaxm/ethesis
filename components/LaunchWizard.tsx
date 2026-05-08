@@ -19,6 +19,7 @@ import {
 import { umia } from "@/lib/umia";
 import { cn, formatEth, identiconColors } from "@/lib/utils";
 import { LaunchAnimation } from "./LaunchAnimation";
+import { UmiaCliHandoff } from "./UmiaCliHandoff";
 
 // ─── Draft model ────────────────────────────────────────────────────
 
@@ -218,7 +219,12 @@ export function LaunchWizard() {
   if (phase === "done" && submitResult) {
     return (
       <FullScreen>
-        <SuccessCard draft={draft} result={submitResult} />
+        <SuccessCard
+          draft={draft}
+          result={submitResult}
+          ownerEns={ownerEns!}
+          ownerAddress={address!}
+        />
       </FullScreen>
     );
   }
@@ -1216,6 +1222,8 @@ function ReviewCard({
 function SuccessCard({
   draft,
   result,
+  ownerEns,
+  ownerAddress,
 }: {
   draft: Draft;
   result: {
@@ -1225,11 +1233,13 @@ function SuccessCard({
     txHash: string;
     ensSubname: string;
   };
+  ownerEns: string;
+  ownerAddress: string;
 }) {
   const [a, b] = identiconColors(result.ensSubname);
   const symbol = draft.tokenSymbol || draft.title.slice(0, 4).toUpperCase();
   return (
-    <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-8">
+    <div className="w-full max-w-2xl rounded-2xl border border-border bg-surface p-8">
       <div className="flex items-center gap-3">
         <span
           className="h-12 w-12 rounded-xl"
@@ -1271,6 +1281,39 @@ function SuccessCard({
         <KV label="Tx" value={shorten(result.txHash, 6)} mono />
       </div>
 
+      <div className="mt-5">
+        <UmiaCliHandoff
+          input={{
+            title: draft.title,
+            description: draft.description,
+            category: draft.category,
+            tokenSymbol: draft.tokenSymbol || symbol,
+            tokenSupply: draft.tokenSupply,
+            auctionDurationHours: draft.auctionDurationHours,
+            activationThresholdEth: draft.activationThresholdEth,
+            monthlyAllowanceEth: draft.monthlyAllowanceEth,
+            autoLiquidateEnabled: draft.autoLiquidateEnabled,
+            autoLiquidateProgressThreshold:
+              draft.autoLiquidateProgressThreshold,
+            autoLiquidateDays: draft.autoLiquidateDays,
+            autoPivotEnabled: draft.autoPivotEnabled,
+            sources: draft.sources.map((s) => ({
+              type: s.type,
+              identifier: s.identifier,
+            })),
+            milestones: draft.milestones.map((m) => ({
+              title: m.title,
+              successCriteria: m.successCriteria,
+              expectedOutputs: m.expectedOutputs,
+              deadlineDays: m.deadlineDays,
+            })),
+            ownerEns,
+            ownerAddress,
+            ensSubname: result.ensSubname,
+          }}
+        />
+      </div>
+
       <div className="mt-6 flex items-center gap-3">
         <Link
           href="/"
@@ -1287,8 +1330,8 @@ function SuccessCard({
       </div>
 
       <p className="mt-4 text-[10px] text-ink-subtle text-center">
-        Mocked end-to-end behind lib/umia.ts. Once Umia ships an SDK, the same
-        wizard talks to mainnet.
+        Wizard inputs are mocked through lib/umia.ts. Drop them into the Umia
+        CLI above to formalise the SPC and deploy contracts onchain.
       </p>
     </div>
   );
