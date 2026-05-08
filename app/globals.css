@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  /* Typography */
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Surfaces — grayscale spine */
+  --color-canvas: #fafaf9;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f4f5;
+  --color-border: #e4e4e7;
+  --color-border-strong: #d4d4d8;
+  --color-ink: #0a0a0a;
+  --color-ink-muted: #52525b;
+  --color-ink-subtle: #a1a1aa;
+
+  /* Semantic — verification & dispute */
+  --color-verify: #10b981;
+  --color-verify-soft: #d1fae5;
+  --color-verify-ink: #047857;
+
+  --color-dispute: #f59e0b;
+  --color-dispute-soft: #fef3c7;
+  --color-dispute-ink: #b45309;
+
+  /* Brand accent — deep indigo */
+  --color-accent: #3b3df0;
+  --color-accent-soft: #e0e0ff;
+  --color-accent-ink: #2a2cb8;
+
+  /* Wound-down sepia */
+  --color-sepia: #d6cfc1;
+  --color-sepia-ink: #6b5e4a;
+}
+
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01", "ss03";
+}
+
+/* Subtle heartbeat for live pulse dots */
+@keyframes heartbeat {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 2.4s ease-in-out infinite;
+}
