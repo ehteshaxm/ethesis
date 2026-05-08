@@ -16,8 +16,7 @@
 // the cycle is mode-agnostic.
 
 import { ApifyClient } from "apify-client";
-import { withPaymentInterceptor } from "x402-fetch";
-import { privateKeyToAccount } from "viem/accounts";
+import { wrapFetchWithPayment, createSigner } from "x402-fetch";
 import type { Hex } from "viem";
 
 export interface OutputWatcherSource {
@@ -101,8 +100,11 @@ async function callViaX402(
   actor: string,
   agentPrivateKey: Hex,
 ): Promise<OutputWatcherResult> {
-  const account = privateKeyToAccount(agentPrivateKey);
-  const fetchWithPay = withPaymentInterceptor(fetch, account);
+  // Apify x402 settles on Base mainnet. createSigner builds the right
+  // Signer for that network from a raw private key.
+  const network = process.env.X402_NETWORK ?? "base";
+  const signer = await createSigner(network, agentPrivateKey);
+  const fetchWithPay = wrapFetchWithPayment(fetch, signer);
 
   const slug = actor.replace("/", "~");
   const url = `${APIFY_API_BASE}/acts/${slug}/run-sync-get-dataset-items`;

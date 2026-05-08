@@ -11,6 +11,7 @@ config({ path: ".env" });
 config({ path: ".env.local", override: true });
 
 import { runCycleForVenture, reportAgentConfig } from "./cycle";
+import { isCtrngConfigured } from "./ctrng";
 
 async function main() {
   const ensName = process.argv[2];
@@ -25,6 +26,9 @@ async function main() {
   console.log(`  Apify:      ${cfg.apify ? "configured" : "MOCK"}`);
   console.log(`  Pinata:     ${cfg.pinata ? "configured" : "MOCK"}`);
   console.log(`  ENS writer: ${cfg.ens ? "configured" : "skipped"}`);
+  console.log(
+    `  cTRNG:      ${isCtrngConfigured() ? "live API (Orbitport credentials)" : "IPFS beacon fallback (no creds)"}`,
+  );
   console.log("");
 
   const result = await runCycleForVenture(ensName);
@@ -38,10 +42,19 @@ async function main() {
     `  Apify mode:       ${result.apifyMode}  (cost: $${result.apifyCostUsd.toFixed(4)})`,
   );
   console.log(`  IPFS CID:         ${result.ipfsCid}`);
+  console.log(
+    `  Cosmic nonce:     ${result.cosmicNonceSource ?? "unavailable"}`,
+  );
   if (result.ensWritten) {
     console.log(`  ENS write tx:     ${result.ensTxHash}`);
   } else {
     console.log(`  ENS write:        skipped — ${result.ensSkipReason}`);
+  }
+  if (result.trigger.triggered) {
+    console.log("");
+    console.log(
+      `  ⚠ Market triggered: ${result.trigger.marketType}\n    reason: ${result.trigger.reason}\n    market id: ${result.trigger.marketId}`,
+    );
   }
 }
 

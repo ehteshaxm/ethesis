@@ -11,6 +11,7 @@ import type { PrivateKeyAccount } from "viem/accounts";
 import { callClaudeStructured, ATTESTATION_MODEL } from "./anthropic-client";
 import type { ScrapedOutput } from "./apify-client";
 import { pinJsonToIpfs } from "./ipfs";
+import { fetchCosmicNonce, type CosmicNonce } from "./ctrng";
 
 export type AttestationVariant = "verified" | "disputed" | "silence";
 
@@ -31,6 +32,14 @@ export interface SignedAttestation extends AttestationDraft {
   signature: Hex;
   signedAt: string;
   model: string;
+  /**
+   * Cosmic-randomness nonce from SpaceComputer's cTRNG. Bound into the
+   * canonical signing payload so the agent's signature commits to the
+   * specific cosmic-random value present at signing time. Null only if
+   * the cTRNG fetch failed (rare); presence indicates space-grade entropy
+   * provenance.
+   */
+  cosmicNonce: CosmicNonce | null;
 }
 
 export interface AttestationGeneratorInput {
@@ -111,8 +120,14 @@ export async function finalizeAttestation(
     observedOutputs: number;
   },
 ): Promise<{ signed: SignedAttestation; ipfsCid: string }> {
-  // Canonical message: stable ordering + ENS scope so signatures are
-  // verifiable later by anyone who reads the attestation off IPFS.
+  // Pull a cosmic-random nonce from SpaceComputer's cTRNG. Bound into
+  // the canonical message below so the EOA signature commits to it.
+  const cosmicNonce = await fetchCosmicNonce();
+
+  // Canonical message: stable ordering + ENS scope + cosmic nonce so
+  // signatures are verifiable later by anyone who reads the attestation
+  // off IPFS, and so the same agent can never re-sign the same payload
+  // twice (the nonce changes every cycle).
   const canonical = JSON.stringify({
     type: draft.type,
     milestoneOrdinal: draft.milestoneOrdinal,
@@ -122,6 +137,9 @@ export async function finalizeAttestation(
     confidence: draft.confidence,
     ventureEnsName: context.ventureEnsName,
     agentEnsName: context.agentEnsName,
+    cosmicNonce: cosmicNonce
+      ? { value: cosmicNonce.value, source: cosmicNonce.source }
+      : null,
   });
   const messageHash = hashMessage(canonical);
   const signature = await account.signMessage({ message: { raw: messageHash } });
@@ -135,6 +153,7 @@ export async function finalizeAttestation(
     signature,
     signedAt: new Date().toISOString(),
     model: ATTESTATION_MODEL,
+    cosmicNonce,
   };
 
   const ipfsCid = await pinJsonToIpfs(

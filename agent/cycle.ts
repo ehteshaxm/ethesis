@@ -25,6 +25,8 @@ import {
 import { writeAttestationToEns, isEnsWriterConfigured } from "./ens-writer";
 import { isPinataConfigured } from "./ipfs";
 import { deriveAgentAccount, ventureSlug } from "./wallet";
+import { checkAndTrigger, type TriggerResult } from "./triggers";
+import { isCtrngConfigured } from "./ctrng";
 
 export interface CycleResult {
   ventureEnsName: string;
@@ -38,6 +40,8 @@ export interface CycleResult {
   observedOutputs: number;
   apifyMode: "x402" | "token" | "mock";
   apifyCostUsd: number;
+  cosmicNonceSource?: string;
+  trigger: TriggerResult;
   durationMs: number;
 }
 
@@ -183,6 +187,21 @@ export async function runCycleForVenture(
     txHash: ensResult.txHash ?? undefined,
   });
 
+  // ─── 9. Run market triggers (autonomous Decision Markets) ───────
+  const trigger = await checkAndTrigger({
+    ventureId: venture.id,
+    ventureEnsName,
+    agentEnsName,
+    agentAddress: account.address,
+    currentProgress: venture.progressScore,
+    rules: {
+      autoLiquidateEnabled: venture.autoLiquidateEnabled,
+      autoLiquidateProgressThreshold: venture.autoLiquidateProgressThreshold,
+      autoLiquidateDays: venture.autoLiquidateDays,
+      autoPivotEnabled: venture.autoPivotEnabled,
+    },
+  });
+
   await db
     .update(schema.ventures)
     .set({ agentLastSyncAt: new Date() })
@@ -200,6 +219,8 @@ export async function runCycleForVenture(
     observedOutputs: apify.outputs.length,
     apifyMode: apify.mode,
     apifyCostUsd: apify.costUsd,
+    cosmicNonceSource: signed.cosmicNonce?.source,
+    trigger,
     durationMs: Date.now() - start,
   };
 }
@@ -211,6 +232,7 @@ export function reportAgentConfig(): {
   pinata: boolean;
   ens: boolean;
   anthropic: boolean;
+  ctrng: boolean;
 } {
   return {
     apify: isApifyConfigured(),
@@ -218,5 +240,6 @@ export function reportAgentConfig(): {
     pinata: isPinataConfigured(),
     ens: isEnsWriterConfigured(),
     anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
+    ctrng: isCtrngConfigured(),
   };
 }

@@ -1,12 +1,32 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Sparkles } from "lucide-react";
 import { getVentureByEns } from "@/lib/mock-venture-detail";
-import { getAttestationsForVenture } from "@/lib/mock-attestations";
+import {
+  getAttestationsForVenture,
+  type AttestationVariant,
+} from "@/lib/mock-attestations";
+import { getAttestationsForVentureFromDb } from "@/lib/db-reads";
 import { AttestationCard } from "@/components/AttestationCard";
 
 interface Props {
   params: Promise<{ ensName: string }>;
+}
+
+interface UnifiedAttestation {
+  id: string;
+  variant: AttestationVariant;
+  agentEnsName: string;
+  postedHoursAgo: number;
+  title: string;
+  body: string;
+  milestoneOrdinal?: number;
+  evidence?: { label: string }[];
+  knowledgeBaseNotes?: string[];
+  ipfsCid: string;
+  ensTextRecordKey?: string;
+  /** Real attestations from the agent runtime are flagged for the badge. */
+  source: "agent" | "seeded";
 }
 
 export default async function PulseTab({ params }: Props) {
@@ -15,7 +35,59 @@ export default async function PulseTab({ params }: Props) {
   const venture = getVentureByEns(decoded);
   if (!venture) notFound();
 
-  const attestations = getAttestationsForVenture(decoded);
+  // Real DB attestations posted by the agent runtime, prepended.
+  const dbRows = await getAttestationsForVentureFromDb(decoded);
+  const renderedAt = new Date().getTime();
+  const real: UnifiedAttestation[] = (dbRows ?? []).map((r) => {
+    const hoursAgo =
+      (renderedAt - new Date(r.createdAt).getTime()) / (3600 * 1000);
+    return {
+      id: `db-${r.ordinal}`,
+      variant: r.type,
+      agentEnsName: r.signedBy,
+      postedHoursAgo: Math.max(0, hoursAgo),
+      title:
+        r.type === "verified"
+          ? `Milestone ${r.milestoneOrdinal ?? "—"} progress verified`
+          : r.type === "disputed"
+            ? "Claim disputed"
+            : "Silence — no activity since last cycle",
+      body: r.summary,
+      milestoneOrdinal: r.milestoneOrdinal ?? undefined,
+      evidence: r.evidence.map((e) => ({
+        label: `${e.type}: ${e.value}`,
+      })),
+      knowledgeBaseNotes: r.knowledgeBaseCheck
+        ? [r.knowledgeBaseCheck.notes]
+        : undefined,
+      ipfsCid: r.ipfsHash,
+      ensTextRecordKey: r.ensTextRecordKey,
+      source: "agent",
+    };
+  });
+
+  // Seeded mocks for the demo ventures.
+  const seeded: UnifiedAttestation[] = getAttestationsForVenture(decoded).map(
+    (a) => ({
+      id: a.id,
+      variant: a.variant,
+      agentEnsName: a.agentEnsName,
+      postedHoursAgo: a.postedHoursAgo,
+      title: a.title,
+      body: a.body,
+      milestoneOrdinal: a.milestoneOrdinal,
+      evidence: a.evidence,
+      knowledgeBaseNotes: a.knowledgeBaseNotes,
+      ipfsCid: a.ipfsCid,
+      ensTextRecordKey: a.ensTextRecordKey,
+      source: "seeded",
+    }),
+  );
+
+  // Real attestations sort to the top (lowest hours-ago); seeded fills the rest.
+  const attestations: UnifiedAttestation[] = [...real, ...seeded].sort(
+    (a, b) => a.postedHoursAgo - b.postedHoursAgo,
+  );
 
   if (venture.stage === "idea" || venture.stage === "auction") {
     return (
@@ -80,13 +152,25 @@ export default async function PulseTab({ params }: Props) {
         </div>
       </header>
 
+      {real.length > 0 && (
+        <div className="rounded-md border border-accent/30 bg-accent/5 px-4 py-3 flex items-center gap-2 text-xs text-accent-ink">
+          <Sparkles className="h-3.5 w-3.5" />
+          <span>
+            <span className="font-mono font-medium">{real.length}</span>{" "}
+            attestation{real.length === 1 ? "" : "s"} posted live by the agent
+            runtime — signed with cosmic-random nonces from SpaceComputer cTRNG,
+            pinned to IPFS, anchored to ENS.
+          </span>
+        </div>
+      )}
+
       <ul className="space-y-3">
         {attestations.map((a) => (
           <li key={a.id}>
             <AttestationCard
               variant={a.variant}
               agentEns={a.agentEnsName}
-              timeAgo={formatRelative(a.postedHoursAgo)}
+              timeAgo={`${formatRelative(a.postedHoursAgo)}${a.source === "agent" ? " · live" : ""}`}
               title={
                 a.milestoneOrdinal !== undefined
                   ? `${a.title} · M${a.milestoneOrdinal}`
@@ -147,7 +231,7 @@ function CountChip({
 }
 
 function countByVariant(
-  list: { variant: "verified" | "disputed" | "silence" }[],
+  list: { variant: AttestationVariant }[],
 ) {
   return list.reduce(
     (acc, a) => {
