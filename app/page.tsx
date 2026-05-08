@@ -1,14 +1,15 @@
 import { mockTickerItems, mockVentures } from "@/lib/mock-data";
 import { VentureCard } from "@/components/VentureCard";
 import { EnsPill } from "@/components/EnsPill";
-import { ConnectWallet } from "@/components/ConnectWallet";
+import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 
 export default function Home() {
   const stageCounts = countByStage();
 
   return (
     <main className="flex-1">
-      <TopBar />
+      <SiteHeader />
 
       <section className="mx-auto max-w-6xl px-6 pt-16 pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12 items-start">
@@ -64,40 +65,8 @@ export default function Home() {
         </div>
       </section>
 
-      <Footer />
+      <SiteFooter />
     </main>
-  );
-}
-
-function TopBar() {
-  return (
-    <header className="sticky top-0 z-30 border-b border-border bg-canvas/85 backdrop-blur-md">
-      <div className="mx-auto max-w-6xl px-6 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <span className="font-mono font-semibold tracking-tight text-ink">
-            ethesis<span className="text-accent">.</span>
-          </span>
-          <nav className="hidden md:flex items-center gap-5 text-sm text-ink-muted">
-            <a className="hover:text-ink transition-colors" href="#">
-              Discover
-            </a>
-            <a className="hover:text-ink transition-colors" href="#">
-              Brain
-            </a>
-            <a className="hover:text-ink transition-colors" href="#">
-              Launch
-            </a>
-          </nav>
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            placeholder="Search ventures…"
-            className="hidden md:block w-56 rounded-md border border-border bg-surface px-3 py-1.5 text-sm placeholder:text-ink-subtle focus:outline-none focus:border-border-strong"
-          />
-          <ConnectWallet />
-        </div>
-      </div>
-    </header>
   );
 }
 
@@ -151,38 +120,6 @@ function Ticker() {
         ))}
       </ul>
     </div>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="border-t border-border bg-surface mt-auto">
-      <div className="mx-auto max-w-6xl px-6 py-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs text-ink-muted">
-        <p className="font-mono">Verified research, funded onchain.</p>
-        <ul className="flex items-center gap-5">
-          <li>
-            <a className="hover:text-ink transition-colors" href="#">
-              Docs
-            </a>
-          </li>
-          <li>
-            <a className="hover:text-ink transition-colors" href="#">
-              GitHub
-            </a>
-          </li>
-          <li>
-            <a className="hover:text-ink transition-colors" href="#">
-              Apify Store
-            </a>
-          </li>
-          <li>
-            <a className="hover:text-ink transition-colors" href="#">
-              Status
-            </a>
-          </li>
-        </ul>
-      </div>
-    </footer>
   );
 }
 
