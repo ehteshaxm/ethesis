@@ -381,13 +381,16 @@ export async function provisionVentureAndAgent(
 
   // ─── TX4: agent text records ────────────────────────────────
   const agentCapabilities = JSON.stringify({
-    runtime: "openclaw",
-    model: "claude-opus-4-7",
+    runtime: "ethesis-agent",
+    runtimeStyle: "openclaw-inspired",
+    model: "claude-sonnet-4-6",
     role: "verification",
     watches: tryParseSources(input.sources),
     outputs: ["verified", "disputed", "silence"],
     cycle: "every 4 hours",
     parentVenture: ventureEnsName,
+    tee: "phala-tdx",
+    entropy: "spacecomputer-ctrng",
   });
 
   const agentRecords: Array<{ key: string; value: string }> = [
@@ -398,7 +401,7 @@ export async function provisionVentureAndAgent(
     { key: k.PLATFORM, value: "ethesis" },
     { key: k.AGENT_WALLET, value: agent.address },
     { key: "org.ethesis.parent-venture", value: ventureEnsName },
-    { key: "org.ethesis.runtime", value: "openclaw" },
+    { key: "org.ethesis.runtime", value: "ethesis-agent" },
     { key: "org.ethesis.capabilities", value: agentCapabilities },
   ];
 

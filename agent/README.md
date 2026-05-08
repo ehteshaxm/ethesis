@@ -1,6 +1,8 @@
 # ETHesis agent runtime
 
-OpenClaw-style verification agent. One agent per venture — runs continuously, watches the venture's connected sources via Apify, generates signed attestations via Claude, pins them to IPFS, and writes the IPFS CIDs to the agent's ENS text records.
+Custom verification agent — OpenClaw-inspired in shape (cron-driven loop, per-agent isolation, tools-via-modules) but not using the OpenClaw library, which is a global-CLI personal-assistant daemon and isn't embeddable inside another Node.js process. We chose a custom runtime because the personal-assistant features OpenClaw is built around (multi-channel inbox, Slack/Telegram/Discord, voice wake mode) don't apply to our headless verification use case — we just need a cron loop calling Claude + Apify + IPFS + ENS.
+
+One agent per venture — runs continuously, watches the venture's connected sources via Apify, generates signed attestations via Claude, pins them to IPFS, writes the IPFS CIDs to the agent's ENS text records, and (when running in a Phala CVM) binds a TDX quote to each attestation.
 
 ## Run modes
 
