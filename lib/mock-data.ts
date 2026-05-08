@@ -239,6 +239,72 @@ export function getMockVenture(ensName: string): MockVenture | undefined {
   return mockVentures.find((v) => v.ensName === ensName);
 }
 
+/**
+ * Convert a live ENS-resolved venture (from `lib/ens-resolve.ts`) into the
+ * shape components consume. Defaults are filled in for fields ENS doesn't
+ * carry — those are display-only and the user-launched venture won't have
+ * them yet (e.g. no bids placed → bidderCount=0).
+ */
+export function ventureFromEnsRecords(input: {
+  ensName: string;
+  pitch: string | null;
+  description: string | null;
+  category: string | null;
+  tokenSymbol: string | null;
+  activationThresholdEth: number | null;
+  stage: string | null;
+  ownerAddress: string | null;
+}): MockVenture {
+  const labelParts = input.ensName.split(".");
+  const slug = labelParts[0] ?? input.ensName;
+  const parent = labelParts.slice(1).join(".") || "";
+  const validCategory: Category = (
+    [
+      "ml",
+      "crypto",
+      "climate",
+      "math",
+      "oss",
+      "security",
+      "other",
+    ] as const
+  ).includes((input.category ?? "other") as Category)
+    ? ((input.category ?? "other") as Category)
+    : "other";
+  const stage: Stage = (
+    ["idea", "auction", "live", "wound_down"] as const
+  ).includes((input.stage ?? "auction") as Stage)
+    ? ((input.stage ?? "auction") as Stage)
+    : "auction";
+
+  return {
+    ensName: input.ensName,
+    title: input.pitch ?? humanizeSlug(slug),
+    pitch: input.pitch ?? "",
+    description: input.description ?? "",
+    category: validCategory,
+    ownerEns: parent,
+    stage,
+    status: "new",
+    promiseScore: undefined,
+    progressScore: undefined,
+    activationThresholdEth: input.activationThresholdEth ?? 0.5,
+    treasuryProgressEth: 0,
+    bidderCount: 0,
+    impliedPriceEth: 0.005,
+    auctionEndsAt: new Date(Date.now() + 48 * 3600 * 1000),
+    pulse: Array(14).fill("none") as PulseDay[],
+    isNew: true,
+  };
+}
+
+function humanizeSlug(slug: string): string {
+  return slug
+    .split("-")
+    .map((p) => p[0]?.toUpperCase() + p.slice(1))
+    .join(" ");
+}
+
 /** Live attestation ticker (right-side of homepage hero). */
 export const mockTickerItems = [
   {
