@@ -24,7 +24,7 @@ async function main() {
   console.log(`─── Single cycle: ${ensName} ───`);
   console.log(`  Anthropic:  ${cfg.anthropic ? "configured" : "MOCK"}`);
   console.log(`  Apify:      ${cfg.apify ? "configured" : "MOCK"}`);
-  console.log(`  Pinata:     ${cfg.pinata ? "configured" : "MOCK"}`);
+  console.log(`  Swarm:      ${cfg.swarm ? `bzz ${process.env.SWARM_BEE_URL ?? "https://bzz.limo"}` : "MOCK"}`);
   console.log(`  ENS writer: ${cfg.ens ? "configured" : "skipped"}`);
   console.log(
     `  cTRNG:      ${isCtrngConfigured() ? "live API (Orbitport credentials)" : "IPFS beacon fallback (no creds)"}`,
@@ -41,7 +41,18 @@ async function main() {
   console.log(
     `  Apify mode:       ${result.apifyMode}  (cost: $${result.apifyCostUsd.toFixed(4)})`,
   );
-  console.log(`  IPFS CID:         ${result.ipfsCid}`);
+  if (result.apifyPaymentTxHash) {
+    console.log(
+      `  x402 settled:     ${result.apifyPaymentTxHash} (${result.apifyPaymentNetwork ?? "base"})`,
+    );
+    console.log(
+      `                    https://basescan.org/tx/${result.apifyPaymentTxHash}`,
+    );
+  }
+  console.log(`  Swarm ref:        ${result.swarmReference}`);
+  console.log(
+    `                    https://bzz.limo/bytes/${result.swarmReference}`,
+  );
   console.log(
     `  Cosmic nonce:     ${result.cosmicNonceSource ?? "unavailable"}`,
   );

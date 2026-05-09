@@ -112,19 +112,47 @@ export function AuctionBidPanel({ venture, initialBids, tokenSymbol }: Props) {
     await wait(800);
     setPhase("submitting");
 
-    const result = await umia.placeBid({
-      ventureEnsName: venture.ensName,
-      bidderAddress: address,
-      amountEth: amountNum,
-      impliedPriceEth: price,
-    });
+    // Persist via the API route so the bid survives a refresh and the
+    // venture's treasury actually moves. Falls back to the legacy umia
+    // mock if the route 404s for any reason.
+    let txHash: string;
+    let tokensReceivedFromApi: number;
+    try {
+      const res = await fetch("/api/auction/place-bid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ventureEnsName: venture.ensName,
+          bidderAddress: address,
+          amountUsdc: amountNum,
+          impliedPriceEth: price,
+        }),
+      });
+      if (!res.ok) throw new Error(`bid ${res.status}`);
+      const json = (await res.json()) as {
+        txHash: string;
+        tokensReceived: number;
+      };
+      txHash = json.txHash;
+      tokensReceivedFromApi = json.tokensReceived;
+    } catch (err) {
+      console.warn("[bid] route failed, using umia mock:", err);
+      const result = await umia.placeBid({
+        ventureEnsName: venture.ensName,
+        bidderAddress: address,
+        amountEth: amountNum,
+        impliedPriceEth: price,
+      });
+      txHash = result.txHash;
+      tokensReceivedFromApi = result.tokensReceived;
+    }
 
     const newBid: MockBid = {
       bidderAddress: address,
       amountEth: amountNum,
-      tokensReceived: result.tokensReceived,
+      tokensReceived: tokensReceivedFromApi,
       placedAtMinutesAgo: 0,
-      txHash: result.txHash,
+      txHash,
     };
 
     setBids((prev) => [newBid, ...prev]);

@@ -13,7 +13,7 @@ import { keccak256, toBytes, hashMessage, type Hex } from "viem";
 import { db, schema } from "./db";
 import { callWebSearch } from "./apify-client";
 import { callClaudeStructuredWithProof, ATTESTATION_MODEL } from "./anthropic-client";
-import { pinJsonToIpfs } from "./ipfs";
+import { swarmUploadJson } from "@/lib/swarm";
 import { fetchCosmicNonce } from "./ctrng";
 import { deriveAgentAccount, ventureSlug } from "./wallet";
 import { emitTeeEvent } from "./tee";
@@ -229,10 +229,8 @@ Evaluate this proposal. Score novelty, feasibility, and impact 0-100. Identify a
     sourcifyOutputsObserved: sourcifyOutputs.length,
   };
 
-  const ipfsCid = await pinJsonToIpfs(
-    `ethesis-proposal-eval-${ventureEnsName}`,
-    signedPayload,
-  );
+  const swarmUpload = await swarmUploadJson(signedPayload);
+  const ipfsCid = swarmUpload.reference;
 
   // ─── 5. Persist scores + transition stage ────────────────────────
   await db

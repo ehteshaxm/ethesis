@@ -1,21 +1,27 @@
-import { mockTickerItems, mockVentures } from "@/lib/mock-data";
+import { mockTickerItems, mockVentures, type MockVenture } from "@/lib/mock-data";
 import { formatUsdc } from "@/lib/utils";
 import { VentureCard } from "@/components/VentureCard";
 import { EnsPill } from "@/components/EnsPill";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { BgParticles } from "@/components/BgParticles";
+import { getLiveVenturesFromDb } from "@/lib/db-reads";
 
-export default function Home() {
-  const stageCounts = countByStage();
-  const liveCount = mockVentures.filter((v) => v.stage === "live").length;
-  const tvlEth = mockVentures.reduce(
+export default async function Home() {
+  // Merge user-launched ventures (from Neon) with the seeded demo set.
+  // DB ventures take precedence on ensName collisions and sort to the top.
+  const dbVentures = await getLiveVenturesFromDb();
+  const ventures: MockVenture[] = mergeVentures(dbVentures, mockVentures);
+
+  const stageCounts = countByStageOf(ventures);
+  const liveCount = ventures.filter((v) => v.stage === "live").length;
+  const tvlEth = ventures.reduce(
     (sum, v) => sum + (v.treasuryBalanceEth ?? 0),
     0,
   );
   const tvlDisplay = formatUsdc(tvlEth);
-  const attestationsThisWeek = mockVentures.length * 7;
-  const verifiedLast24h = mockVentures.reduce(
+  const attestationsThisWeek = ventures.length * 7;
+  const verifiedLast24h = ventures.reduce(
     (n, v) =>
       n +
       v.pulse
@@ -47,7 +53,7 @@ export default function Home() {
                 {liveCount} live ventures
               </span>
               <span className="text-ink-subtle">·</span>
-              <span>{mockVentures.length * 68} outputs indexed</span>
+              <span>{ventures.length * 68} outputs indexed</span>
               <span className="text-ink-subtle">·</span>
               <span>99.94% agent uptime</span>
             </div>
@@ -129,7 +135,7 @@ export default function Home() {
             </span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {trendingVentures(mockVentures).map((v) => (
+            {trendingVentures(ventures).map((v) => (
               <TrendCard key={v.ensName} venture={v} />
             ))}
           </div>
@@ -139,19 +145,19 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-6 pb-24">
         <div className="flex items-center justify-between border-b border-border pb-3 mb-8">
           <nav className="flex items-center gap-1 text-sm">
-            <StageTab label="All stages" count={mockVentures.length} active />
+            <StageTab label="All stages" count={ventures.length} active />
             <StageTab label="Idea" count={stageCounts.idea} />
             <StageTab label="Auction" count={stageCounts.auction} />
             <StageTab label="Live" count={stageCounts.live} />
             <StageTab label="Wound down" count={stageCounts.wound_down} />
           </nav>
           <span className="text-xs text-ink-subtle font-mono">
-            {mockVentures.length} ventures · updated just now
+            {ventures.length} ventures · updated just now
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {mockVentures.map((v) => (
+          {ventures.map((v) => (
             <VentureCard key={v.ensName} venture={v} />
           ))}
         </div>
@@ -275,7 +281,7 @@ function SeedAvatar({ seed, size = 44 }: { seed: string; size?: number }) {
   );
 }
 
-function trendingVentures(ventures: typeof mockVentures) {
+function trendingVentures(ventures: MockVenture[]) {
   return [...ventures]
     .filter((v) => v.promiseScore != null)
     .sort(
@@ -375,12 +381,81 @@ function Ticker() {
   );
 }
 
-function countByStage() {
-  return mockVentures.reduce(
+function countByStageOf(ventures: MockVenture[]) {
+  return ventures.reduce(
     (acc, v) => {
       acc[v.stage]++;
       return acc;
     },
     { idea: 0, auction: 0, live: 0, wound_down: 0 } as Record<string, number>,
   );
+}
+
+/**
+ * Merge user-launched ventures (DB) with the seeded mock set. DB rows
+ * win on ensName collisions and sort to the top of the list.
+ */
+function mergeVentures(
+  dbVentures: Array<{
+    ensName: string;
+    title: string;
+    pitch: string;
+    description: string;
+    category: string;
+    stage: string;
+    status: string;
+    progressScore: number | null;
+    promiseScore: number | null;
+    treasuryBalanceEth: number;
+    totalFundersCount: number;
+    activationThresholdEth: number;
+    auctionEndAt: Date | null;
+    createdAt: Date;
+  }>,
+  mocks: MockVenture[],
+): MockVenture[] {
+  const seen = new Set<string>();
+  const out: MockVenture[] = [];
+  for (const r of dbVentures) {
+    seen.add(r.ensName);
+    const stage = (
+      ["idea", "auction", "live", "wound_down"].includes(r.stage)
+        ? r.stage
+        : "auction"
+    ) as MockVenture["stage"];
+    out.push({
+      ensName: r.ensName,
+      title: r.title,
+      pitch: r.pitch,
+      description: r.description,
+      category: (
+        ["ml", "crypto", "climate", "math", "oss", "security", "bio", "other"]
+          .includes(r.category)
+          ? r.category
+          : "other"
+      ) as MockVenture["category"],
+      ownerEns: "you",
+      stage,
+      status: (
+        ["healthy", "disputed", "stagnant", "new"].includes(r.status)
+          ? r.status
+          : "new"
+      ) as MockVenture["status"],
+      progressScore: r.progressScore ?? undefined,
+      promiseScore: r.promiseScore ?? undefined,
+      treasuryBalanceEth: r.treasuryBalanceEth,
+      treasuryProgressEth: stage === "auction" ? r.treasuryBalanceEth : undefined,
+      totalFunders: r.totalFundersCount,
+      bidderCount: r.totalFundersCount,
+      impliedPriceEth: 0.005,
+      activationThresholdEth: r.activationThresholdEth,
+      auctionEndsAt: r.auctionEndAt ?? undefined,
+      pulse: ["none", "none", "none", "none", "none", "none", "verified"],
+      isNew: true,
+    });
+  }
+  for (const m of mocks) {
+    if (!seen.has(m.ensName)) out.push(m);
+  }
+  return out;
 }

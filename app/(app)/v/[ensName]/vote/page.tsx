@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getVentureByEns } from "@/lib/mock-venture-detail";
+import { resolveVenture } from "@/lib/db-reads";
 import {
   getMarketsForVenture,
   getConditionsForVenture,
@@ -15,7 +15,7 @@ interface Props {
 export default async function VoteTab({ params }: Props) {
   const { ensName } = await params;
   const decoded = decodeURIComponent(ensName);
-  const venture = getVentureByEns(decoded);
+  const venture = await resolveVenture(decoded);
   if (!venture) notFound();
 
   const markets = getMarketsForVenture(decoded);

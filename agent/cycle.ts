@@ -31,7 +31,6 @@ import {
   type AttestationGeneratorInput,
 } from "./attestation";
 import { writeAttestationToEns, isEnsWriterConfigured } from "./ens-writer";
-import { isPinataConfigured } from "./ipfs";
 import { deriveAgentAccount, ventureSlug } from "./wallet";
 import { checkAndTrigger, type TriggerResult } from "./triggers";
 import { isCtrngConfigured } from "./ctrng";
@@ -43,13 +42,15 @@ export interface CycleResult {
   agentEnsName: string;
   ordinal: number;
   attestationType: "verified" | "disputed" | "silence";
-  ipfsCid: string;
+  swarmReference: string;
   ensTxHash: string | null;
   ensWritten: boolean;
   ensSkipReason?: string;
   observedOutputs: number;
-  apifyMode: "x402" | "token" | "mock";
+  apifyMode: "x402" | "token" | "direct" | "mock";
   apifyCostUsd: number;
+  apifyPaymentTxHash?: string;
+  apifyPaymentNetwork?: string;
   cosmicNonceSource?: string;
   /** Set when the agent ran inside a DStack TEE — TDX quote bound to the attestation. */
   teeQuote?: { quote: string; reportData: string };
@@ -151,8 +152,11 @@ export async function runCycleForVenture(
       sources: apifySources.map((s) => `${s.type}:${s.identifier}`),
       outputCount: apify.outputs.length,
       sourcifyOutputCount: sourcifyOutputs.length,
+      paymentNetwork: apify.paymentNetwork ?? null,
+      paymentPayer: apify.paymentPayer ?? null,
     },
     costUsd: apify.costUsd,
+    txHash: apify.paymentTxHash,
   });
 
   // ─── 3. Generate attestation via Claude ──────────────────────────
@@ -178,7 +182,7 @@ export async function runCycleForVenture(
 
   // ─── 4 + 5. Sign + pin to IPFS ───────────────────────────────────
   const account = deriveAgentAccount(slug);
-  const { signed, ipfsCid } = await finalizeAttestation(draft, account, {
+  const { signed, swarmReference } = await finalizeAttestation(draft, account, {
     ventureEnsName,
     agentEnsName,
     observedOutputs: allOutputs.length,
@@ -192,11 +196,11 @@ export async function runCycleForVenture(
   });
   const ordinal = (last?.ordinal ?? 0) + 1;
 
-  // ─── 7. Write CID to ENS ─────────────────────────────────────────
+  // ─── 7. Write Swarm reference to ENS ─────────────────────────────
   const ensResult = await writeAttestationToEns({
     agentEnsName,
     ordinal,
-    ipfsCid,
+    swarmReference,
   });
 
   // ─── 8. Persist to Neon ──────────────────────────────────────────
@@ -211,13 +215,15 @@ export async function runCycleForVenture(
     confidence: signed.confidence,
     signedBy: agentEnsName,
     signature: signed.signature,
-    ipfsHash: ipfsCid,
+    // DB column is named `ipfs_hash` for now; we store Swarm references
+    // in it. A migration to rename the column lands separately.
+    ipfsHash: swarmReference,
     ensTextRecordKey: ensResult.recordKey,
   });
 
   // ─── TEE: bind a TDX quote to this attestation if running in CVM ──
   const teeQuote = await getCycleQuote({
-    ipfsCid,
+    swarmReference,
     agentAddress: account.address,
     ventureEnsName,
   });
@@ -225,7 +231,7 @@ export async function runCycleForVenture(
     // Emit to RTMR3 so the cumulative event log includes this cycle.
     await emitTeeEvent(
       "ethesis.attestation",
-      `${ventureEnsName}|${ordinal}|${ipfsCid}`,
+      `${ventureEnsName}|${ordinal}|${swarmReference}`,
     );
   }
 
@@ -234,7 +240,7 @@ export async function runCycleForVenture(
     type: signed.type,
     ordinal,
     summary: signed.summary,
-    ipfsCid,
+    swarmReference,
   });
 
   // Log the attestation creation to the activity log too.
@@ -244,7 +250,7 @@ export async function runCycleForVenture(
     details: {
       ordinal,
       type: signed.type,
-      ipfsCid,
+      swarmReference,
       ensRecordKey: ensResult.recordKey,
       ensTxHash: ensResult.txHash,
       ensWritten: ensResult.written,
@@ -281,13 +287,15 @@ export async function runCycleForVenture(
     agentEnsName,
     ordinal,
     attestationType: signed.type,
-    ipfsCid,
+    swarmReference,
     ensTxHash: ensResult.txHash,
     ensWritten: ensResult.written,
     ensSkipReason: ensResult.reason,
     observedOutputs: allOutputs.length,
     apifyMode: apify.mode,
     apifyCostUsd: apify.costUsd,
+    apifyPaymentTxHash: apify.paymentTxHash,
+    apifyPaymentNetwork: apify.paymentNetwork,
     cosmicNonceSource: signed.cosmicNonce?.source,
     teeQuote: teeQuote
       ? { quote: teeQuote.quote, reportData: teeQuote.reportData }
@@ -300,8 +308,8 @@ export async function runCycleForVenture(
 /** Surface what the agent has and hasn't been configured with. */
 export function reportAgentConfig(): {
   apify: boolean;
-  apifyMode: "x402" | "token" | "mock";
-  pinata: boolean;
+  apifyMode: "x402" | "token" | "direct" | "mock";
+  swarm: boolean;
   ens: boolean;
   anthropic: boolean;
   ctrng: boolean;
@@ -309,7 +317,9 @@ export function reportAgentConfig(): {
   return {
     apify: isApifyConfigured(),
     apifyMode: apifyMode(),
-    pinata: isPinataConfigured(),
+    // bzz.limo accepts NULL_STAMP, so Swarm is always available unless
+    // SWARM_BEE_URL has been overridden to a node that requires a real stamp.
+    swarm: true,
     ens: isEnsWriterConfigured(),
     anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
     ctrng: isCtrngConfigured(),

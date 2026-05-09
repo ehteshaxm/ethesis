@@ -81,24 +81,24 @@ export interface CycleQuoteResult {
   quote: Hex;
   /** RTMR event log up to this quote. */
   eventLog: string;
-  /** Hash bound into report_data — the attestation's IPFS CID + agent address. */
+  /** Hash bound into report_data — the attestation's Swarm ref + agent address. */
   reportData: string;
 }
 
 /**
  * Get a TDX quote that commits to a specific attestation. The
- * report_data is `keccak256(ipfsCid || agentAddress)` so anyone with the
- * quote + Intel PCS can verify "this agent in this TDX produced this
- * attestation".
+ * report_data is `keccak256(swarmReference || agentAddress || ventureEnsName)`
+ * so anyone with the quote + Intel PCS can verify "this agent in this TDX
+ * produced this attestation".
  */
 export async function getCycleQuote(args: {
-  ipfsCid: string;
+  swarmReference: string;
   agentAddress: string;
   ventureEnsName: string;
 }): Promise<CycleQuoteResult | null> {
   if (!(await isInTee())) return null;
   try {
-    const reportInput = `${args.ipfsCid}|${args.agentAddress}|${args.ventureEnsName}`;
+    const reportInput = `${args.swarmReference}|${args.agentAddress}|${args.ventureEnsName}`;
     const reportData = keccak256(new TextEncoder().encode(reportInput));
     const quote = await getClient().getQuote(reportData);
     return {

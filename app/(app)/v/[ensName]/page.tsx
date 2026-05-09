@@ -1,9 +1,7 @@
 import { notFound } from "next/navigation";
 import { Check, Star } from "lucide-react";
-import {
-  getVentureByEns,
-  getVentureDetail,
-} from "@/lib/mock-venture-detail";
+import { getVentureDetail } from "@/lib/mock-venture-detail";
+import { resolveVenture } from "@/lib/db-reads";
 import { cn, formatEth, shortAddress } from "@/lib/utils";
 import { EnsPill } from "@/components/EnsPill";
 import { MilestoneTimeline } from "@/components/MilestoneTimeline";
@@ -20,7 +18,7 @@ interface Props {
 export default async function StoryTab({ params }: Props) {
   const { ensName } = await params;
   const decoded = decodeURIComponent(ensName);
-  const venture = getVentureByEns(decoded);
+  const venture = await resolveVenture(decoded);
   if (!venture) notFound();
   const detail = getVentureDetail(venture);
   if (!detail) notFound();
@@ -299,9 +297,7 @@ function AgentMiniCard({
 function AgentRules({
   venture,
 }: {
-  venture: ReturnType<typeof getVentureByEns> extends infer T
-    ? NonNullable<T>
-    : never;
+  venture: import("@/lib/mock-data").MockVenture;
 }) {
   return (
     <div className="rounded-lg border border-border bg-surface p-5 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
@@ -329,9 +325,7 @@ function FundLivePanel({
   venture,
   tokenSymbol,
 }: {
-  venture: ReturnType<typeof getVentureByEns> extends infer T
-    ? NonNullable<T>
-    : never;
+  venture: import("@/lib/mock-data").MockVenture;
   tokenSymbol: string;
 }) {
   return (
@@ -369,9 +363,7 @@ function IdeaWaitingPanel({
   venture,
   tokenSymbol,
 }: {
-  venture: ReturnType<typeof getVentureByEns> extends infer T
-    ? NonNullable<T>
-    : never;
+  venture: import("@/lib/mock-data").MockVenture;
   tokenSymbol: string;
 }) {
   return (
@@ -404,9 +396,7 @@ function WoundDownPanel({
   tokenSymbol,
   agentEns,
 }: {
-  venture: ReturnType<typeof getVentureByEns> extends infer T
-    ? NonNullable<T>
-    : never;
+  venture: import("@/lib/mock-data").MockVenture;
   tokenSymbol: string;
   agentEns?: string;
 }) {

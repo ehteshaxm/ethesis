@@ -57,7 +57,8 @@ export async function sendProgressUpdateNotification(
     type: AttestationVariant;
     ordinal: number;
     summary: string;
-    ipfsCid: string;
+    /** 64-char hex Swarm reference for the signed attestation payload. */
+    swarmReference: string;
   },
 ): Promise<void> {
   try {
@@ -82,7 +83,7 @@ export async function sendProgressUpdateNotification(
       investorIds.map((uid) =>
         insertNotification(uid, ventureEnsName, notifType, message, {
           ordinal: attestation.ordinal,
-          ipfsCid: attestation.ipfsCid,
+          swarmReference: attestation.swarmReference,
           attestationType: attestation.type,
         }),
       ),

@@ -324,9 +324,9 @@ export default function ProposalDetailPage() {
           <div className="rounded-xl border border-border bg-surface p-4 text-xs text-ink-subtle space-y-2">
             <p className="font-medium text-ink-muted">How voting works</p>
             <p>
-              Buy "Fund" tokens if you believe this research should be supported, or
-              "Reject" tokens if not. When the market closes, the winning outcome is
-              determined by TWAP differential. If "Fund" wins, the venture enters a
+              Buy &ldquo;Fund&rdquo; tokens if you believe this research should be supported, or
+              &ldquo;Reject&rdquo; tokens if not. When the market closes, the winning outcome is
+              determined by TWAP differential. If &ldquo;Fund&rdquo; wins, the venture enters a
               token auction and the agent activates once the treasury threshold is met.
             </p>
           </div>

@@ -133,7 +133,7 @@ export function BgParticles() {
       w: Math.max(2, Math.floor(W * renderer.getPixelRatio())),
       h: Math.max(2, Math.floor(H * renderer.getPixelRatio())),
     });
-    let { w: rtW, h: rtH } = sized();
+    const { w: rtW, h: rtH } = sized();
     const rtA = new THREE.WebGLRenderTarget(rtW, rtH, rtParams);
     const rtB = new THREE.WebGLRenderTarget(rtW, rtH, rtParams);
     const rtTmp = new THREE.WebGLRenderTarget(rtW, rtH, rtParams);
