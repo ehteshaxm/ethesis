@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ExternalLink, Loader2, ShieldCheck } from "lucide-react";
 
 interface CycleRunResult {
@@ -20,44 +21,78 @@ interface CycleRunResult {
   error?: string;
 }
 
-type Entry = CycleRunResult & {
-  startedAt: number;
-  durationMs?: number;
-};
+interface PersistedRow {
+  activityType: string;
+  details: Record<string, unknown>;
+  costUsd: number | null;
+  txHash: string | null;
+  createdAt: string;
+}
 
 interface Props {
   ventureEnsName: string;
 }
 
 export function LiveScrapePanel({ ventureEnsName }: Props) {
+  const router = useRouter();
   const [running, setRunning] = useState(false);
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [rows, setRows] = useState<PersistedRow[]>([]);
+  const [lastRun, setLastRun] = useState<CycleRunResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  const refreshRows = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/agent/activity?ens=${encodeURIComponent(ventureEnsName)}&limit=20`,
+        { cache: "no-store" },
+      );
+      if (!res.ok) return;
+      const json = (await res.json()) as { rows: PersistedRow[] };
+      setRows(json.rows ?? []);
+    } catch {
+      // best-effort — the in-memory lastRun still renders even if the DB
+      // read fails
+    } finally {
+      setLoaded(true);
+    }
+  }, [ventureEnsName]);
+
+  // Hydrate on mount so the audit log is populated even before the user
+  // clicks anything.
+  useEffect(() => {
+    void refreshRows();
+  }, [refreshRows]);
 
   async function fire() {
     if (running) return;
     setRunning(true);
     setError(null);
-    const startedAt = Date.now();
+    let res: CycleRunResult | null = null;
     try {
-      const res = await fetch("/api/agent/run", {
+      const r = await fetch("/api/agent/run", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ensName: ventureEnsName }),
       });
-      const json = (await res.json()) as CycleRunResult;
-      if (!res.ok || !json.ok) {
-        setError(json.error ?? `HTTP ${res.status}`);
+      const json = (await r.json()) as CycleRunResult;
+      if (!r.ok || !json.ok) {
+        setError(json.error ?? `HTTP ${r.status}`);
       }
-      setEntries((prev) => [
-        { ...json, startedAt, durationMs: Date.now() - startedAt },
-        ...prev,
-      ]);
+      res = json;
+      setLastRun(json);
     } catch (e) {
       setError((e as Error).message ?? "Network error");
     } finally {
       setRunning(false);
     }
+    // Persisted activity rows just got new entries — re-fetch them so the
+    // log shows what's actually in the DB. Also refresh other server
+    // components on the page (Pulse tab, agent tab) so they pick up the
+    // new attestation + activity rows next time they're rendered.
+    await refreshRows();
+    router.refresh();
+    return res;
   }
 
   return (
@@ -78,8 +113,8 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
               KMS — signs the EIP-3009 USDC authorization, the x402
               facilitator settles on Base, the resulting outputs go through
               Claude into a signed attestation, the JSON lands on Swarm, and
-              the bzz reference is written to ENS as a text record. ~30 seconds
-              per click.
+              the bzz reference is written to ENS. Each click appends a new
+              row to the audit log below.
             </p>
           </div>
         </div>
@@ -106,116 +141,178 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
         </div>
       )}
 
-      {entries.length > 0 && (
-        <div className="mt-5">
-          <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-ink-muted mb-2">
-            Swarm log
+      <div className="mt-5">
+        <div className="flex items-baseline justify-between mb-2">
+          <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-ink-muted">
+            Audit log
           </p>
+          <span className="font-mono text-[10px] text-ink-subtle">
+            {loaded
+              ? `${rows.length} event${rows.length === 1 ? "" : "s"} on record`
+              : "loading…"}
+          </span>
+        </div>
+
+        {/* Highlight the most-recent run while we still have its full
+         * details (settlement tx + swarm ref together). The persisted
+         * rows below are split into apify_query + attestation_generated
+         * by the cycle, so the inline summary is more readable for the
+         * fresh run. */}
+        {lastRun?.ok && (
+          <div className="mb-3 rounded-lg border border-verify/30 bg-verify-soft px-4 py-3 space-y-1.5">
+            <div className="flex items-center justify-between gap-3 text-[12px]">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-verify-ink bg-verify/15 rounded px-1.5 py-0.5">
+                just now · cycle #{lastRun.ordinal} · {lastRun.attestationType}
+              </span>
+              <span className="font-mono text-[10px] text-ink-muted">
+                mode={lastRun.apifyMode} · obs={lastRun.observedOutputs ?? 0}
+              </span>
+            </div>
+            {lastRun.apifyMode === "x402" && (
+              <Row
+                label="x402 settlement"
+                value={
+                  lastRun.apifyPaymentTxHash ? (
+                    <Link
+                      href={`https://basescan.org/tx/${lastRun.apifyPaymentTxHash}`}
+                    >
+                      {short(lastRun.apifyPaymentTxHash)}
+                    </Link>
+                  ) : (
+                    <span className="text-ink-muted text-[11px]">
+                      (facilitator didn&apos;t echo receipt)
+                    </span>
+                  )
+                }
+                extra={
+                  lastRun.apifyPaymentValueUsd
+                    ? `${lastRun.apifyPaymentValueUsd.toFixed(4)} USDC`
+                    : undefined
+                }
+              />
+            )}
+            {lastRun.swarmReference && (
+              <Row
+                label="signed attestation"
+                value={
+                  <Link href={`/swarm/${lastRun.swarmReference}`}>
+                    bzz://{short(lastRun.swarmReference, 14, 6)}
+                  </Link>
+                }
+              />
+            )}
+            {lastRun.ensTxHash && (
+              <Row
+                label="ENS write"
+                value={
+                  <Link
+                    href={`https://sepolia.etherscan.io/tx/${lastRun.ensTxHash}`}
+                  >
+                    {short(lastRun.ensTxHash)}
+                  </Link>
+                }
+              />
+            )}
+          </div>
+        )}
+
+        {rows.length === 0 ? (
+          <p className="text-[12px] text-ink-muted py-3">
+            No audit log entries yet. Hit the button above — every cycle
+            writes one row per Apify call and one per attestation generated.
+          </p>
+        ) : (
           <ul className="divide-y divide-border-soft border border-border bg-surface rounded-lg overflow-hidden">
-            {entries.map((e, i) => (
-              <LogRow key={i} entry={e} />
+            {rows.map((r, i) => (
+              <PersistedLogRow key={i} row={r} />
             ))}
           </ul>
-        </div>
-      )}
+        )}
+      </div>
     </section>
   );
 }
 
-function LogRow({ entry: e }: { entry: Entry }) {
-  const ts = new Date(e.startedAt).toLocaleTimeString([], {
+function PersistedLogRow({ row }: { row: PersistedRow }) {
+  const ts = new Date(row.createdAt).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
     hour12: false,
   });
-  const ok = e.ok !== false;
+  const isApify = row.activityType === "apify_query";
+  const isAttestation = row.activityType === "attestation_generated";
+  const d = row.details ?? {};
+
   return (
-    <li className="px-4 py-3 flex flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-3 text-[12px]">
-        <span className="font-mono text-[11px] text-ink-muted tabular-nums">
+    <li className="px-4 py-3 flex flex-col gap-1.5 text-[12px]">
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="font-mono text-[11px] text-ink-muted tabular-nums shrink-0">
           {ts}
         </span>
-        {ok ? (
-          <span className="font-mono text-[10px] uppercase tracking-wider text-verify-ink bg-verify-soft rounded px-1.5 py-0.5">
-            cycle #{e.ordinal} · {e.attestationType ?? "—"}
-          </span>
-        ) : (
-          <span className="font-mono text-[10px] uppercase tracking-wider text-red bg-red-soft rounded px-1.5 py-0.5">
-            failed
+        <span
+          className={
+            "font-mono text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 " +
+            (isApify
+              ? "text-accent-ink bg-accent/15"
+              : isAttestation
+                ? "text-verify-ink bg-verify-soft"
+                : "text-ink-muted bg-surface-2")
+          }
+        >
+          {row.activityType.replace(/_/g, " ")}
+        </span>
+        {typeof d.mode === "string" && (
+          <span className="font-mono text-[10px] text-ink-muted">
+            mode={d.mode}
           </span>
         )}
-        <span className="ml-auto font-mono text-[10px] text-ink-muted">
-          {e.durationMs ? `${(e.durationMs / 1000).toFixed(1)}s` : "—"} ·{" "}
-          mode={e.apifyMode ?? "—"} · obs={e.observedOutputs ?? 0}
-        </span>
+        {typeof row.costUsd === "number" && row.costUsd > 0 && (
+          <span className="font-mono text-[10px] text-ink-muted">
+            ${row.costUsd.toFixed(4)}
+          </span>
+        )}
       </div>
 
-      {e.apifyMode === "x402" && (
-        <Row
-          label="x402 settlement"
-          value={
-            e.apifyPaymentTxHash ? (
-              <a
-                href={`https://basescan.org/tx/${e.apifyPaymentTxHash}`}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="font-mono text-accent hover:text-accent-ink inline-flex items-center gap-1"
-              >
-                {e.apifyPaymentTxHash.slice(0, 14)}…
-                {e.apifyPaymentTxHash.slice(-6)}
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            ) : (
-              <span className="text-ink-muted text-[11px]">
-                facilitator didn&apos;t echo receipt — check basescan for KMS
-              </span>
-            )
-          }
-          extra={
-            e.apifyPaymentValueUsd
-              ? `${e.apifyPaymentValueUsd.toFixed(4)} USDC`
-              : undefined
-          }
-        />
+      {isApify && (
+        <>
+          {typeof d.actorId === "string" && (
+            <Row label="actor" value={<span className="font-mono">{d.actorId}</span>} />
+          )}
+          {row.txHash && (
+            <Row
+              label="x402 settlement"
+              value={
+                <Link href={`https://basescan.org/tx/${row.txHash}`}>
+                  {short(row.txHash)}
+                </Link>
+              }
+            />
+          )}
+        </>
       )}
 
-      {e.swarmReference && (
-        <Row
-          label="signed attestation"
-          value={
-            <a
-              href={`/swarm/${e.swarmReference}`}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="font-mono text-accent hover:text-accent-ink inline-flex items-center gap-1"
-            >
-              bzz://{e.swarmReference.slice(0, 14)}…{e.swarmReference.slice(-6)}
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          }
-        />
-      )}
-
-      {e.ensTxHash && (
-        <Row
-          label={e.ensWritten ? "ENS text record" : "ENS write attempt"}
-          value={
-            <a
-              href={`https://sepolia.etherscan.io/tx/${e.ensTxHash}`}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="font-mono text-accent hover:text-accent-ink inline-flex items-center gap-1"
-            >
-              {e.ensTxHash.slice(0, 14)}…{e.ensTxHash.slice(-6)}
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          }
-        />
-      )}
-
-      {!ok && e.error && (
-        <p className="text-[12px] text-red font-mono">{e.error}</p>
+      {isAttestation && (
+        <>
+          {typeof d.ordinal === "number" && (
+            <Row
+              label={`#${d.ordinal} ${typeof d.type === "string" ? d.type : ""}`.trim()}
+              value={null}
+            />
+          )}
+          {typeof d.ensTxHash === "string" && d.ensTxHash && (
+            <Row
+              label="ENS write"
+              value={
+                <Link
+                  href={`https://sepolia.etherscan.io/tx/${d.ensTxHash}`}
+                >
+                  {short(d.ensTxHash)}
+                </Link>
+              }
+            />
+          )}
+        </>
       )}
     </li>
   );
@@ -239,4 +336,28 @@ function Row({
       )}
     </div>
   );
+}
+
+function Link({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer noopener"
+      className="font-mono text-accent hover:text-accent-ink inline-flex items-center gap-1"
+    >
+      {children}
+      <ExternalLink className="h-3 w-3" />
+    </a>
+  );
+}
+
+function short(hash: string, head = 12, tail = 6) {
+  return `${hash.slice(0, head)}…${hash.slice(-tail)}`;
 }
