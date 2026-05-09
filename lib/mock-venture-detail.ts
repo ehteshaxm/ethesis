@@ -117,8 +117,8 @@ const RESEARCHERS: Record<string, MockResearcher> = {
     isVerified: false,
     offPlatformLinks: [],
   },
-  "delafuente.eth": {
-    ens: "delafuente.eth",
+  "delafuente.peptide-amr.ethesis.eth": {
+    ens: "delafuente.peptide-amr.ethesis.eth",
     bio: "César de la Fuente-Nunez · Presidential Associate Professor at UPenn (Bioengineering, Chemical & Biomolecular Engineering, Microbiology, Psychiatry). Leads the Machine Biology Group, applying ML to antibiotic discovery — published work spans AMP-Diffusion, AMPSphere, and ancient-proteome AMP de-extinction.",
     priorVentures: 0,
     isVerified: true,

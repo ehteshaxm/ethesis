@@ -73,7 +73,7 @@ export const mockVentures: MockVenture[] = [
     description:
       "Antimicrobial resistance kills ~1.3M/yr globally. The Machine Biology Group at UPenn (de la Fuente Lab) has shown that latent-diffusion over ESM-2 embeddings (AMP-Diffusion, Chen et al. 2024) and global-microbiome mining (Santos-Júnior et al. 2024, Cell) both yield in-vitro hits at ≥40% rates. This venture extends that pipeline: we re-train AMP-Diffusion on a refreshed peptidomic library, generate 50K candidates, screen down to a 50-peptide panel, then run MIC + resistance profiling against six ESKAPE pathogens. Wet-lab partner: BSL-2 CRO. Generated peptides, top hits, and raw assay data are uploaded to Swarm and anchored to ENS as the agent verifies each milestone.",
     category: "bio",
-    ownerEns: "delafuente.eth",
+    ownerEns: "delafuente.peptide-amr.ethesis.eth",
     stage: "live",
     status: "healthy",
     progressScore: 74,
