@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ETHesis — Pitch Deck</title>
+    <style>
+        :root {
+            --bg: #FFFFFF;
+            --bg-soft: #F7FAF2;
+            --green-deep: #173404;
+            --green: #3B6D11;
+            --green-mid: #639922;
+            --green-light: #C0DD97;
+            --green-pale: #EAF3DE;
+            --ink: #173404;
+            --ink-soft: #3B6D11;
+            --ink-muted: #87938A;
+            --line: rgba(23, 52, 4, 0.10);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-weight: 400;
+            line-height: 1.4;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .deck { max-width: 1200px; margin: 0 auto; }
+
+        .slide {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 80px 100px;
+            border-bottom: 1px solid var(--line);
+            position: relative;
+        }
+
+        .slide.tinted { background: var(--green-pale); }
+        .slide.dark { background: var(--green-deep); }
+
+        .slide-num {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            font-size: 13px;
+            color: var(--ink-muted);
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.04em;
+        }
+
+        .slide.dark .slide-num { color: rgba(255,255,255,0.3); }
+
+        .label {
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--green);
+            margin-bottom: 32px;
+        }
+
+        .slide.dark .label { color: var(--green-light); }
+
+        h1 {
+            font-size: 96px;
+            font-weight: 500;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            color: var(--ink);
+        }
+
+        h1.huge {
+            font-size: 128px;
+            letter-spacing: -0.05em;
+        }
+
+        .slide.dark h1, .slide.dark h2 { color: #FFFFFF; }
+
+        h2 {
+            font-size: 64px;
+            font-weight: 500;
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+            color: var(--ink);
+        }
+
+        p {
+            font-size: 22px;
+            line-height: 1.5;
+            color: var(--ink-soft);
+            max-width: 760px;
+        }
+
+        p.lede {
+            font-size: 28px;
+            color: var(--ink);
+            max-width: 800px;
+        }
+
+        .slide.dark p, .slide.dark p.lede { color: rgba(255,255,255,0.7); }
+
+        .row {
+            display: flex;
+            gap: 80px;
+            align-items: flex-start;
+            margin-top: 64px;
+        }
+
+        .col { flex: 1; min-width: 0; }
+
+        .stat-block {
+            font-size: 80px;
+            font-weight: 500;
+            letter-spacing: -0.04em;
+            line-height: 0.95;
+            color: var(--ink);
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 16px;
+        }
+
+        .caption {
+            font-size: 16px;
+            color: var(--ink-muted);
+            letter-spacing: 0.02em;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 40px;
+            margin-top: 64px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 56px;
+            margin-top: 64px;
+        }
+
+        .card {
+            border-top: 1px solid var(--ink);
+            padding-top: 24px;
+        }
+
+        .slide.dark .card { border-top-color: rgba(255,255,255,0.2); }
+
+        .card .num {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--green);
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .slide.dark .card .num { color: var(--green-light); }
+
+        .card h4 {
+            font-size: 26px;
+            font-weight: 500;
+            line-height: 1.15;
+            margin-bottom: 14px;
+            color: var(--ink);
+            letter-spacing: -0.01em;
+        }
+
+        .slide.dark .card h4 { color: #FFFFFF; }
+
+        .card p {
+            font-size: 17px;
+            color: var(--ink-soft);
+            line-height: 1.55;
+            max-width: none;
+        }
+
+        .slide.dark .card p { color: rgba(255,255,255,0.6); }
+
+        .pill {
+            display: inline-block;
+            padding: 8px 18px;
+            border: 1px solid currentColor;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--ink);
+            margin-right: 10px;
+            margin-bottom: 10px;
+            letter-spacing: 0.02em;
+        }
+
+        .pill.solid {
+            background: var(--green);
+            color: #FFFFFF;
+            border-color: var(--green);
+        }
+
+        .pill.outline-white {
+            color: rgba(255,255,255,0.8);
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .flow {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-top: 64px;
+            flex-wrap: wrap;
+        }
+
+        .flow-step {
+            flex: 1;
+            min-width: 140px;
+            padding: 28px 24px;
+            border-top: 2px solid var(--ink);
+            position: relative;
+        }
+
+        .flow-step .step-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--green);
+            margin-bottom: 10px;
+        }
+
+        .flow-step h5 {
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--ink);
+            margin-bottom: 8px;
+            letter-spacing: -0.01em;
+        }
+
+        .flow-step p {
+            font-size: 14px;
+            color: var(--ink-muted);
+            line-height: 1.5;
+            max-width: none;
+        }
+
+        .flow-arrow {
+            font-size: 20px;
+            color: var(--ink-muted);
+            padding: 0 8px;
+            flex-shrink: 0;
+            align-self: flex-start;
+            margin-top: 36px;
+        }
+
+        .cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 16px;
+            padding: 22px 40px;
+            background: var(--green);
+            color: #FFFFFF;
+            font-size: 20px;
+            font-weight: 500;
+            border-radius: 999px;
+            text-decoration: none;
+            margin-top: 48px;
+            letter-spacing: -0.01em;
+        }
+
+        .cta-ghost {
+            display: inline-flex;
+            align-items: center;
+            gap: 16px;
+            padding: 22px 40px;
+            border: 1.5px solid var(--ink);
+            color: var(--ink);
+            font-size: 20px;
+            font-weight: 500;
+            border-radius: 999px;
+            text-decoration: none;
+            margin-top: 48px;
+            margin-left: 16px;
+            letter-spacing: -0.01em;
+        }
+
+        .center {
+            text-align: center;
+            align-items: center;
+        }
+
+        .center p, .center h1, .center h2, .center .lede {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .footnote {
+            font-size: 14px;
+            color: var(--ink-muted);
+            margin-top: 56px;
+            letter-spacing: 0.02em;
+        }
+
+        .divider {
+            width: 48px;
+            height: 2px;
+            background: var(--green);
+            margin: 40px 0;
+        }
+
+        @media print {
+            .slide { min-height: auto; height: 100vh; }
+            body { background: var(--bg); }
+        }
+    </style>
+</head>
+
+<body>
+<div class="deck">
+
+<!-- ─── SLIDE 1 — The problem ──────────────────────────────────────── -->
+<section class="slide">
+    <span class="slide-num">01 / 05</span>
+    <div class="label">The problem</div>
+
+    <h1 class="huge">Research<br>funding<br>is broken.</h1>
+
+    <div class="row">
+        <div class="col">
+            <div class="stat-block">$2.8T</div>
+            <p class="caption">Global annual R&amp;D spend — controlled by governments, pharma, and a handful of foundations</p>
+        </div>
+        <div class="col">
+            <div class="stat-block">0%</div>
+            <p class="caption">of that is verifiably tracked once disbursed. Funders trust progress reports. Nobody checks.</p>
+        </div>
+        <div class="col">
+            <div class="stat-block">∞</div>
+            <p class="caption">Capital trapped when projects stall. No exit mechanism exists. Funders lose everything.</p>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <p>Researchers spend more time chasing grants than doing science. Funders have no way to verify claims or recover money when work stops. The system protects institutions, not progress.</p>
+</section>
+
+<!-- ─── SLIDE 2 — How ETHesis works ───────────────────────────────── -->
+<section class="slide tinted">
+    <span class="slide-num">02 / 05</span>
+    <div class="label">How ETHesis works</div>
+
+    <h2>Funding that holds researchers accountable — automatically.</h2>
+
+    <div class="flow">
+        <div class="flow-step">
+            <div class="step-label">01</div>
+            <h5>Proposal</h5>
+            <p>Researcher submits idea. AI agent scores novelty, feasibility, and impact using web research and peer-reviewed literature.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+            <div class="step-label">02</div>
+            <h5>Community vote</h5>
+            <p>Funders — individuals or companies — back the project using conditional tokens. Treasury fills when threshold is met.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+            <div class="step-label">03</div>
+            <h5>Live &amp; watched</h5>
+            <p>Agent activates inside a secure enclave. Every 4 hours it scrapes GitHub, arXiv, HuggingFace, and the open web for real output.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+            <div class="step-label">04</div>
+            <h5>Signed attestation</h5>
+            <p>Agent signs its verdict — verified, disputed, or silence — and anchors it in ENS. Immutable. Auditable. Forever.</p>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+            <div class="step-label">05</div>
+            <h5>Auto-exit if stalling</h5>
+            <p>No progress? Agent triggers a liquidation market. Treasury returns pro-rata to funders. Nobody gets stuck.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ─── SLIDE 3 — The participants ────────────────────────────────── -->
+<section class="slide">
+    <span class="slide-num">03 / 05</span>
+    <div class="label">Who's in the room</div>
+
+    <h2>Funders and researchers.<br>Everyone qualifies.</h2>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="num">Funders</div>
+            <h4>Anyone from anywhere can back research</h4>
+            <p>Individual investors, crypto-native funds, and traditional institutions all participate on equal footing. Minimum participation is a wallet. No accreditation requirements, no geographic restrictions.</p>
+            <div style="margin-top: 24px;">
+                <span class="pill solid">Individual investors</span>
+                <span class="pill">Family offices</span>
+                <span class="pill">DAOs</span>
+            </div>
+        </div>
+        <div class="card">
+            <div class="num">Companies &amp; Foundations</div>
+            <h4>Post a grant request. Let researchers come to you.</h4>
+            <p>Companies can publish open research briefs — problems they'd pay to have solved. Researchers treat them as a signal. The funder's treasury is pre-committed so researchers know the money is real before they start.</p>
+            <div style="margin-top: 24px;">
+                <span class="pill solid">Grant programs</span>
+                <span class="pill">R&amp;D arms</span>
+                <span class="pill">Foundations</span>
+            </div>
+        </div>
+        <div class="card">
+            <div class="num">Researchers</div>
+            <h4>Any researcher, from any field</h4>
+            <p>No institutional affiliation needed. Independent researchers, PhD students, or cross-disciplinary teams can submit proposals. The agent evaluates work, not credentials.</p>
+            <div style="margin-top: 24px;">
+                <span class="pill solid">Academic labs</span>
+                <span class="pill">Independent researchers</span>
+                <span class="pill">Teams</span>
+            </div>
+        </div>
+        <div class="card">
+            <div class="num">The platform</div>
+            <h4>ETHesis earns when science ships</h4>
+            <p>A small protocol fee on funded tranches — only taken when milestones are verified. We're economically aligned with research actually happening, not just being funded.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ─── SLIDE 4 — The market / Every field ────────────────────────── -->
+<section class="slide dark">
+    <span class="slide-num">04 / 05</span>
+    <div class="label">The market</div>
+
+    <h2>DeSci isn't just biology.<br>It's every field.</h2>
+
+    <p class="lede" style="margin-top: 32px; color: rgba(255,255,255,0.85);">Existing DeSci platforms are locked to longevity and biotech. ETHesis is domain-agnostic by design — any area where research produces verifiable outputs can run on the platform.</p>
+
+    <div class="grid-3" style="margin-top: 60px;">
+        <div class="card">
+            <div class="num">Already in the pipeline</div>
+            <h4>Machine Learning</h4>
+            <p>Several independent ML researchers have expressed interest in launching ventures on ETHesis. Model weights, benchmark results, and code commits are machine-verifiable outputs — a natural fit for the agent.</p>
+        </div>
+        <div class="card">
+            <div class="num">Underserved today</div>
+            <h4>Social Sciences &amp; Economics</h4>
+            <p>Academic papers, datasets, and replication studies. Fields where grant access is hardest and institutional gatekeeping is most severe. ETHesis removes the middleman.</p>
+        </div>
+        <div class="card">
+            <div class="num">Natural home</div>
+            <h4>Crypto &amp; Protocol Research</h4>
+            <p>Security audits, cryptography, zero-knowledge proofs, L2 design. Companies in this space already fund research but have no standardized accountability layer. ETHesis provides one.</p>
+        </div>
+    </div>
+
+    <div class="divider" style="background: var(--green-light);"></div>
+
+    <p style="color: rgba(255,255,255,0.6); font-size: 18px;">Target partners: large foundations and companies that already distribute research grants — Mozilla, Protocol Labs, Ethereum Foundation — are natural anchors. We are in early conversations with grant program leads at two of them.</p>
+</section>
+
+<!-- ─── SLIDE 5 — CTA ──────────────────────────────────────────────── -->
+<section class="slide center">
+    <span class="slide-num">05 / 05</span>
+    <div class="label">The pitch in one line</div>
+
+    <h1 class="huge" style="text-align: center;">Science that<br>proves itself.</h1>
+
+    <p class="lede" style="text-align: center; margin-top: 40px;">
+        ETHesis is the funding layer for research that can demonstrate results — in any field, from any researcher, backed by anyone. The agent watches so funders don't have to.
+    </p>
+
+    <div style="margin-top: 56px; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;">
+        <span class="pill solid">Any field</span>
+        <span class="pill">AI-verified outputs</span>
+        <span class="pill">Onchain treasury</span>
+        <span class="pill">Auto-exit if stalling</span>
+        <span class="pill">Open to all</span>
+    </div>
+
+    <div>
+        <a href="#" class="cta">Submit a proposal <span>→</span></a>
+        <a href="#" class="cta-ghost">Post a grant request <span>→</span></a>
+    </div>
+
+    <p class="footnote" style="text-align: center; margin-top: 80px;">
+        ETHPrague 2026 · ethesis.eth
+    </p>
+</section>
+
+</div>
+</body>
+</html>

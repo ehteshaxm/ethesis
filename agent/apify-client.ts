@@ -17,7 +17,7 @@
 
 import { ApifyClient } from "apify-client";
 import { wrapFetchWithPayment, createSigner } from "x402-fetch";
-import type { Hex } from "viem";
+import type { Hex, LocalAccount } from "viem";
 
 export interface OutputWatcherSource {
   type: "github" | "arxiv" | "huggingface" | "openreview" | "x" | "substack";
@@ -27,7 +27,8 @@ export interface OutputWatcherSource {
 
 export type ScrapedSource =
   | OutputWatcherSource["type"]
-  | "sourcify";
+  | "sourcify"
+  | "fatcat";
 
 export type ScrapedOutputType =
   | "commit"
@@ -67,8 +68,13 @@ export interface CallOutputWatcherArgs {
   sources: OutputWatcherSource[];
   milestoneKeywords?: string[];
   ventureSlug: string;
-  /** Agent's deterministic private key — required for x402 mode. */
+  /** Agent's deterministic private key — used for x402 when KMS is not available. */
   agentPrivateKey?: Hex;
+  /**
+   * KMS-backed LocalAccount for x402 signing (post-funding only).
+   * When set, this takes priority over agentPrivateKey for x402 calls.
+   */
+  kmsSigner?: LocalAccount;
 }
 
 const APIFY_API_BASE = "https://api.apify.com/v2";
@@ -81,9 +87,9 @@ export async function callOutputWatcher(
   const token = process.env.APIFY_TOKEN;
   const tokenActor = process.env.APIFY_ACTOR_ID_OUTPUT_WATCHER;
 
-  if (x402Enabled && x402Actor && args.agentPrivateKey) {
+  if (x402Enabled && x402Actor && (args.kmsSigner ?? args.agentPrivateKey)) {
     try {
-      return await callViaX402(args, x402Actor, args.agentPrivateKey);
+      return await callViaX402(args, x402Actor, args.kmsSigner, args.agentPrivateKey);
     } catch (err) {
       console.warn(
         "[apify] x402 call failed, falling through:",
@@ -111,12 +117,15 @@ export async function callOutputWatcher(
 async function callViaX402(
   args: CallOutputWatcherArgs,
   actor: string,
-  agentPrivateKey: Hex,
+  kmsSigner?: LocalAccount,
+  agentPrivateKey?: Hex,
 ): Promise<OutputWatcherResult> {
-  // Apify x402 settles on Base mainnet. createSigner builds the right
-  // Signer for that network from a raw private key.
+  // KMS signer takes priority (post-funding, gated by caller). Falls back to
+  // raw private key derivation for pre-funding or non-KMS environments.
   const network = process.env.X402_NETWORK ?? "base";
-  const signer = await createSigner(network, agentPrivateKey);
+  const signer = kmsSigner
+    ? (kmsSigner as Parameters<typeof wrapFetchWithPayment>[1])
+    : await createSigner(network, agentPrivateKey!);
   const fetchWithPay = wrapFetchWithPayment(fetch, signer);
 
   const slug = actor.replace("/", "~");
@@ -398,19 +407,16 @@ function hexish(seed: string, len: number): string {
  * proposal evaluation. Calls the RAG web browser actor (same x402/token/mock
  * priority chain as callOutputWatcher) with a raw query string instead of a
  * source list.
+ *
+ * Pass `kmsSigner` for post-funding (live) ventures; `agentPrivateKey` for
+ * proposal-stage (pre-funding) ventures. KMS takes priority when both provided.
  */
 export async function callWebSearch(
   query: string,
-  agentPrivateKey: Hex,
+  agentPrivateKey: Hex | null,
   maxResults = 10,
+  kmsSigner?: LocalAccount,
 ): Promise<{ outputs: ScrapedOutput[]; mode: string; costUsd: number }> {
-  const syntheticArgs: CallOutputWatcherArgs = {
-    sources: [],
-    milestoneKeywords: [],
-    ventureSlug: "web-search",
-    agentPrivateKey,
-  };
-
   const x402Enabled = process.env.X402_ENABLED === "1";
   const x402Actor = process.env.APIFY_X402_ACTOR;
   const token = process.env.APIFY_TOKEN;
@@ -418,11 +424,13 @@ export async function callWebSearch(
 
   const ragInput = { query, maxResults };
 
-  if (x402Enabled && x402Actor && agentPrivateKey) {
+  if (x402Enabled && x402Actor && (kmsSigner ?? agentPrivateKey)) {
     try {
       const network = process.env.X402_NETWORK ?? "base";
       const { wrapFetchWithPayment, createSigner } = await import("x402-fetch");
-      const signer = await createSigner(network, agentPrivateKey);
+      const signer = kmsSigner
+        ? (kmsSigner as Parameters<typeof wrapFetchWithPayment>[1])
+        : await createSigner(network, agentPrivateKey!);
       const fetchWithPay = wrapFetchWithPayment(fetch, signer);
       const slug = x402Actor.replace("/", "~");
       const url = `${APIFY_API_BASE}/acts/${slug}/run-sync-get-dataset-items`;
@@ -480,7 +488,6 @@ export async function callWebSearch(
     costUsd: 0,
   };
 
-  void syntheticArgs; // suppress unused-var warning
 }
 
 export function isApifyConfigured(): boolean {

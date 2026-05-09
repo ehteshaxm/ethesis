@@ -36,6 +36,7 @@ import { deriveAgentAccount, ventureSlug } from "./wallet";
 import { checkAndTrigger, type TriggerResult } from "./triggers";
 import { isCtrngConfigured } from "./ctrng";
 import { emitTeeEvent, getCycleQuote } from "./tee";
+import { createKmsLocalAccount, isKmsConfigured } from "./kms-signer";
 
 export interface CycleResult {
   ventureEnsName: string;
@@ -100,6 +101,16 @@ export async function runCycleForVenture(
       since: venture.agentLastSyncAt?.toISOString(),
     }));
 
+  // KMS signing is only permitted for funded (live) ventures — it's gated
+  // by the KMS access policy and enforced here before any signing attempt.
+  const kmsSigner =
+    venture.stage === "live" && isKmsConfigured()
+      ? await createKmsLocalAccount().catch((err) => {
+          console.warn("[cycle] KMS signer unavailable, falling back to derived key:", err.message);
+          return undefined;
+        })
+      : undefined;
+
   const apify = await callOutputWatcher({
     sources: apifySources,
     milestoneKeywords: milestones.flatMap((m) =>
@@ -108,7 +119,8 @@ export async function runCycleForVenture(
         : [],
     ),
     ventureSlug: slug,
-    agentPrivateKey: deriveAgentPrivateKey(slug),
+    agentPrivateKey: kmsSigner ? undefined : deriveAgentPrivateKey(slug),
+    kmsSigner,
   });
 
   // ─── 2b. Sourcify contract verification data ─────────────────────
