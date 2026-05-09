@@ -34,6 +34,10 @@ import { writeAttestationToEns, isEnsWriterConfigured } from "./ens-writer";
 import { deriveAgentAccount, ventureSlug } from "./wallet";
 import { checkAndTrigger, type TriggerResult } from "./triggers";
 import { isCtrngConfigured } from "./ctrng";
+import {
+  lookupRecentX402Settlement,
+  snapshotBaseBlock,
+} from "@/lib/x402-settlement";
 import { emitTeeEvent, getCycleQuote } from "./tee";
 import { createKmsLocalAccount, isKmsConfigured } from "./kms-signer";
 
@@ -51,6 +55,10 @@ export interface CycleResult {
   apifyCostUsd: number;
   apifyPaymentTxHash?: string;
   apifyPaymentNetwork?: string;
+  /** When `apifyMode === "mock"`, the reason the gate fell through.
+   * Lets the UI render "free fetchers covered everything" instead of
+   * a silent mock. */
+  apifyMockReason?: string;
   cosmicNonceSource?: string;
   /** Set when the agent ran inside a DStack TEE — TDX quote bound to the attestation. */
   teeQuote?: { quote: string; reportData: string };
@@ -70,6 +78,13 @@ function deriveAgentPrivateKey(slug: string): Hex {
 
 export async function runCycleForVenture(
   ventureEnsName: string,
+  opts: {
+    /** Throw if the apify call doesn't produce an x402 settlement. Used by
+     * the "Pay & scrape now" panel button so it never silently degrades to
+     * mock — a click on that button should result in an on-chain payment
+     * or a clear error. */
+    requirePayment?: boolean;
+  } = {},
 ): Promise<CycleResult> {
   const start = Date.now();
 
@@ -102,6 +117,11 @@ export async function runCycleForVenture(
       since: venture.agentLastSyncAt?.toISOString(),
     }));
 
+  // Snapshot Base before the Apify call so we can scope a USDC Transfer
+  // log search to events strictly from this run (Apify doesn't echo the
+  // settlement tx in any response header — see lib/x402-settlement.ts).
+  const x402StartBlock = await snapshotBaseBlock();
+
   // KMS signing is only permitted for funded (live) ventures — it's gated
   // by the KMS access policy and enforced here before any signing attempt.
   const kmsSigner =
@@ -124,6 +144,15 @@ export async function runCycleForVenture(
     kmsSigner,
   });
 
+  if (opts.requirePayment && apify.mode !== "x402") {
+    const reason = apify.mockReason ?? `apify ran in ${apify.mode} mode`;
+    throw Object.assign(new Error(`x402 didn't fire — ${reason}`), {
+      code: "PAYMENT_NOT_SETTLED",
+      apifyMode: apify.mode,
+      reason,
+    });
+  }
+
   // ─── 2b. Sourcify contract verification data ─────────────────────
   const sourcifyOutputs: ScrapedOutput[] = [];
   if (isSourcifyConfigured()) {
@@ -140,6 +169,20 @@ export async function runCycleForVenture(
 
   const allOutputs = [...apify.outputs, ...sourcifyOutputs];
 
+  // Look up the on-chain settlement if the cycle ran in x402 mode and
+  // Apify didn't echo the receipt header. Persisting the hash here means
+  // the Audit Log row for this Apify call carries the real Basescan tx,
+  // not just `null`.
+  let resolvedPaymentTx = apify.paymentTxHash ?? null;
+  let resolvedPaymentValueUsd: number | null = null;
+  if (apify.mode === "x402" && !resolvedPaymentTx && x402StartBlock > 0n) {
+    const settlement = await lookupRecentX402Settlement(x402StartBlock);
+    if (settlement) {
+      resolvedPaymentTx = settlement.txHash;
+      resolvedPaymentValueUsd = settlement.valueUsd;
+    }
+  }
+
   // Log the Apify call to the activity log so the agent tab can show it
   // (and so the venture's funders can see what their treasury paid for).
   await db.insert(schema.agentActivityLog).values({
@@ -154,9 +197,15 @@ export async function runCycleForVenture(
       sourcifyOutputCount: sourcifyOutputs.length,
       paymentNetwork: apify.paymentNetwork ?? null,
       paymentPayer: apify.paymentPayer ?? null,
+      kmsAddress:
+        apify.mode === "x402"
+          ? (process.env.SC_KMS_KEY_ADDRESS ?? null)
+          : null,
+      paymentValueUsd: resolvedPaymentValueUsd,
+      mockReason: apify.mockReason ?? null,
     },
     costUsd: apify.costUsd,
-    txHash: apify.paymentTxHash,
+    txHash: resolvedPaymentTx,
   });
 
   // ─── 3. Generate attestation via Claude ──────────────────────────
@@ -258,6 +307,13 @@ export async function runCycleForVenture(
       teeQuote: teeQuote
         ? { quote: teeQuote.quote, reportData: teeQuote.reportData }
         : null,
+      // Surface Claude's actual narrative + cited evidence on the
+      // activity-log row so the audit log can render "what the agent
+      // found out", not just metadata about where it landed.
+      summary: signed.summary,
+      evidence: signed.evidence,
+      confidence: signed.confidence,
+      milestoneOrdinal: signed.milestoneOrdinal,
     },
     txHash: ensResult.txHash ?? undefined,
   });
@@ -296,6 +352,7 @@ export async function runCycleForVenture(
     apifyCostUsd: apify.costUsd,
     apifyPaymentTxHash: apify.paymentTxHash,
     apifyPaymentNetwork: apify.paymentNetwork,
+    apifyMockReason: apify.mockReason,
     cosmicNonceSource: signed.cosmicNonce?.source,
     teeQuote: teeQuote
       ? { quote: teeQuote.quote, reportData: teeQuote.reportData }

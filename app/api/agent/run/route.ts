@@ -89,7 +89,9 @@ export async function POST(req: NextRequest) {
   })();
 
   try {
-    const result = await runCycleForVenture(body.ensName);
+    const result = await runCycleForVenture(body.ensName, {
+      requirePayment: true,
+    });
 
     // Recompute progress score from observed outputs + matched keywords.
     // Crude but transparent: each output worth 6, capped at 100.
@@ -123,6 +125,7 @@ export async function POST(req: NextRequest) {
       swarmReference: result.swarmReference,
       observedOutputs: result.observedOutputs,
       apifyMode: result.apifyMode,
+      apifyMockReason: result.apifyMockReason ?? null,
       apifyCostUsd: result.apifyCostUsd,
       apifyPaymentTxHash: paymentTxHash,
       apifyPaymentTo: paymentTo,
@@ -162,6 +165,24 @@ export async function POST(req: NextRequest) {
           network: e.network,
         },
         { status: 402 },
+      );
+    }
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      (err as { code: unknown }).code === "PAYMENT_NOT_SETTLED"
+    ) {
+      const e = err as { reason?: string; apifyMode?: string };
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "PAYMENT_NOT_SETTLED",
+          error: `x402 didn't fire — ${e.reason ?? "unknown"}`,
+          reason: e.reason ?? null,
+          apifyMode: e.apifyMode ?? null,
+        },
+        { status: 502 },
       );
     }
     console.error("[agent/run] error:", err);

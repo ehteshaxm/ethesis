@@ -119,6 +119,10 @@ export interface OutputWatcherResult {
   paymentNetwork?: string;
   /** Address that paid (the agent's derived EOA). */
   paymentPayer?: string;
+  /** When `mode === "mock"`, a human-readable reason explaining which
+   * gate failed (no x402 envs, no signer, x402 attempt threw, etc.).
+   * Surfaced to the panel so the user can debug without grepping logs. */
+  mockReason?: string;
 }
 
 export interface CallOutputWatcherArgs {
@@ -158,23 +162,62 @@ export async function callOutputWatcher(
   }
 
   // x402 path — pay once for the Google leg covering anything the free
-  // fetchers couldn't handle (e.g. x.com / substack / generic web).
-  // Skip x402 entirely if every source was covered for free.
+  // fetchers either couldn't handle (e.g. x.com / substack / generic web)
+  // OR handled but came back empty. The second condition matters because
+  // a venture wired only to github/arxiv/HF sources that happen to be
+  // quiet would otherwise yield mode="mock" with obs=0 — defeating the
+  // point of the "Pay & scrape now" button.
   // Two signing modes:
   //   - KMS_ENABLED=1   → the platform key in SpaceComputer Orbitport
   //     KMS signs the EIP-712 typed data. agentPrivateKey is unused.
   //   - otherwise       → the agent's locally-derived EOA signs.
   const haveSigner = isKmsEnabled() || Boolean(args.agentPrivateKey);
+  const x402TargetSources =
+    uncoveredSources.length > 0 ? uncoveredSources : args.sources;
+  const shouldFireX402 =
+    x402Enabled &&
+    Boolean(x402Actor) &&
+    haveSigner &&
+    (uncoveredSources.length > 0 || directOutputs.length === 0);
+
+  // Build a precise reason if the gate fails so the UI can render it
+  // instead of an opaque "mode=mock". This is the single biggest source
+  // of confusion when the panel says mock but the user expected x402.
+  const gateReasons: string[] = [];
+  if (!x402Enabled) gateReasons.push("X402_ENABLED!=1");
+  if (!x402Actor) gateReasons.push("APIFY_X402_ACTOR unset");
+  if (!haveSigner) gateReasons.push("no signer (KMS_ENABLED=0 and no agentPrivateKey)");
   if (
     x402Enabled &&
     x402Actor &&
     haveSigner &&
-    uncoveredSources.length > 0
+    !shouldFireX402
   ) {
+    gateReasons.push(
+      "free fetchers covered everything + found results — x402 unnecessary",
+    );
+  }
+  let x402AttemptError: string | null = null;
+
+  console.log(
+    "[apify] x402 gate:",
+    JSON.stringify({
+      x402Enabled,
+      x402Actor,
+      kmsEnabled: isKmsEnabled(),
+      hasAgentKey: Boolean(args.agentPrivateKey),
+      haveSigner,
+      uncovered: uncoveredSources.length,
+      directOutputs: directOutputs.length,
+      shouldFireX402,
+    }),
+  );
+
+  if (shouldFireX402 && x402Actor) {
     try {
       const account = await resolveX402Account(args.agentPrivateKey);
       const x402Result = await callViaX402(
-        { ...args, sources: uncoveredSources },
+        { ...args, sources: x402TargetSources },
         x402Actor,
         account,
       );
@@ -191,10 +234,13 @@ export async function callOutputWatcher(
       if (err instanceof InsufficientBalanceError) {
         throw err;
       }
+      x402AttemptError =
+        (err as { message?: string })?.message ?? String(err);
       console.warn(
         "[apify] x402 call failed, falling through:",
-        (err as { message?: string })?.message ?? err,
+        x402AttemptError,
       );
+      gateReasons.push(`x402 attempt threw: ${x402AttemptError.slice(0, 160)}`);
     }
   }
 
@@ -219,7 +265,14 @@ export async function callOutputWatcher(
     }
   }
 
-  return mockOutputWatcher(args);
+  const mockResult = mockOutputWatcher(args);
+  return {
+    ...mockResult,
+    mockReason:
+      gateReasons.length > 0
+        ? gateReasons.join(" | ")
+        : "no path matched (token unset, x402 gate skipped)",
+  };
 }
 
 // ─── x402 path ──────────────────────────────────────────────────────

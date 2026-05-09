@@ -11,6 +11,7 @@ interface CycleRunResult {
   swarmReference?: string;
   observedOutputs?: number;
   apifyMode?: "x402" | "token" | "direct" | "mock";
+  apifyMockReason?: string | null;
   apifyCostUsd?: number;
   apifyPaymentTxHash?: string | null;
   apifyPaymentTo?: string | null;
@@ -19,9 +20,11 @@ interface CycleRunResult {
   ensTxHash?: string | null;
   ensWritten?: boolean;
   error?: string;
-  /** Set to "INSUFFICIENT_BALANCE" by /api/agent/run when the KMS
-   * wallet doesn't hold enough USDC on Base for the Apify call. */
+  /** Set to "INSUFFICIENT_BALANCE" when the KMS wallet doesn't hold
+   * enough USDC, or "PAYMENT_NOT_SETTLED" when x402 was skipped or
+   * threw and the route refused to fall back to mock. */
   code?: string;
+  reason?: string | null;
   walletAddress?: string;
   haveUsdc?: number;
   needUsdc?: number;
@@ -45,6 +48,7 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
   const [rows, setRows] = useState<PersistedRow[]>([]);
   const [lastRun, setLastRun] = useState<CycleRunResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [paymentErr, setPaymentErr] = useState<string | null>(null);
   const [balanceErr, setBalanceErr] = useState<{
     walletAddress: string;
     haveUsdc: number;
@@ -80,6 +84,7 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
     setRunning(true);
     setError(null);
     setBalanceErr(null);
+    setPaymentErr(null);
     let res: CycleRunResult | null = null;
     try {
       const r = await fetch("/api/agent/run", {
@@ -99,6 +104,10 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
           haveUsdc: json.haveUsdc,
           needUsdc: json.needUsdc,
         });
+      } else if (json.code === "PAYMENT_NOT_SETTLED") {
+        setPaymentErr(
+          json.reason ?? json.error ?? "x402 settlement didn't land",
+        );
       } else if (!r.ok || !json.ok) {
         setError(json.error ?? `HTTP ${r.status}`);
       } else {
@@ -207,7 +216,22 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
         </div>
       )}
 
-      {error && !balanceErr && (
+      {paymentErr && (
+        <div className="mt-3 rounded-md border border-warn/30 bg-warn-soft px-4 py-3 text-[12px] text-warn-ink space-y-1">
+          <p className="font-medium">x402 settlement didn&apos;t land.</p>
+          <p className="text-[11px] text-ink-soft leading-relaxed">
+            {paymentErr}
+          </p>
+          <p className="text-[11px] text-ink-soft">
+            Common causes: dev server hasn&apos;t reloaded x402 envs (restart{" "}
+            <code className="font-mono">pnpm dev</code>), KMS wallet has no USDC
+            on Base mainnet, or the venture isn&apos;t flagged{" "}
+            <code className="font-mono">stage=live</code>.
+          </p>
+        </div>
+      )}
+
+      {error && !balanceErr && !paymentErr && (
         <div className="mt-3 rounded-md border border-red/30 bg-red-soft px-3 py-2 text-[12px] text-red">
           {error}
         </div>
@@ -230,58 +254,49 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
          * rows below are split into apify_query + attestation_generated
          * by the cycle, so the inline summary is more readable for the
          * fresh run. */}
-        {lastRun?.ok && (
+        {lastRun?.ok && lastRun.apifyMode === "x402" && (
           <div className="mb-3 rounded-lg border border-verify/30 bg-verify-soft px-4 py-3 space-y-1.5">
             <div className="flex items-center justify-between gap-3 text-[12px] flex-wrap">
               <span className="font-mono text-[10px] uppercase tracking-wider text-verify-ink bg-verify/15 rounded px-1.5 py-0.5">
                 just now · cycle #{lastRun.ordinal} · {lastRun.attestationType}
               </span>
-              {lastRun.apifyMode === "x402" && (
-                <span className="font-mono text-[10px] uppercase tracking-wider text-accent-ink bg-accent/15 rounded px-1.5 py-0.5">
-                  signed by SpaceComputer KMS · settled on Base
-                </span>
-              )}
-              <span className="font-mono text-[10px] text-ink-muted ml-auto">
-                mode={lastRun.apifyMode} · obs={lastRun.observedOutputs ?? 0}
+              <span className="font-mono text-[10px] uppercase tracking-wider text-accent-ink bg-accent/15 rounded px-1.5 py-0.5">
+                signed by SpaceComputer KMS · settled on Base
               </span>
             </div>
-            {lastRun.apifyMode === "x402" && (
-              <>
-                {lastRun.kmsAddress && (
-                  <Row
-                    label="KMS payer"
-                    value={
-                      <Link
-                        href={`https://basescan.org/address/${lastRun.kmsAddress}`}
-                      >
-                        {short(lastRun.kmsAddress)}
-                      </Link>
-                    }
-                  />
-                )}
-                <Row
-                  label="x402 settlement"
-                  value={
-                    lastRun.apifyPaymentTxHash ? (
-                      <Link
-                        href={`https://basescan.org/tx/${lastRun.apifyPaymentTxHash}`}
-                      >
-                        {short(lastRun.apifyPaymentTxHash)}
-                      </Link>
-                    ) : (
-                      <span className="text-ink-muted text-[11px]">
-                        (facilitator didn&apos;t echo receipt — check Basescan)
-                      </span>
-                    )
-                  }
-                  extra={
-                    lastRun.apifyPaymentValueUsd
-                      ? `${lastRun.apifyPaymentValueUsd.toFixed(4)} USDC`
-                      : undefined
-                  }
-                />
-              </>
+            {lastRun.kmsAddress && (
+              <Row
+                label="KMS payer"
+                value={
+                  <Link
+                    href={`https://basescan.org/address/${lastRun.kmsAddress}`}
+                  >
+                    {short(lastRun.kmsAddress)}
+                  </Link>
+                }
+              />
             )}
+            <Row
+              label="x402 settlement"
+              value={
+                lastRun.apifyPaymentTxHash ? (
+                  <Link
+                    href={`https://basescan.org/tx/${lastRun.apifyPaymentTxHash}`}
+                  >
+                    {short(lastRun.apifyPaymentTxHash)}
+                  </Link>
+                ) : (
+                  <span className="text-ink-muted text-[11px]">
+                    (facilitator didn&apos;t echo receipt — check Basescan)
+                  </span>
+                )
+              }
+              extra={
+                lastRun.apifyPaymentValueUsd
+                  ? `${lastRun.apifyPaymentValueUsd.toFixed(4)} USDC`
+                  : undefined
+              }
+            />
             {lastRun.swarmReference && (
               <Row
                 label="signed attestation"
@@ -314,9 +329,18 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
           </p>
         ) : (
           <ul className="divide-y divide-border-soft border border-border bg-surface rounded-lg overflow-hidden">
-            {rows.map((r, i) => (
-              <PersistedLogRow key={i} row={r} />
-            ))}
+            {rows
+              // Hide apify_query rows that didn't produce a real settlement —
+              // they're noise in an audit log meant to show paid scrapes.
+              .filter(
+                (r) =>
+                  r.activityType !== "apify_query" ||
+                  ((r.details as { mode?: string } | null)?.mode === "x402" &&
+                    Boolean(r.txHash)),
+              )
+              .map((r, i) => (
+                <PersistedLogRow key={i} row={r} />
+              ))}
           </ul>
         )}
       </div>
@@ -353,11 +377,6 @@ function PersistedLogRow({ row }: { row: PersistedRow }) {
         >
           {row.activityType.replace(/_/g, " ")}
         </span>
-        {typeof d.mode === "string" && (
-          <span className="font-mono text-[10px] text-ink-muted">
-            mode={d.mode}
-          </span>
-        )}
         {typeof row.costUsd === "number" && row.costUsd > 0 && (
           <span className="font-mono text-[10px] text-ink-muted">
             ${row.costUsd.toFixed(4)}
@@ -390,6 +409,36 @@ function PersistedLogRow({ row }: { row: PersistedRow }) {
               label={`#${d.ordinal} ${typeof d.type === "string" ? d.type : ""}`.trim()}
               value={null}
             />
+          )}
+          {typeof d.summary === "string" && d.summary && (
+            <div className="mt-1 rounded-md bg-surface-2/60 border border-border-soft px-3 py-2 text-[12px] text-ink leading-relaxed">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                  Claude says
+                </span>
+                {typeof d.confidence === "number" && (
+                  <span className="font-mono text-[10px] text-ink-muted">
+                    confidence {Math.round(d.confidence)}%
+                  </span>
+                )}
+                {typeof d.milestoneOrdinal === "number" && (
+                  <span className="font-mono text-[10px] text-ink-muted">
+                    milestone #{d.milestoneOrdinal}
+                  </span>
+                )}
+              </div>
+              <p className="text-ink-soft">{d.summary}</p>
+              {Array.isArray(d.evidence) && d.evidence.length > 0 && (
+                <ul className="mt-1.5 space-y-0.5 list-disc pl-4 text-[11px] text-ink-muted">
+                  {(d.evidence as unknown[])
+                    .filter((e): e is string => typeof e === "string")
+                    .slice(0, 4)
+                    .map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                </ul>
+              )}
+            </div>
           )}
           {typeof d.ensTxHash === "string" && d.ensTxHash && (
             <Row
