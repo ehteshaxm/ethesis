@@ -22,7 +22,7 @@ export const ENS_MAINNET = {
 export const ENS_SEPOLIA = {
   registry: ENS_REGISTRY,
   nameWrapper: "0x0635513f179D50A207757E05759CbD106d7dFcE8" as `0x${string}`,
-  publicResolver: "0x8FADE66B79cC9f707aB26799354482EB93a5B7dD" as `0x${string}`,
+  publicResolver: "0xE99638b40E4Fff0129D56f03b55b6bbC4BBE49b5" as `0x${string}`,
   chainId: 11155111,
 } as const;
 

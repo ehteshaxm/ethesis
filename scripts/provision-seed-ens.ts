@@ -17,11 +17,14 @@ config({ path: ".env" });
 config({ path: ".env.local", override: true });
 
 import { mockVentures } from "../lib/mock-data";
-import { provisionVentureAndAgent } from "../lib/ens-platform";
-import { db, schema } from "../db";
-import { eq } from "drizzle-orm";
 
 async function main() {
+  // Dynamic-import everything that touches DATABASE_URL or other env after
+  // dotenv has run — top-level imports get hoisted before config() and
+  // would crash with "DATABASE_URL not set".
+  const { provisionVentureAndAgent } = await import("../lib/ens-platform");
+  const { db, schema } = await import("../db");
+  const { eq } = await import("drizzle-orm");
   const arg = process.argv[2];
   if (!arg) {
     console.error(

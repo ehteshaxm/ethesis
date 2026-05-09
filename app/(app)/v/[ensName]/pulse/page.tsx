@@ -222,7 +222,7 @@ export default async function PulseTab({ params }: Props) {
               footerLinks={[
                 {
                   label: `view payload on Swarm`,
-                  href: `https://bzz.limo/bytes/${a.swarmReference}`,
+                  href: `/swarm/${a.swarmReference}`,
                 },
                 {
                   label: `view ENS record`,
