@@ -8,7 +8,11 @@
 
 import { hashMessage, type Hex } from "viem";
 import type { PrivateKeyAccount } from "viem/accounts";
-import { callClaudeStructured, ATTESTATION_MODEL } from "./anthropic-client";
+import {
+  callClaudeStructuredWithProof,
+  ATTESTATION_MODEL,
+} from "./anthropic-client";
+import type { TeeGatewayAttestation } from "./tee-gateway";
 import type { ScrapedOutput } from "./apify-client";
 import { pinJsonToIpfs } from "./ipfs";
 import { fetchCosmicNonce, type CosmicNonce } from "./ctrng";
@@ -40,6 +44,12 @@ export interface SignedAttestation extends AttestationDraft {
    * provenance.
    */
   cosmicNonce: CosmicNonce | null;
+  /**
+   * TEE attestation proof from SpaceComputer's secure inference gateway.
+   * Present only when SPACE_COMPUTER_GATEWAY_URL is configured. Contains
+   * a TDX quote binding the AI response to a specific hardware enclave.
+   */
+  teeGatewayProof?: TeeGatewayAttestation;
 }
 
 export interface AttestationGeneratorInput {
@@ -94,17 +104,19 @@ Be conservative: if you're unsure, prefer silence. Always cite specific evidence
 
 export async function generateAttestationDraft(
   input: AttestationGeneratorInput,
-): Promise<AttestationDraft> {
+): Promise<{ draft: AttestationDraft; teeGatewayProof?: TeeGatewayAttestation }> {
   const userPrompt = formatUserPrompt(input);
   const fallback = synthesizeFallbackDraft(input);
 
-  return callClaudeStructured<AttestationDraft>({
+  const result = await callClaudeStructuredWithProof<AttestationDraft>({
     system: SYSTEM_PROMPT,
     user: userPrompt,
     jsonSchema: ATTESTATION_SCHEMA,
     fallback,
     maxTokens: 1024,
   });
+
+  return { draft: result.value, teeGatewayProof: result.teeGatewayProof };
 }
 
 /**
@@ -118,6 +130,7 @@ export async function finalizeAttestation(
     ventureEnsName: string;
     agentEnsName: string;
     observedOutputs: number;
+    teeGatewayProof?: TeeGatewayAttestation;
   },
 ): Promise<{ signed: SignedAttestation; ipfsCid: string }> {
   // Pull a cosmic-random nonce from SpaceComputer's cTRNG. Bound into
@@ -154,6 +167,7 @@ export async function finalizeAttestation(
     signedAt: new Date().toISOString(),
     model: ATTESTATION_MODEL,
     cosmicNonce,
+    teeGatewayProof: context.teeGatewayProof,
   };
 
   const ipfsCid = await pinJsonToIpfs(

@@ -50,8 +50,8 @@ export const ventures = pgTable("ventures", {
   woundDownAt: timestamp("wound_down_at"),
 
   // Token & treasury
-  tokenSymbol: text("token_symbol").notNull(),
-  tokenSupply: text("token_supply").notNull(),
+  tokenSymbol: text("token_symbol"),
+  tokenSupply: text("token_supply"),
   tokenAddress: text("token_address"),
   treasuryAddress: text("treasury_address"),
   treasuryBalanceEth: real("treasury_balance_eth").notNull().default(0),
@@ -78,6 +78,14 @@ export const ventures = pgTable("ventures", {
   promiseScore: integer("promise_score"),
   progressScore7dDelta: integer("progress_score_7d_delta"),
   promiseScore7dDelta: integer("promise_score_7d_delta"),
+
+  // Proposal stage
+  proposalNoveltyScore: integer("proposal_novelty_score"),
+  proposalFeasibilityScore: integer("proposal_feasibility_score"),
+  proposalImpactScore: integer("proposal_impact_score"),
+  proposalEvalIpfsCid: text("proposal_eval_ipfs_cid"),
+  fundingLengthDays: integer("funding_length_days"),
+  fundingGoalEth: real("funding_goal_eth"),
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -225,6 +233,21 @@ export const brainQueries = pgTable("brain_queries", {
   answer: text("answer").notNull(),
   citedDocumentIds: jsonb("cited_document_ids").notNull(),
   ventureScopeId: uuid("venture_scope_id").references(() => ventures.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ─── Notifications ──────────────────────────────────────────────────
+
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .references(() => users.id)
+    .notNull(),
+  ventureEnsName: text("venture_ens_name").notNull(),
+  type: text("type").notNull(),
+  message: text("message").notNull(),
+  metadata: jsonb("metadata"),
+  readAt: timestamp("read_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
