@@ -93,16 +93,57 @@ async function main() {
   })) as `0x${string}`;
   if (ventureOwner === ZERO) {
     console.log("  step 1/4 venture subname missing — creating");
-    const tx = await wallet.writeContract({
-      address: target.nameWrapper,
-      abi: nameWrapperAbi,
-      functionName: "setSubnodeOwner",
-      args: [namehash(parent), label, account.address, 0, 0],
-      account: account,
-      chain: sepolia,
-    });
+    // ethesis.eth was registered via the v3 registrar, which wraps by
+    // default — so the parent owner on the registry is the NameWrapper
+    // itself. We need to call NameWrapper.setSubnodeRecord (string label)
+    // not Registry.setSubnodeRecord (labelhash).
+    const parentNode = namehash(parent);
+    const parentOwnerOnRegistry = (await pub.readContract({
+      address: target.registry,
+      abi: ensRegistryAbi,
+      functionName: "owner",
+      args: [parentNode],
+    })) as `0x${string}`;
+    const wrapped =
+      parentOwnerOnRegistry.toLowerCase() ===
+      target.nameWrapper.toLowerCase();
+    let tx: Hex;
+    if (wrapped) {
+      tx = await wallet.writeContract({
+        address: target.nameWrapper,
+        abi: nameWrapperAbi,
+        functionName: "setSubnodeRecord",
+        args: [
+          parentNode,
+          label,
+          account.address,
+          target.publicResolver,
+          0n,
+          0,
+          0n,
+        ],
+        account: account,
+        chain: sepolia,
+      });
+    } else {
+      const labelHash = keccak256(toBytes(label));
+      tx = await wallet.writeContract({
+        address: target.registry,
+        abi: ensRegistryAbi,
+        functionName: "setSubnodeRecord",
+        args: [
+          parentNode,
+          labelHash,
+          account.address,
+          target.publicResolver,
+          0n,
+        ],
+        account: account,
+        chain: sepolia,
+      });
+    }
     await pub.waitForTransactionReceipt({ hash: tx });
-    console.log(`           tx: ${tx}`);
+    console.log(`           tx: ${tx}  (parent ${wrapped ? "wrapped" : "unwrapped"})`);
   } else {
     console.log(`  step 1/4 venture exists       owner=${ventureOwner}`);
   }
