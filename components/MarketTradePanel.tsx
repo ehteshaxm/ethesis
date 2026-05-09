@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAccount } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { ArrowDown, ArrowUp, Check, Loader2, Wallet } from "lucide-react";
@@ -77,23 +77,24 @@ export function MarketTradePanel({ market }: Props) {
   const { address, isConnected } = useAccount();
   const { openConnectModal } = useConnectModal();
 
-  const [outcomes, setOutcomes] = useState<MarketOutcome[]>(market.outcomes);
+  // Hydrate from localStorage in lazy useState initializers so we get
+  // the right value on first paint without a redundant cascading render
+  // (and without tripping react-hooks/set-state-in-effect). The
+  // initializer runs once at mount; on the server, window is undefined
+  // and the load helpers return defaults — same shape both sides, no
+  // hydration mismatch.
+  const [outcomes, setOutcomes] = useState<MarketOutcome[]>(() => {
+    const saved = loadTwaps(market.id);
+    return saved && saved.length === market.outcomes.length
+      ? saved
+      : market.outcomes;
+  });
   const [selected, setSelected] = useState<string | null>(null);
   const [amount, setAmount] = useState<string>("0.05");
   const [phase, setPhase] = useState<Phase>("idle");
-  const [positions, setPositions] = useState<Position[]>([]);
-
-  // Hydrate from localStorage on mount so trades and TWAP nudges
-  // survive a refresh.
-  useEffect(() => {
-    const saved = loadPositions(market.id);
-    if (saved.length > 0) setPositions(saved);
-    const savedTwaps = loadTwaps(market.id);
-    if (savedTwaps && savedTwaps.length === market.outcomes.length) {
-      setOutcomes(savedTwaps);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [market.id]);
+  const [positions, setPositions] = useState<Position[]>(() =>
+    loadPositions(market.id),
+  );
 
   const totalDeposits = outcomes.reduce((s, o) => s + o.totalDepositsEth, 0);
   const sortedTwaps = [...outcomes].sort((a, b) => b.twap - a.twap);
