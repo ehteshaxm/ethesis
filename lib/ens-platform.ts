@@ -330,12 +330,20 @@ export async function provisionVentureAndAgent(
 
   const agent = deriveAgentWallet(input.label, cfg.agentMasterSeed);
 
-  // ─── TX1: create venture subname (owner = user) ─────────────
+  // ─── TX1: create venture subname (owner = platform wallet) ──
+  // We want the platform to retain authority so subsequent setText
+  // calls (the multicall in TX2, plus per-cycle attestation writes
+  // via writeAttestationToEns) don't revert on the resolver's
+  // authorisation check. The user's identity is preserved in the
+  // ETHESIS_OWNER text record (set in TX2). When user-owned
+  // subnames are needed later, swap to a flow where the user signs
+  // the multicall via SIWE-derived permission, not this provisioner.
+  const platformAccount = walletClient.account!;
   const { txHash: ventureCreate, subnameNode: ventureSubnameNode } =
     await createSubname({
       parentEnsName: cfg.parentEnsName,
       label: input.label,
-      owner: input.ownerAddress,
+      owner: platformAccount.address,
       publicClient,
       walletClient,
       target,
@@ -373,7 +381,6 @@ export async function provisionVentureAndAgent(
   // ─── TX3: create agent subname (owner = platform) ───────────
   // Owner = platform wallet so the platform can keep updating agent
   // records (capabilities change, attestation CIDs land continuously).
-  const platformAccount = walletClient.account!;
   const { txHash: agentCreateTx, subnameNode: agentSubnameNode } =
     await createSubname({
       parentEnsName: ventureEnsName,
