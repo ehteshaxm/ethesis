@@ -8,7 +8,7 @@
 //   4. Writes scores to the ventures row and transitions stage → "auction"
 //   5. Notifies the proposal submitter that scoring is complete
 
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { keccak256, toBytes, hashMessage, type Hex } from "viem";
 import { db, schema } from "./db";
 import { callWebSearch } from "./apify-client";
@@ -18,6 +18,8 @@ import { fetchCosmicNonce } from "./ctrng";
 import { deriveAgentAccount, ventureSlug } from "./wallet";
 import { emitTeeEvent } from "./tee";
 import { sendProposalScoredNotification } from "./notifications";
+import { swarmList, isSwarmConfigured } from "./swarm-client";
+import { fetchSourcifyOutputs, isSourcifyConfigured } from "./sourcify-client";
 
 export interface ProposalEvalResult {
   ventureEnsName: string;
@@ -105,6 +107,7 @@ export async function runProposalEval(
   const agentPrivateKey = deriveAgentPrivateKey(slug);
 
   // ─── 2. Gather web context via Apify ─────────────────────────────
+  // Proposals are pre-funding so KMS is never used here — raw key only.
   const queries = [
     `${venture.title} ${venture.category} related research papers competing projects`,
     `${venture.pitch} state of the art prior work`,
@@ -116,6 +119,38 @@ export async function runProposalEval(
     )
   ).flat();
 
+  // ─── 2b. Swarm: user-uploaded content (proposals, proof docs) ────
+  const swarmDocs = isSwarmConfigured()
+    ? await swarmList(venture.id).catch((err) => {
+        console.warn("[proposal-eval] Swarm list failed:", err.message);
+        return [];
+      })
+    : [];
+
+  // ─── 2c. Sourcify: pre-registered contract sources (if any) ─────
+  const sourcifyConnected = isSourcifyConfigured()
+    ? await db.query.connectedSources.findMany({
+        where: and(
+          eq(schema.connectedSources.ventureId, venture.id),
+          eq(schema.connectedSources.sourceType, "sourcify"),
+          eq(schema.connectedSources.isActive, true),
+        ),
+      })
+    : [];
+
+  const sourcifyOutputs = (
+    await Promise.all(
+      sourcifyConnected.map((s) => {
+        const [chainId, address] = s.identifier.split(":");
+        if (!chainId || !address) return Promise.resolve([]);
+        return fetchSourcifyOutputs(chainId, address).catch((err) => {
+          console.warn("[proposal-eval] Sourcify fetch failed:", err.message);
+          return [];
+        });
+      }),
+    )
+  ).flat();
+
   // ─── 3. Score via Claude ──────────────────────────────────────────
   const outputsText = allOutputs
     .map(
@@ -123,6 +158,18 @@ export async function runProposalEval(
         `[${i}] (${o.source}) ${o.title}\n  URL: ${o.url}\n  ${o.body.slice(0, 200)}`,
     )
     .join("\n\n");
+
+  const swarmText = swarmDocs.length > 0
+    ? swarmDocs
+        .map((d) => `[${d.label}]\n${d.content.slice(0, 400)}`)
+        .join("\n\n")
+    : "(none)";
+
+  const sourcifyText = sourcifyOutputs.length > 0
+    ? sourcifyOutputs
+        .map((o) => `${o.title}: ${o.body.slice(0, 300)}`)
+        .join("\n\n")
+    : "(none)";
 
   const userPrompt = `Proposal title: ${venture.title}
 Category: ${venture.category}
@@ -133,6 +180,12 @@ Funding goal: ${venture.fundingGoalEth ?? "unspecified"} ETH
 
 Web search results (${allOutputs.length} items found):
 ${outputsText || "(no results retrieved)"}
+
+User-uploaded documents (${swarmDocs.length} items from Swarm):
+${swarmText}
+
+Contract verification data (Sourcify, ${sourcifyOutputs.length} items):
+${sourcifyText}
 
 Evaluate this proposal. Score novelty, feasibility, and impact 0-100. Identify any directly competing projects.`;
 
@@ -172,6 +225,8 @@ Evaluate this proposal. Score novelty, feasibility, and impact 0-100. Identify a
     cosmicNonce,
     teeGatewayProof: teeGatewayProof ?? null,
     searchOutputsObserved: allOutputs.length,
+    swarmDocsObserved: swarmDocs.length,
+    sourcifyOutputsObserved: sourcifyOutputs.length,
   };
 
   const ipfsCid = await pinJsonToIpfs(
@@ -201,6 +256,8 @@ Evaluate this proposal. Score novelty, feasibility, and impact 0-100. Identify a
       impact: evalResult.impact,
       ipfsCid,
       searchOutputsObserved: allOutputs.length,
+      swarmDocsObserved: swarmDocs.length,
+      sourcifyOutputsObserved: sourcifyOutputs.length,
       teeGatewayProof: teeGatewayProof ?? null,
     },
     costUsd: 0,
