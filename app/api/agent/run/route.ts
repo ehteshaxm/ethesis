@@ -133,6 +133,37 @@ export async function POST(req: NextRequest) {
       progressScore: progressFromOutputs,
     });
   } catch (err) {
+    // Surface insufficient-balance distinctly so the UI can render
+    // "not enough USDC on the KMS wallet" with a top-up link instead
+    // of a generic 500.
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      (err as { code: unknown }).code === "INSUFFICIENT_BALANCE"
+    ) {
+      const e = err as unknown as {
+        message: string;
+        walletAddress: string;
+        haveUsdc: number;
+        needUsdc: number;
+        network: string;
+      };
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "INSUFFICIENT_BALANCE",
+          error: `Not enough USDC on the KMS wallet. Holds ${e.haveUsdc.toFixed(
+            4,
+          )} USDC, this Apify call costs ${e.needUsdc.toFixed(4)} USDC.`,
+          walletAddress: e.walletAddress,
+          haveUsdc: e.haveUsdc,
+          needUsdc: e.needUsdc,
+          network: e.network,
+        },
+        { status: 402 },
+      );
+    }
     console.error("[agent/run] error:", err);
     return NextResponse.json(
       {

@@ -19,12 +19,57 @@
 // the cycle is mode-agnostic.
 
 import { ApifyClient } from "apify-client";
-import { createWalletClient, http, type Hex } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  formatUnits,
+  http,
+  type Hex,
+} from "viem";
 import { privateKeyToAccount, type LocalAccount } from "viem/accounts";
 import { base, baseSepolia } from "viem/chains";
 import { fetchSourceFree } from "./source-fetchers";
 import { getOrCreatePlatformKey, isKmsEnabled } from "@/lib/sc-kms";
 import { createKmsAccount } from "@/lib/sc-kms-account";
+
+/** Thrown when the x402 signer doesn't have enough USDC on the
+ * settlement chain. Caught by callers (route handlers, the cycle) so
+ * they can surface a clean message instead of "x402 retry 401:
+ * unauthorized" or worse, falling silently through to mock. */
+export class InsufficientBalanceError extends Error {
+  readonly code = "INSUFFICIENT_BALANCE" as const;
+  readonly walletAddress: Hex;
+  readonly haveUsdc: number;
+  readonly needUsdc: number;
+  readonly network: string;
+  constructor(args: {
+    walletAddress: Hex;
+    haveUsdc: number;
+    needUsdc: number;
+    network: string;
+  }) {
+    super(
+      `KMS wallet ${args.walletAddress} has ${args.haveUsdc.toFixed(
+        4,
+      )} USDC on ${args.network}, needs ${args.needUsdc.toFixed(4)} for this Apify call.`,
+    );
+    this.name = "InsufficientBalanceError";
+    this.walletAddress = args.walletAddress;
+    this.haveUsdc = args.haveUsdc;
+    this.needUsdc = args.needUsdc;
+    this.network = args.network;
+  }
+}
+
+const ERC20_BALANCE_ABI = [
+  {
+    name: "balanceOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
 
 export interface OutputWatcherSource {
   type: "github" | "arxiv" | "huggingface" | "openreview" | "x" | "substack";
@@ -139,6 +184,13 @@ export async function callOutputWatcher(
         sourceStats: tallyByType([...directOutputs, ...x402Result.outputs]),
       };
     } catch (err) {
+      // Insufficient balance is a *user* error — surface it instead of
+      // silently degrading to direct/mock. The route handler converts
+      // this into a 402 with code: INSUFFICIENT_BALANCE so the panel
+      // can render "not enough USDC" with a top-up link.
+      if (err instanceof InsufficientBalanceError) {
+        throw err;
+      }
       console.warn(
         "[apify] x402 call failed, falling through:",
         (err as { message?: string })?.message ?? err,
@@ -297,6 +349,31 @@ async function callViaX402(
     transport: http(networkConfig.rpcUrl),
   });
   const amountAtomic = BigInt(accept.amount);
+
+  // Pre-flight: confirm the signer holds enough USDC. The facilitator's
+  // generic "x402-agentic-payment-unauthorized" surfaces the same way
+  // for an invalid signature *or* an underfunded wallet — we can't tell
+  // which from the response alone. Reading balanceOf takes 1 RPC call
+  // and turns an opaque 401 into "insufficient balance: 0.96 / 1.00".
+  const publicClient = createPublicClient({
+    chain: networkConfig.chain,
+    transport: http(networkConfig.rpcUrl),
+  });
+  const balanceAtomic = (await publicClient.readContract({
+    address: accept.asset as `0x${string}`,
+    abi: ERC20_BALANCE_ABI,
+    functionName: "balanceOf",
+    args: [account.address],
+  })) as bigint;
+  if (balanceAtomic < amountAtomic) {
+    throw new InsufficientBalanceError({
+      walletAddress: account.address,
+      haveUsdc: Number(formatUnits(balanceAtomic, 6)),
+      needUsdc: Number(formatUnits(amountAtomic, 6)),
+      network: accept.network,
+    });
+  }
+
   const expirySec = accept.maxTimeoutSeconds || 3600;
   const validBefore = BigInt(Math.floor(Date.now() / 1000) + expirySec);
   const nonce = randomBytes32();

@@ -19,6 +19,12 @@ interface CycleRunResult {
   ensTxHash?: string | null;
   ensWritten?: boolean;
   error?: string;
+  /** Set to "INSUFFICIENT_BALANCE" by /api/agent/run when the KMS
+   * wallet doesn't hold enough USDC on Base for the Apify call. */
+  code?: string;
+  walletAddress?: string;
+  haveUsdc?: number;
+  needUsdc?: number;
 }
 
 interface PersistedRow {
@@ -39,6 +45,11 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
   const [rows, setRows] = useState<PersistedRow[]>([]);
   const [lastRun, setLastRun] = useState<CycleRunResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [balanceErr, setBalanceErr] = useState<{
+    walletAddress: string;
+    haveUsdc: number;
+    needUsdc: number;
+  } | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   const refreshRows = useCallback(async () => {
@@ -68,6 +79,7 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
     if (running) return;
     setRunning(true);
     setError(null);
+    setBalanceErr(null);
     let res: CycleRunResult | null = null;
     try {
       const r = await fetch("/api/agent/run", {
@@ -76,11 +88,23 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
         body: JSON.stringify({ ensName: ventureEnsName }),
       });
       const json = (await r.json()) as CycleRunResult;
-      if (!r.ok || !json.ok) {
+      if (
+        json.code === "INSUFFICIENT_BALANCE" &&
+        json.walletAddress &&
+        typeof json.haveUsdc === "number" &&
+        typeof json.needUsdc === "number"
+      ) {
+        setBalanceErr({
+          walletAddress: json.walletAddress,
+          haveUsdc: json.haveUsdc,
+          needUsdc: json.needUsdc,
+        });
+      } else if (!r.ok || !json.ok) {
         setError(json.error ?? `HTTP ${r.status}`);
+      } else {
+        setLastRun(json);
       }
       res = json;
-      setLastRun(json);
     } catch (e) {
       setError((e as Error).message ?? "Network error");
     } finally {
@@ -135,7 +159,55 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
         </button>
       </header>
 
-      {error && (
+      {balanceErr && (
+        <div className="mt-3 rounded-md border border-dispute/40 bg-dispute-soft px-4 py-3 text-[12px] space-y-2">
+          <p className="text-dispute-ink font-medium">
+            Not enough USDC on the KMS wallet to pay for this Apify call.
+          </p>
+          <div className="grid grid-cols-3 gap-3 text-[11px]">
+            <div>
+              <div className="text-ink-muted uppercase tracking-wider">
+                Have
+              </div>
+              <div className="font-mono text-ink">
+                {balanceErr.haveUsdc.toFixed(4)} USDC
+              </div>
+            </div>
+            <div>
+              <div className="text-ink-muted uppercase tracking-wider">
+                Need
+              </div>
+              <div className="font-mono text-dispute-ink">
+                {balanceErr.needUsdc.toFixed(4)} USDC
+              </div>
+            </div>
+            <div>
+              <div className="text-ink-muted uppercase tracking-wider">
+                Short
+              </div>
+              <div className="font-mono text-dispute-ink">
+                {(balanceErr.needUsdc - balanceErr.haveUsdc).toFixed(4)} USDC
+              </div>
+            </div>
+          </div>
+          <p className="text-[11px] text-ink-soft">
+            Top up{" "}
+            <a
+              href={`https://basescan.org/address/${balanceErr.walletAddress}`}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="font-mono text-accent hover:text-accent-ink"
+            >
+              {balanceErr.walletAddress.slice(0, 8)}…
+              {balanceErr.walletAddress.slice(-6)}
+            </a>{" "}
+            on Base mainnet, then retry. The KMS held this wallet, so only
+            it can spend the deposited USDC.
+          </p>
+        </div>
+      )}
+
+      {error && !balanceErr && (
         <div className="mt-3 rounded-md border border-red/30 bg-red-soft px-3 py-2 text-[12px] text-red">
           {error}
         </div>
@@ -160,36 +232,55 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
          * fresh run. */}
         {lastRun?.ok && (
           <div className="mb-3 rounded-lg border border-verify/30 bg-verify-soft px-4 py-3 space-y-1.5">
-            <div className="flex items-center justify-between gap-3 text-[12px]">
+            <div className="flex items-center justify-between gap-3 text-[12px] flex-wrap">
               <span className="font-mono text-[10px] uppercase tracking-wider text-verify-ink bg-verify/15 rounded px-1.5 py-0.5">
                 just now · cycle #{lastRun.ordinal} · {lastRun.attestationType}
               </span>
-              <span className="font-mono text-[10px] text-ink-muted">
+              {lastRun.apifyMode === "x402" && (
+                <span className="font-mono text-[10px] uppercase tracking-wider text-accent-ink bg-accent/15 rounded px-1.5 py-0.5">
+                  signed by SpaceComputer KMS · settled on Base
+                </span>
+              )}
+              <span className="font-mono text-[10px] text-ink-muted ml-auto">
                 mode={lastRun.apifyMode} · obs={lastRun.observedOutputs ?? 0}
               </span>
             </div>
             {lastRun.apifyMode === "x402" && (
-              <Row
-                label="x402 settlement"
-                value={
-                  lastRun.apifyPaymentTxHash ? (
-                    <Link
-                      href={`https://basescan.org/tx/${lastRun.apifyPaymentTxHash}`}
-                    >
-                      {short(lastRun.apifyPaymentTxHash)}
-                    </Link>
-                  ) : (
-                    <span className="text-ink-muted text-[11px]">
-                      (facilitator didn&apos;t echo receipt)
-                    </span>
-                  )
-                }
-                extra={
-                  lastRun.apifyPaymentValueUsd
-                    ? `${lastRun.apifyPaymentValueUsd.toFixed(4)} USDC`
-                    : undefined
-                }
-              />
+              <>
+                {lastRun.kmsAddress && (
+                  <Row
+                    label="KMS payer"
+                    value={
+                      <Link
+                        href={`https://basescan.org/address/${lastRun.kmsAddress}`}
+                      >
+                        {short(lastRun.kmsAddress)}
+                      </Link>
+                    }
+                  />
+                )}
+                <Row
+                  label="x402 settlement"
+                  value={
+                    lastRun.apifyPaymentTxHash ? (
+                      <Link
+                        href={`https://basescan.org/tx/${lastRun.apifyPaymentTxHash}`}
+                      >
+                        {short(lastRun.apifyPaymentTxHash)}
+                      </Link>
+                    ) : (
+                      <span className="text-ink-muted text-[11px]">
+                        (facilitator didn&apos;t echo receipt — check Basescan)
+                      </span>
+                    )
+                  }
+                  extra={
+                    lastRun.apifyPaymentValueUsd
+                      ? `${lastRun.apifyPaymentValueUsd.toFixed(4)} USDC`
+                      : undefined
+                  }
+                />
+              </>
             )}
             {lastRun.swarmReference && (
               <Row
