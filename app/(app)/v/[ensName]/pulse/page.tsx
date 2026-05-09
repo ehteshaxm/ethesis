@@ -26,7 +26,8 @@ interface UnifiedAttestation {
   milestoneOrdinal?: number;
   evidence?: { label: string }[];
   knowledgeBaseNotes?: string[];
-  ipfsCid: string;
+  /** 64-char hex Swarm reference (no 0x prefix) of the signed payload. */
+  swarmReference: string;
   ensTextRecordKey?: string;
   /** Real attestations from the agent runtime are flagged for the badge. */
   source: "agent" | "seeded";
@@ -71,7 +72,8 @@ export default async function PulseTab({ params }: Props) {
       knowledgeBaseNotes: r.knowledgeBaseCheck
         ? [r.knowledgeBaseCheck.notes]
         : undefined,
-      ipfsCid: r.ipfsHash,
+      // DB column is named ipfs_hash for now; agent writes Swarm refs into it.
+      swarmReference: r.ipfsHash,
       ensTextRecordKey: r.ensTextRecordKey,
       source: "agent",
     };
@@ -89,7 +91,7 @@ export default async function PulseTab({ params }: Props) {
       milestoneOrdinal: a.milestoneOrdinal,
       evidence: a.evidence,
       knowledgeBaseNotes: a.knowledgeBaseNotes,
-      ipfsCid: a.ipfsCid,
+      swarmReference: a.ipfsCid,
       ensTextRecordKey: a.ensTextRecordKey,
       source: "seeded",
     }),
@@ -139,8 +141,8 @@ export default async function PulseTab({ params }: Props) {
           </h2>
           <p className="mt-2 text-sm text-ink-muted leading-relaxed max-w-2xl">
             Each entry is a JSON payload signed by the venture&apos;s agent,
-            pinned to IPFS, and written into a per-attestation ENS text record
-            on{" "}
+            uploaded to Ethereum Swarm, and written into a per-attestation ENS
+            text record on{" "}
             <span className="font-mono text-ink">{venture.ensName}</span>.
           </p>
         </div>
@@ -170,7 +172,7 @@ export default async function PulseTab({ params }: Props) {
             <span className="font-mono font-medium">{real.length}</span>{" "}
             attestation{real.length === 1 ? "" : "s"} posted live by the agent
             runtime — signed with cosmic-random nonces from SpaceComputer cTRNG,
-            pinned to IPFS, anchored to ENS.
+            uploaded to Swarm, anchored to ENS.
           </span>
         </div>
       )}
@@ -219,8 +221,8 @@ export default async function PulseTab({ params }: Props) {
               knowledgeBaseNotes={a.knowledgeBaseNotes}
               footerLinks={[
                 {
-                  label: `view payload on IPFS`,
-                  href: `https://ipfs.io/ipfs/${a.ipfsCid}`,
+                  label: `view payload on Swarm`,
+                  href: `https://bzz.limo/bytes/${a.swarmReference}`,
                 },
                 {
                   label: `view ENS record`,

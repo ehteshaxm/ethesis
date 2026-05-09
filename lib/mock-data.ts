@@ -337,6 +337,7 @@ export function ventureFromEnsRecords(input: {
       "math",
       "oss",
       "security",
+      "bio",
       "other",
     ] as const
   ).includes((input.category ?? "other") as Category)

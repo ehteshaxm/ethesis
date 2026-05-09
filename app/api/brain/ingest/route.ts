@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { keccak256, toBytes } from "viem";
+import { swarmUploadJson } from "@/lib/swarm";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -77,6 +78,26 @@ export async function POST(req: NextRequest) {
       extractTitle(text) ?? f.name.replace(/\.pdf$/i, "").slice(0, 200);
     const contentHash = keccak256(toBytes(trimmed.slice(0, 200_000)));
 
+    // Pin the extracted text to Swarm so the brain corpus is content-
+    // addressable independently of our DB. Best-effort — if Bee is down,
+    // we still ingest into Postgres without a Swarm reference.
+    let swarmReference: string | null = null;
+    try {
+      const upload = await swarmUploadJson({
+        kind: "kb-document",
+        title,
+        sourceFilename: f.name,
+        contentHash,
+        text: trimmed.slice(0, 500_000),
+      });
+      swarmReference = upload.reference;
+    } catch (err) {
+      console.warn(
+        "[brain/ingest] swarm upload failed, persisting without ref:",
+        (err as Error).message,
+      );
+    }
+
     const [row] = await db
       .insert(schema.knowledgeBaseDocuments)
       .values({
@@ -87,7 +108,8 @@ export async function POST(req: NextRequest) {
         authors: null,
         publishedAt: null,
         fullText: trimmed.slice(0, 500_000), // truncate at 500K chars
-        ipfsHash: null,
+        // DB column is `ipfs_hash`; we store Swarm references in it.
+        ipfsHash: swarmReference,
         contentHash,
       })
       .returning({ id: schema.knowledgeBaseDocuments.id });

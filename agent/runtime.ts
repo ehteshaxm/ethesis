@@ -28,7 +28,7 @@ async function tick() {
     try {
       const result = await runCycleForVenture(v.ensName);
       console.log(
-        `[agent] ${result.ventureEnsName} → ${result.attestationType} (#${result.ordinal})  cid=${result.ipfsCid}  ens=${result.ensWritten ? result.ensTxHash : `skipped: ${result.ensSkipReason}`}  ${result.durationMs}ms`,
+        `[agent] ${result.ventureEnsName} → ${result.attestationType} (#${result.ordinal})  bzz=${result.swarmReference}  ens=${result.ensWritten ? result.ensTxHash : `skipped: ${result.ensSkipReason}`}  ${result.durationMs}ms`,
       );
     } catch (err) {
       console.error(
@@ -52,7 +52,7 @@ async function main() {
           : ""
     }`,
   );
-  console.log(`  Pinata:       ${cfg.pinata ? "configured" : "MOCK (no JWT)"}`);
+  console.log(`  Swarm:        ${cfg.swarm ? `bzz ${process.env.SWARM_BEE_URL ?? "https://bzz.limo"}` : "MOCK"}`);
   console.log(`  ENS writer:   ${cfg.ens ? "configured" : "skipped (no platform key)"}`);
   console.log(`  Cycle:        every ${CYCLE_INTERVAL_MS / 3600000}h per venture`);
 

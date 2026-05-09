@@ -1,7 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
-import { getAgentActivityFromDb, resolveVenture } from "@/lib/db-reads";
+import { ExternalLink, ShieldCheck } from "lucide-react";
+import {
+  getAgentActivityFromDb,
+  resolveVenture,
+  type DbActivityRow,
+} from "@/lib/db-reads";
+import { getOrCreatePlatformKey, isKmsEnabled } from "@/lib/sc-kms";
 
 interface Props {
   params: Promise<{ ensName: string }>;
@@ -15,7 +20,29 @@ export default async function AgentTab({ params }: Props) {
 
   const activity = (await getAgentActivityFromDb(decoded, 50)) ?? [];
 
-  if (activity.length === 0) {
+  // Resolve the KMS-held platform key for the wallet panel. Best-effort —
+  // if KMS is disabled or the gateway is unreachable, we just hide the panel.
+  let walletAddress: string | null = null;
+  if (isKmsEnabled()) {
+    try {
+      const key = await getOrCreatePlatformKey();
+      walletAddress = key.address;
+    } catch (err) {
+      console.warn(
+        "[agent page] KMS resolve failed:",
+        (err as { message?: string })?.message ?? err,
+      );
+    }
+  }
+  const lastX402 = activity.find(
+    (r) =>
+      r.activityType === "apify_query" &&
+      r.details?.mode === "x402" &&
+      typeof r.txHash === "string" &&
+      r.txHash.startsWith("0x"),
+  );
+
+  if (activity.length === 0 && !walletAddress) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-surface-2/50 p-10 text-center max-w-2xl mx-auto">
         <h2 className="text-lg font-medium text-ink">Agent</h2>
@@ -47,6 +74,10 @@ export default async function AgentTab({ params }: Props) {
           ENS write is recorded here with its on-chain receipt where applicable.
         </p>
       </header>
+
+      {walletAddress && (
+        <KmsWalletPanel address={walletAddress} lastX402={lastX402} />
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Stat
@@ -139,6 +170,78 @@ export default async function AgentTab({ params }: Props) {
         ))}
       </ul>
     </div>
+  );
+}
+
+function KmsWalletPanel({
+  address,
+  lastX402,
+}: {
+  address: string;
+  lastX402: DbActivityRow | undefined;
+}) {
+  return (
+    <section className="rounded-xl border border-accent/30 bg-accent/5 p-5">
+      <div className="flex items-start gap-3">
+        <ShieldCheck className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-sm font-medium text-ink">
+              Platform x402 wallet
+            </h3>
+            <span className="font-mono text-[10px] uppercase tracking-wider text-accent-ink bg-accent/15 rounded px-1.5 py-0.5">
+              managed by SpaceComputer KMS
+            </span>
+          </div>
+          <p className="mt-1.5 text-xs text-ink-muted leading-relaxed">
+            The private key lives in SpaceComputer&apos;s gateway HSM. The
+            agent sends EIP-712 typed-data digests in; the signed
+            authorization comes back; the x402 facilitator settles on Base.
+          </p>
+          <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="rounded-md border border-border bg-surface px-3 py-2">
+              <dt className="text-[10px] uppercase tracking-wider text-ink-subtle">
+                Address
+              </dt>
+              <dd className="mt-1 font-mono text-ink break-all">
+                <Link
+                  href={`https://basescan.org/address/${address}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-accent inline-flex items-center gap-1"
+                >
+                  {address}
+                  <ExternalLink className="h-3 w-3 shrink-0" />
+                </Link>
+              </dd>
+            </div>
+            <div className="rounded-md border border-border bg-surface px-3 py-2">
+              <dt className="text-[10px] uppercase tracking-wider text-ink-subtle">
+                Last x402 settlement
+              </dt>
+              <dd className="mt-1 font-mono text-ink">
+                {lastX402?.txHash ? (
+                  <Link
+                    href={`https://basescan.org/tx/${lastX402.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-accent inline-flex items-center gap-1"
+                  >
+                    {lastX402.txHash.slice(0, 10)}…
+                    {lastX402.txHash.slice(-6)}
+                    <ExternalLink className="h-3 w-3 shrink-0" />
+                  </Link>
+                ) : (
+                  <span className="text-ink-muted text-[11px]">
+                    no x402 calls yet
+                  </span>
+                )}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </section>
   );
 }
 

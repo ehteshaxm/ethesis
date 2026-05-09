@@ -193,7 +193,7 @@ export function DemoAgentRunner({ venture }: Props) {
       setStage("liquidated");
       addEvent({
         kind: "attest",
-        text: "Final attestation hash-addressed and posted to ENS · ipfs://bafy…",
+        text: "Final attestation uploaded to Swarm and anchored to ENS · bzz://9f3a…",
       });
     });
   };

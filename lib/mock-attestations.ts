@@ -33,13 +33,14 @@ export interface MockAttestation {
 }
 
 function fakeCid(seed: string): string {
+  // 64-char hex Swarm reference shape (no scheme prefix).
   let s = hashString(seed);
   let hex = "";
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 8; i++) {
     s = (s * 1664525 + 1013904223) >>> 0;
     hex += s.toString(16).padStart(8, "0");
   }
-  return `bafyrei${hex.slice(0, 24)}mock`;
+  return hex.slice(0, 64);
 }
 
 export const mockAttestations: MockAttestation[] = [

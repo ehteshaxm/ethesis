@@ -20,9 +20,11 @@
 
 import { ApifyClient } from "apify-client";
 import { createWalletClient, http, type Hex } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { privateKeyToAccount, type LocalAccount } from "viem/accounts";
 import { base, baseSepolia } from "viem/chains";
 import { fetchSourceFree } from "./source-fetchers";
+import { getOrCreatePlatformKey, isKmsEnabled } from "@/lib/sc-kms";
+import { createKmsAccount } from "@/lib/sc-kms-account";
 
 export interface OutputWatcherSource {
   type: "github" | "arxiv" | "huggingface" | "openreview" | "x" | "substack";
@@ -95,17 +97,23 @@ export async function callOutputWatcher(
   // x402 path — pay once for the Google leg covering anything the free
   // fetchers couldn't handle (e.g. x.com / substack / generic web).
   // Skip x402 entirely if every source was covered for free.
+  // Two signing modes:
+  //   - KMS_ENABLED=1   → the platform key in SpaceComputer Orbitport
+  //     KMS signs the EIP-712 typed data. agentPrivateKey is unused.
+  //   - otherwise       → the agent's locally-derived EOA signs.
+  const haveSigner = isKmsEnabled() || Boolean(args.agentPrivateKey);
   if (
     x402Enabled &&
     x402Actor &&
-    args.agentPrivateKey &&
+    haveSigner &&
     uncoveredSources.length > 0
   ) {
     try {
+      const account = await resolveX402Account(args.agentPrivateKey);
       const x402Result = await callViaX402(
         { ...args, sources: uncoveredSources },
         x402Actor,
-        args.agentPrivateKey,
+        account,
       );
       return {
         ...x402Result,
@@ -179,10 +187,28 @@ function randomBytes32(): `0x${string}` {
       .join("")) as `0x${string}`;
 }
 
+/** Resolve the viem account that should sign x402 typed data.
+ * Prefers the SpaceComputer KMS-held platform key when KMS_ENABLED=1;
+ * otherwise falls back to the agent's locally-derived EOA. */
+async function resolveX402Account(
+  agentPrivateKey: Hex | undefined,
+): Promise<LocalAccount> {
+  if (isKmsEnabled()) {
+    const key = await getOrCreatePlatformKey();
+    return createKmsAccount({ keyId: key.keyId, address: key.address });
+  }
+  if (!agentPrivateKey) {
+    throw new Error(
+      "[apify] no signer available — set KMS_ENABLED=1 or pass agentPrivateKey",
+    );
+  }
+  return privateKeyToAccount(agentPrivateKey);
+}
+
 async function callViaX402(
   args: CallOutputWatcherArgs,
   actor: string,
-  agentPrivateKey: Hex,
+  account: LocalAccount,
 ): Promise<OutputWatcherResult> {
   const slug = actor.replace("/", "~");
   const url = `${APIFY_API_BASE}/acts/${slug}/run-sync-get-dataset-items`;
@@ -233,7 +259,6 @@ async function callViaX402(
     throw new Error(`Unsupported Apify x402 network: ${accept.network}`);
   }
 
-  const account = privateKeyToAccount(agentPrivateKey);
   const walletClient = createWalletClient({
     account,
     chain: networkConfig.chain,

@@ -1,6 +1,7 @@
-// Writes attestation IPFS CIDs to ENS text records on the agent's
+// Writes attestation Swarm references to ENS text records on the agent's
 // subname under the platform parent. No-op if the platform ENS isn't
-// configured (e.g. before pnpm ens:bootstrap has run).
+// configured (e.g. before pnpm ens:bootstrap has run). The value stored
+// is `bzz://<reference>` so consumers can resolve via any Bee gateway.
 
 import {
   createPublicClient,
@@ -21,7 +22,7 @@ import {
 
 export interface EnsWriteResult {
   txHash: Hex | null;
-  /** ENS text record key that now points to the attestation CID. */
+  /** ENS text record key that now points to the attestation Swarm ref. */
   recordKey: string;
   /** Set to false if ENS isn't configured. We just log and continue. */
   written: boolean;
@@ -31,7 +32,8 @@ export interface EnsWriteResult {
 export async function writeAttestationToEns(args: {
   agentEnsName: string;
   ordinal: number;
-  ipfsCid: string;
+  /** 64-char hex Swarm reference of the attestation payload. */
+  swarmReference: string;
   scoreUpdates?: { progress?: number; promise?: number };
 }): Promise<EnsWriteResult> {
   const recordKey = attestationRecordKey(args.ordinal);
@@ -90,7 +92,7 @@ export async function writeAttestationToEns(args: {
       address: target.publicResolver,
       abi: publicResolverAbi,
       functionName: "setText",
-      args: [node, recordKey, args.ipfsCid],
+      args: [node, recordKey, `bzz://${args.swarmReference}`],
     });
     await publicClient.waitForTransactionReceipt({ hash: txHash });
     return { txHash, recordKey, written: true };

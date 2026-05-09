@@ -3,14 +3,14 @@
 // Pipeline:
 //   1. Reason about scraped outputs vs declared milestones using Claude
 //   2. Sign the resulting payload with the agent's derived wallet
-//   3. Pin the signed payload to IPFS via Pinata
-//   4. Caller writes the IPFS CID to the agent's ENS text records
+//   3. Upload the signed payload to Ethereum Swarm via the bzz.limo gateway
+//   4. Caller writes the bzz:// reference to the agent's ENS text records
 
 import { hashMessage, type Hex } from "viem";
 import type { PrivateKeyAccount } from "viem/accounts";
 import { callClaudeStructured, ATTESTATION_MODEL } from "./anthropic-client";
 import type { ScrapedOutput } from "./apify-client";
-import { pinJsonToIpfs } from "./ipfs";
+import { swarmUploadJson } from "@/lib/swarm";
 import { fetchCosmicNonce, type CosmicNonce } from "./ctrng";
 
 export type AttestationVariant = "verified" | "disputed" | "silence";
@@ -108,8 +108,8 @@ export async function generateAttestationDraft(
 }
 
 /**
- * Sign the attestation with the agent's private key, pin to IPFS, and
- * return the signed payload + the IPFS CID.
+ * Sign the attestation with the agent's private key, upload to Swarm,
+ * and return the signed payload + the Swarm reference.
  */
 export async function finalizeAttestation(
   draft: AttestationDraft,
@@ -119,14 +119,14 @@ export async function finalizeAttestation(
     agentEnsName: string;
     observedOutputs: number;
   },
-): Promise<{ signed: SignedAttestation; ipfsCid: string }> {
+): Promise<{ signed: SignedAttestation; swarmReference: string }> {
   // Pull a cosmic-random nonce from SpaceComputer's cTRNG. Bound into
   // the canonical message below so the EOA signature commits to it.
   const cosmicNonce = await fetchCosmicNonce();
 
   // Canonical message: stable ordering + ENS scope + cosmic nonce so
   // signatures are verifiable later by anyone who reads the attestation
-  // off IPFS, and so the same agent can never re-sign the same payload
+  // off Swarm, and so the same agent can never re-sign the same payload
   // twice (the nonce changes every cycle).
   const canonical = JSON.stringify({
     type: draft.type,
@@ -156,12 +156,9 @@ export async function finalizeAttestation(
     cosmicNonce,
   };
 
-  const ipfsCid = await pinJsonToIpfs(
-    `ethesis-attestation-${context.ventureEnsName}`,
-    signed,
-  );
+  const upload = await swarmUploadJson(signed);
 
-  return { signed, ipfsCid };
+  return { signed, swarmReference: upload.reference };
 }
 
 function formatUserPrompt(input: AttestationGeneratorInput): string {
