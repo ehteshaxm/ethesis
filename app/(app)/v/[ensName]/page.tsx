@@ -10,6 +10,7 @@ import { TreasuryCashflow } from "@/components/TreasuryCashflow";
 import { AuctionBidPanel } from "@/components/AuctionBidPanel";
 import { VenturePapers } from "@/components/VenturePapers";
 import { DemoAgentRunner } from "@/components/DemoAgentRunner";
+import { LiveScrapePanel } from "@/components/LiveScrapePanel";
 
 interface Props {
   params: Promise<{ ensName: string }>;
@@ -36,6 +37,8 @@ export default async function StoryTab({ params }: Props) {
         {venture.status === "stagnant" && isLive && (
           <DemoAgentRunner venture={venture} />
         )}
+
+        {isLive && <LiveScrapePanel ventureEnsName={venture.ensName} />}
 
         <Section title="About">
           <p className="text-[15px] leading-relaxed text-ink whitespace-pre-line">
