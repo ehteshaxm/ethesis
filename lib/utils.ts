@@ -30,10 +30,17 @@ export function identiconColors(seed: string): [string, string] {
   return [a, b];
 }
 
-/** Format ETH amount with up to 3 decimal places, no $ prefix. */
-export function formatEth(eth: number): string {
-  if (eth === 0) return "0 ETH";
-  if (eth < 0.001) return `${(eth * 1000).toFixed(2)}m ETH`;
-  if (eth < 1) return `${eth.toFixed(3)} ETH`;
-  return `${eth.toFixed(2)} ETH`;
+/** Format a treasury / bid amount as USDC. The numeric value is treated as
+ * a USDC amount directly. Kept under the `formatEth` name so legacy call
+ * sites don't churn; the displayed unit is "USDC". */
+export function formatEth(usdc: number): string {
+  if (usdc === 0) return "0 USDC";
+  if (usdc < 1) return `${usdc.toFixed(2)} USDC`;
+  if (usdc < 1000) return `${Math.round(usdc).toLocaleString()} USDC`;
+  if (usdc < 1_000_000)
+    return `${(usdc / 1000).toFixed(usdc < 10_000 ? 1 : 0)}K USDC`;
+  return `${(usdc / 1_000_000).toFixed(2)}M USDC`;
 }
+
+/** Same as formatEth but exposes the USDC name explicitly for new call sites. */
+export const formatUsdc = formatEth;

@@ -14,6 +14,7 @@ const CATEGORY_LABEL: Record<MockVenture["category"], string> = {
   math: "Mathematics",
   oss: "Open Source",
   security: "Security",
+  bio: "Biotech",
   other: "Other",
 };
 

@@ -10,6 +10,8 @@ import { MilestoneTimeline } from "@/components/MilestoneTimeline";
 import { SourceList } from "@/components/SourceList";
 import { TreasuryCashflow } from "@/components/TreasuryCashflow";
 import { AuctionBidPanel } from "@/components/AuctionBidPanel";
+import { VenturePapers } from "@/components/VenturePapers";
+import { DemoAgentRunner } from "@/components/DemoAgentRunner";
 
 interface Props {
   params: Promise<{ ensName: string }>;
@@ -33,6 +35,10 @@ export default async function StoryTab({ params }: Props) {
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10">
       {/* ─── Main column ──────────────────────────── */}
       <div className="space-y-10 min-w-0">
+        {venture.status === "stagnant" && isLive && (
+          <DemoAgentRunner venture={venture} />
+        )}
+
         <Section title="About">
           <p className="text-[15px] leading-relaxed text-ink whitespace-pre-line">
             {venture.description}
@@ -56,6 +62,12 @@ export default async function StoryTab({ params }: Props) {
         <Section title="Connected sources">
           <SourceList sources={detail.sources} />
         </Section>
+
+        {venture.paperIds && venture.paperIds.length > 0 && (
+          <Section title="Anchor literature">
+            <VenturePapers paperIds={venture.paperIds} />
+          </Section>
+        )}
 
         {isLive && (
           <Section title="Token & treasury">
@@ -295,9 +307,9 @@ function AgentRules({
     <div className="rounded-lg border border-border bg-surface p-5 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
       <Rule
         label="Activates at"
-        value={`${formatEth(venture.activationThresholdEth ?? 0.5)} treasury`}
+        value={`${formatEth(venture.activationThresholdEth ?? 500)} treasury`}
       />
-      <Rule label="Monthly allowance" value="0.05 ETH" />
+      <Rule label="Monthly allowance" value="50 USDC" />
       <Rule label="Auto-liquidate" value="Progress < 30 for 30d" />
       <Rule label="Auto-pivot on disputes" value="ON" />
     </div>

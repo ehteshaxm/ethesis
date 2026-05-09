@@ -11,6 +11,7 @@ export type Category =
   | "math"
   | "oss"
   | "security"
+  | "bio"
   | "other";
 export type PulseDay = "verified" | "disputed" | "silence" | "none";
 
@@ -53,6 +54,9 @@ export interface MockVenture {
   pulse: PulseDay[];
 
   isNew?: boolean;
+
+  /** IDs into BRAIN_CORPUS for anchor literature attached to this venture. */
+  paperIds?: string[];
 }
 
 const now = new Date();
@@ -60,6 +64,71 @@ const daysFromNow = (d: number) => new Date(now.getTime() + d * 86400 * 1000);
 const hoursFromNow = (h: number) => new Date(now.getTime() + h * 3600 * 1000);
 
 export const mockVentures: MockVenture[] = [
+  {
+    ensName: "peptide-amr.ethesis.eth",
+    title: "Peptide-AMR: ML-designed peptides against ESKAPE pathogens",
+    pitch:
+      "Replicating two AMP-discovery papers, then running our own active-learning loop on a refreshed peptidomic library.",
+    description:
+      "Antimicrobial resistance kills ~1.3M/yr globally. We're combining the explainable-deep-learning pipeline (Wong et al. 2023) with the cryptic-peptide mining approach (Torres et al. 2022), validating both on ESKAPE pathogens, then running our own GNN-guided active-learning loop. Wet-lab partner: a CRO with BSL-2 capability for MIC + resistance profiling.",
+    category: "bio",
+    ownerEns: "lambros.eth",
+    stage: "live",
+    status: "healthy",
+    progressScore: 74,
+    promiseScore: 86,
+    progressDelta7d: 6,
+    promiseDelta7d: 3,
+    treasuryBalanceEth: 7800,
+    totalFunders: 64,
+    nextMilestoneInDays: 9,
+    paperIds: [
+      "wong-2023-explainable-amp",
+      "maasch-2023-de-extinction",
+      "torres-2022-encrypted-amp",
+      "stokes-2020-halicin",
+    ],
+    pulse: [
+      "verified",
+      "verified",
+      "none",
+      "verified",
+      "verified",
+      "verified",
+      "none",
+      "verified",
+      "verified",
+      "verified",
+      "none",
+      "verified",
+      "verified",
+      "verified",
+    ],
+  },
+  {
+    ensName: "glp-tweaks.ethesis.eth",
+    title: "GLP-Tweaks: stabilized GLP-1 analogues via NCAA backbone substitution",
+    pitch:
+      "Synthesize a 6-analogue panel substituting non-canonical amino acids at GLP-1 position 2; assay plasma stability + receptor binding.",
+    description:
+      "GLP-1 analogues lose potency to DPP-4 cleavage at the N-terminal His-Ala bond. We're testing whether NCAA substitution at position 2 gives a better serum-half-life-to-binding-penalty trade-off than the standard lipid-conjugation route. Pre-registered milestones, third-party assay vendor, all attestations on-chain.",
+    category: "bio",
+    ownerEns: "amelia.eth",
+    stage: "auction",
+    status: "new",
+    promiseScore: 79,
+    impliedPriceEth: 3.8,
+    bidderCount: 14,
+    treasuryProgressEth: 220,
+    activationThresholdEth: 600,
+    auctionEndsAt: hoursFromNow(36.4),
+    paperIds: [
+      "drucker-2022-glp1-pharmacology",
+      "drucker-2018-mechanisms-glp1",
+    ],
+    pulse: Array(14).fill("none"),
+    isNew: true,
+  },
   {
     ensName: "olympia-protein-folding.ethesis.eth",
     title: "Olympia: Open Protein Folding at the Edge",
@@ -75,7 +144,7 @@ export const mockVentures: MockVenture[] = [
     promiseScore: 72,
     progressDelta7d: 4,
     promiseDelta7d: -2,
-    treasuryBalanceEth: 4.2,
+    treasuryBalanceEth: 4200,
     totalFunders: 38,
     nextMilestoneInDays: 6,
     pulse: [
@@ -109,8 +178,9 @@ export const mockVentures: MockVenture[] = [
     promiseScore: 79,
     progressDelta7d: -3,
     promiseDelta7d: 1,
-    treasuryBalanceEth: 6.8,
+    treasuryBalanceEth: 6800,
     totalFunders: 51,
+    paperIds: ["gabizon-2019-plonk"],
     nextMilestoneInDays: 12,
     pulse: [
       "verified",
@@ -141,11 +211,12 @@ export const mockVentures: MockVenture[] = [
     stage: "auction",
     status: "new",
     promiseScore: 81,
-    impliedPriceEth: 0.0042,
+    impliedPriceEth: 4.2,
     bidderCount: 22,
-    treasuryProgressEth: 0.31,
-    activationThresholdEth: 0.5,
+    treasuryProgressEth: 310,
+    activationThresholdEth: 500,
     auctionEndsAt: hoursFromNow(14.53),
+    paperIds: ["bricken-2023-monosemanticity", "cunningham-2023-saes"],
     pulse: Array(14).fill("none"),
     isNew: true,
   },
@@ -180,7 +251,7 @@ export const mockVentures: MockVenture[] = [
     promiseScore: 41,
     progressDelta7d: -6,
     promiseDelta7d: -3,
-    treasuryBalanceEth: 1.4,
+    treasuryBalanceEth: 1400,
     totalFunders: 17,
     nextMilestoneInDays: -8,
     pulse: [

@@ -74,7 +74,7 @@ interface FormState {
 }
 
 const DEFAULT_FORM: FormState = {
-  amountEth: "1.0",
+  amountEth: "1000",
   pivotTitle: "",
   spinoffName: "",
   reason: "",
@@ -347,7 +347,7 @@ function ActionForm({
       </p>
 
       {action.marketType === "budget_extension" && (
-        <Field label="Additional disbursement (ETH)">
+        <Field label="Additional disbursement (USDC)">
           <div className="flex items-stretch overflow-hidden rounded-md border border-border-strong bg-surface focus-within:border-accent">
             <input
               type="text"
@@ -363,7 +363,7 @@ function ActionForm({
               className="flex-1 px-3 py-2 font-mono text-base text-ink bg-transparent focus:outline-none"
             />
             <span className="flex items-center px-3 bg-surface-2 text-sm font-medium text-ink-muted border-l border-border">
-              ETH
+              USDC
             </span>
           </div>
         </Field>
@@ -703,7 +703,7 @@ function buildMarket({
   const description = (() => {
     switch (action.marketType) {
       case "budget_extension":
-        return `Approve a ${form.amountEth} ETH disbursement from treasury. ${form.reason || ""}`.trim();
+        return `Approve a ${form.amountEth} USDC disbursement from treasury. ${form.reason || ""}`.trim();
       case "pivot":
         return `${form.pivotTitle || "Milestone pivot"}. ${form.reason || ""}`.trim();
       case "liquidation":

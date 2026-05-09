@@ -13,6 +13,7 @@ const CATEGORY_LABEL: Record<MockVenture["category"], string> = {
   math: "Mathematics",
   oss: "Open Source",
   security: "Security",
+  bio: "Biotech",
   other: "Other",
 };
 
@@ -78,7 +79,15 @@ export function VentureHeader({ venture }: VentureHeaderProps) {
                   countdownTo={venture.auctionEndsAt}
                 />
               </div>
-              <h1 className="mt-2 text-3xl font-medium leading-tight text-ink">
+              <h1
+                className="mt-2 text-ink"
+                style={{
+                  fontSize: "clamp(28px, 4vw, 36px)",
+                  fontWeight: 500,
+                  letterSpacing: "-0.025em",
+                  lineHeight: 1.05,
+                }}
+              >
                 {venture.title}
               </h1>
               <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-ink-muted">

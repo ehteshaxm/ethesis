@@ -74,13 +74,13 @@ export const mockMarkets: MockMarket[] = [
         name: "Liquidate",
         twap: 0.572,
         twap24hDelta: 0.12,
-        totalDepositsEth: 1.84,
+        totalDepositsEth: 1840,
       },
       {
         name: "No-Op",
         twap: 0.428,
         twap24hDelta: -0.03,
-        totalDepositsEth: 1.31,
+        totalDepositsEth: 1310,
       },
     ],
     thresholdRequired: 0.05,
@@ -111,13 +111,13 @@ export const mockMarkets: MockMarket[] = [
         name: "Liquidate",
         twap: 0.78,
         twap24hDelta: 0,
-        totalDepositsEth: 4.2,
+        totalDepositsEth: 4200,
       },
       {
         name: "No-Op",
         twap: 0.22,
         twap24hDelta: 0,
-        totalDepositsEth: 1.1,
+        totalDepositsEth: 1100,
       },
     ],
     thresholdRequired: 0.05,
@@ -138,22 +138,22 @@ export const mockMarkets: MockMarket[] = [
     status: "closed_no_op",
     triggeredBy: "owner",
     triggerReason:
-      "Owner requested 1.5 ETH additional runway to extend distillation experiments by 60 days.",
+      "Owner requested 1,500 USDC additional runway to extend distillation experiments by 60 days.",
     proposalDescription:
-      "Approve a 1.5 ETH disbursement from treasury to extend research timeline by 60 days.",
+      "Approve a 1,500 USDC disbursement from treasury to extend research timeline by 60 days.",
     closesAt: daysFromNow(-12),
     outcomes: [
       {
         name: "Approve",
         twap: 0.31,
         twap24hDelta: 0,
-        totalDepositsEth: 0.8,
+        totalDepositsEth: 800,
       },
       {
         name: "No-Op",
         twap: 0.69,
         twap24hDelta: 0,
-        totalDepositsEth: 1.7,
+        totalDepositsEth: 1700,
       },
     ],
     thresholdRequired: 0.05,
@@ -193,7 +193,7 @@ const CONDITIONS_BY_VENTURE: Record<string, MockCondition[]> = {
     {
       type: "compensation_unlock",
       label: "Compensation unlock",
-      detail: "Token price 0.0042 (threshold: 0.02 ETH)",
+      detail: "Token price 4.2 USDC (threshold: 20 USDC)",
       status: "pending",
     },
     {

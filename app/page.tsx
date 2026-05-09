@@ -1,25 +1,80 @@
 import { mockTickerItems, mockVentures } from "@/lib/mock-data";
+import { formatUsdc } from "@/lib/utils";
 import { VentureCard } from "@/components/VentureCard";
 import { EnsPill } from "@/components/EnsPill";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { BgParticles } from "@/components/BgParticles";
 
 export default function Home() {
   const stageCounts = countByStage();
+  const liveCount = mockVentures.filter((v) => v.stage === "live").length;
+  const tvlEth = mockVentures.reduce(
+    (sum, v) => sum + (v.treasuryBalanceEth ?? 0),
+    0,
+  );
+  const tvlDisplay = formatUsdc(tvlEth);
+  const attestationsThisWeek = mockVentures.length * 7;
+  const verifiedLast24h = mockVentures.reduce(
+    (n, v) =>
+      n +
+      v.pulse
+        .slice(-2)
+        .filter((p) => p === "verified").length,
+    0,
+  );
 
   return (
     <main className="flex-1">
       <SiteHeader />
 
-      <section className="mx-auto max-w-6xl px-6 pt-16 pb-12">
+      <section className="relative overflow-hidden">
+        <BgParticles />
+        <div
+          className="pointer-events-none absolute inset-0 z-[1]"
+          style={{
+            background:
+              "radial-gradient(ellipse at center, transparent 0%, var(--color-canvas) 85%)",
+          }}
+          aria-hidden="true"
+        />
+        <div className="relative z-[2] mx-auto max-w-6xl px-6 pt-16 pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12 items-start">
           <div>
-            <h1 className="text-5xl md:text-6xl font-medium tracking-tight leading-[1.05] text-ink">
-              Verifiable research.
+            <div className="font-mono text-[11px] uppercase tracking-wider text-ink-muted flex flex-wrap items-center gap-2 mb-5">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-verify animate-heartbeat" />
+                {liveCount} live ventures
+              </span>
+              <span className="text-ink-subtle">·</span>
+              <span>{mockVentures.length * 68} outputs indexed</span>
+              <span className="text-ink-subtle">·</span>
+              <span>99.94% agent uptime</span>
+            </div>
+            <h1
+              className="text-ink"
+              style={{
+                fontSize: "clamp(44px, 5.6vw, 76px)",
+                fontWeight: 500,
+                letterSpacing: "-0.035em",
+                lineHeight: 1.02,
+                margin: "0 0 24px 0",
+                maxWidth: "16ch",
+              }}
+            >
+              Verifiable research,
               <br />
-              Funded onchain.
+              <span
+                className="font-serif italic font-normal text-verify"
+                style={{ letterSpacing: "-0.01em" }}
+              >
+                funded onchain.
+              </span>
             </h1>
-            <p className="mt-6 text-lg text-ink-muted max-w-xl leading-relaxed">
+            <p
+              className="mt-6 text-ink-soft max-w-xl leading-relaxed"
+              style={{ fontSize: "17px" }}
+            >
               Researchers launch ventures. Agents verify progress against
               declared plans. The brain learns from every claim — and every
               attestation lands in ENS, forever.
@@ -27,7 +82,7 @@ export default function Home() {
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                className="rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-ink"
+                className="rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-canvas transition-colors hover:bg-ink-soft"
               >
                 Launch a venture
               </button>
@@ -35,12 +90,49 @@ export default function Home() {
                 type="button"
                 className="rounded-md border border-border-strong bg-surface px-5 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-surface-2"
               >
-                Ask the brain
+                Ask the brain →
               </button>
             </div>
+            <dl className="mt-10 grid grid-cols-3 gap-x-8 gap-y-2 max-w-xl">
+              <HeroStat
+                value={tvlDisplay}
+                label="treasury across ventures"
+              />
+              <HeroStat
+                value={attestationsThisWeek}
+                label="attestations this week"
+              />
+              <HeroStat
+                value={verifiedLast24h}
+                label="claims verified · 48h"
+              />
+            </dl>
           </div>
 
           <Ticker />
+        </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-12">
+        <div className="border-y border-border-soft py-8">
+          <div className="flex items-baseline justify-between mb-4">
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-muted inline-flex items-center gap-2">
+              <span
+                className="h-2 w-2 rounded-full bg-verify"
+                style={{ boxShadow: "0 0 0 4px var(--color-verify-soft)" }}
+              />
+              Trending ventures
+            </span>
+            <span className="text-xs text-ink-muted">
+              by 7d promise momentum
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {trendingVentures(mockVentures).map((v) => (
+              <TrendCard key={v.ensName} venture={v} />
+            ))}
+          </div>
         </div>
       </section>
 
@@ -67,6 +159,166 @@ export default function Home() {
 
       <SiteFooter />
     </main>
+  );
+}
+
+function TrendCard({ venture: v }: { venture: (typeof mockVentures)[number] }) {
+  const promise = v.promiseScore ?? 0;
+  const delta = v.promiseDelta7d ?? 0;
+  const trendUp = delta >= 0;
+  const series = promiseSeries(v.ensName, promise, delta);
+  const nick = v.title.split(/[ —:]/).slice(0, 3).join(" ");
+
+  return (
+    <a
+      href={`/v/${v.ensName}`}
+      className="group block rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong"
+    >
+      <div className="flex items-center gap-2.5">
+        <SeedAvatar seed={v.ensName} size={44} />
+        <div className="flex flex-col min-w-0 gap-0.5">
+          <span className="text-sm font-semibold text-ink truncate">
+            {nick}
+          </span>
+          <span className="font-mono text-[12px] text-ink-muted truncate">
+            {v.ensName}
+          </span>
+        </div>
+      </div>
+      <div className="mt-3 flex items-end justify-between gap-2">
+        <span className="font-mono text-[28px] font-semibold leading-none text-ink">
+          {promise || "—"}
+        </span>
+        <span
+          className={
+            "font-mono text-[12px] font-semibold px-1.5 py-0.5 rounded " +
+            (trendUp
+              ? "bg-verify-soft text-verify-ink"
+              : "bg-red-soft text-red")
+          }
+        >
+          {trendUp ? "+" : ""}
+          {delta}%
+        </span>
+      </div>
+      <div className="mt-2 h-9">
+        <MiniSpark data={series} trendUp={trendUp} />
+      </div>
+    </a>
+  );
+}
+
+function MiniSpark({
+  data,
+  trendUp,
+}: {
+  data: number[];
+  trendUp: boolean;
+}) {
+  const w = 260;
+  const h = 36;
+  const pad = 2;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const span = Math.max(0.5, max - min);
+  const pts = data.map((v, i) => {
+    const x = pad + (i / (data.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((v - min) / span) * (h - pad * 2);
+    return [x, y] as const;
+  });
+  const linePath = "M " + pts.map((p) => p.join(",")).join(" L ");
+  const areaPath =
+    linePath + ` L ${pts[pts.length - 1][0]},${h} L ${pts[0][0]},${h} Z`;
+  const stroke = trendUp ? "var(--color-verify)" : "var(--color-red)";
+  const fill = trendUp ? "var(--color-verify-soft)" : "var(--color-red-soft)";
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      className="w-full h-full"
+    >
+      <path d={areaPath} fill={fill} />
+      <path
+        d={linePath}
+        fill="none"
+        stroke={stroke}
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function SeedAvatar({ seed, size = 44 }: { seed: string; size?: number }) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  const hue1 = h % 360;
+  const hue2 = (hue1 + 40 + ((h >> 8) % 80)) % 360;
+  const initial = seed[0]?.toUpperCase() ?? "?";
+  return (
+    <div
+      className="rounded-md flex items-center justify-center text-white font-mono font-semibold flex-shrink-0"
+      style={{
+        width: size,
+        height: size,
+        background: `linear-gradient(135deg, hsl(${hue1} 60% 48%), hsl(${hue2} 55% 38%))`,
+        fontSize: size * 0.42,
+      }}
+      aria-hidden="true"
+    >
+      {initial}
+    </div>
+  );
+}
+
+function trendingVentures(ventures: typeof mockVentures) {
+  return [...ventures]
+    .filter((v) => v.promiseScore != null)
+    .sort(
+      (a, b) =>
+        (b.promiseScore ?? 0) +
+        (b.promiseDelta7d ?? 0) * 2 -
+        ((a.promiseScore ?? 0) + (a.promiseDelta7d ?? 0) * 2),
+    )
+    .slice(0, 4);
+}
+
+function promiseSeries(seed: string, end: number, delta: number) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++)
+    h = ((h * 31 + seed.charCodeAt(i)) >>> 0) || 1;
+  const start = Math.max(8, Math.min(98, end - delta * 3));
+  const pts: number[] = [];
+  const len = 14;
+  for (let i = 0; i < len; i++) {
+    const t = i / (len - 1);
+    h = (Math.imul(h, 1664525) + 1013904223) >>> 0;
+    const noise = ((h % 1000) / 1000 - 0.5) * 6;
+    pts.push(start + (end - start) * t + noise);
+  }
+  return pts;
+}
+
+function HeroStat({
+  value,
+  label,
+}: {
+  value: string | number;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1 border-l border-border pl-4 first:pl-0 first:border-l-0">
+      <dt className="font-mono text-[22px] tabular-nums text-ink leading-none tracking-tight">
+        {value}
+      </dt>
+      <dd className="text-[11px] text-ink-muted uppercase tracking-wider">
+        {label}
+      </dd>
+    </div>
   );
 }
 

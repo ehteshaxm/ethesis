@@ -3,35 +3,85 @@
 @theme {
   /* Typography */
   --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  --font-serif: var(--font-serif), "Times New Roman", Georgia, serif;
 
-  /* Surfaces — grayscale spine */
-  --color-canvas: #fafaf9;
-  --color-surface: #ffffff;
-  --color-surface-2: #f4f4f5;
-  --color-border: #e4e4e7;
-  --color-border-strong: #d4d4d8;
-  --color-ink: #0a0a0a;
-  --color-ink-muted: #52525b;
-  --color-ink-subtle: #a1a1aa;
+  /* ─── Surfaces (default: dark) ──────────────────────────────── */
+  --color-canvas: #060607;
+  --color-surface: #0e0e10;
+  --color-surface-2: #131316;
 
-  /* Semantic — verification & dispute */
-  --color-verify: #10b981;
-  --color-verify-soft: #d1fae5;
-  --color-verify-ink: #047857;
+  --color-border: #1f1f23;
+  --color-border-strong: #2c2c31;
+  --color-border-soft: #161618;
 
-  --color-dispute: #f59e0b;
-  --color-dispute-soft: #fef3c7;
-  --color-dispute-ink: #b45309;
+  /* ─── Ink (4-tier) ──────────────────────────────────────────── */
+  --color-ink: #f6f5ee;
+  --color-ink-soft: #c8c6bc;
+  --color-ink-muted: #8c8a7f;
+  --color-ink-subtle: #5a584e;
 
-  /* Brand accent — deep indigo */
-  --color-accent: #3b3df0;
-  --color-accent-soft: #e0e0ff;
-  --color-accent-ink: #2a2cb8;
+  /* Backwards-compat alias */
+  --color-ink-faint: #5a584e;
 
-  /* Wound-down sepia */
+  /* ─── Semantic ──────────────────────────────────────────────── */
+  --color-verify: #34e89e;
+  --color-verify-soft: rgba(52, 232, 158, 0.16);
+  --color-verify-ink: #5fffb1;
+
+  --color-dispute: #e6a93a;
+  --color-dispute-soft: rgba(230, 169, 58, 0.14);
+  --color-dispute-ink: #f5c977;
+
+  --color-accent: #6e70ff;
+  --color-accent-soft: rgba(110, 112, 255, 0.14);
+  --color-accent-ink: #8c8eff;
+
+  --color-red: #ff6b6b;
+  --color-red-soft: rgba(255, 107, 107, 0.14);
+
   --color-sepia: #d6cfc1;
   --color-sepia-ink: #6b5e4a;
+
+  /* ─── Shape ─────────────────────────────────────────────────── */
+  --radius-xs: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* ─── Layout constants ──────────────────────────────────────── */
+  --nav-h: 64px;
+}
+
+/* ─── Light theme override (warm paper) ─────────────────────── */
+[data-theme="light"] {
+  --color-canvas: #f7f6f1;
+  --color-surface: #ffffff;
+  --color-surface-2: #efeee8;
+
+  --color-border: #e3e1d8;
+  --color-border-strong: #c9c6b9;
+  --color-border-soft: #ecebe4;
+
+  --color-ink: #15140f;
+  --color-ink-soft: #46443d;
+  --color-ink-muted: #7a7768;
+  --color-ink-subtle: #a09d8d;
+  --color-ink-faint: #a09d8d;
+
+  --color-verify: #0aa86b;
+  --color-verify-soft: rgba(10, 168, 107, 0.10);
+  --color-verify-ink: #08864f;
+
+  --color-dispute: #c08400;
+  --color-dispute-soft: rgba(192, 132, 0, 0.12);
+  --color-dispute-ink: #92660a;
+
+  --color-accent: #2a2dff;
+  --color-accent-soft: rgba(42, 45, 255, 0.08);
+  --color-accent-ink: #1d1fcc;
+
+  --color-red: #d22e2e;
+  --color-red-soft: rgba(210, 46, 46, 0.10);
 }
 
 html,
@@ -39,7 +89,9 @@ body {
   background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-feature-settings: "cv11", "ss01", "ss03";
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 /* Subtle heartbeat for live pulse dots */
@@ -55,4 +107,25 @@ body {
 
 .animate-heartbeat {
   animation: heartbeat 2.4s ease-in-out infinite;
+}
+
+/* Ticker scroll for the homepage live-attestations strip */
+@keyframes ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-ticker {
+  animation: ticker-scroll 38s linear infinite;
+}
+
+/* Brain typewriter caret */
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
 }

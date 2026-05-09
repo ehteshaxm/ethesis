@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAccount } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Check, Loader2, Wallet } from "lucide-react";
@@ -8,6 +8,19 @@ import type { MockVenture } from "@/lib/mock-data";
 import type { MockBid } from "@/lib/mock-venture-detail";
 import { umia } from "@/lib/umia";
 import { cn, formatEth, identiconColors, shortAddress } from "@/lib/utils";
+
+const LIVE_BIDDERS = [
+  "satoshin.eth",
+  "0xnomad.eth",
+  "ricmoo.eth",
+  "samczsun.eth",
+  "tarun.eth",
+  "haseeb.eth",
+  "pcaversaccio.eth",
+  "lefteris.eth",
+  "fede.eth",
+  "molly.eth",
+];
 
 type Phase = "idle" | "confirming" | "submitting" | "success";
 
@@ -21,7 +34,7 @@ export function AuctionBidPanel({ venture, initialBids, tokenSymbol }: Props) {
   const { address, isConnected } = useAccount();
   const { openConnectModal } = useConnectModal();
 
-  const [amount, setAmount] = useState<string>("0.01");
+  const [amount, setAmount] = useState<string>("50");
   const [phase, setPhase] = useState<Phase>("idle");
   const [bids, setBids] = useState<MockBid[]>(initialBids);
   const [yourBid, setYourBid] = useState<MockBid | null>(null);
@@ -35,10 +48,57 @@ export function AuctionBidPanel({ venture, initialBids, tokenSymbol }: Props) {
 
   const amountNum = parseFloat(amount);
   const validAmount =
-    !Number.isNaN(amountNum) && amountNum >= 0.001 && amountNum <= 100;
+    !Number.isNaN(amountNum) && amountNum >= 1 && amountNum <= 50_000;
   const tokensReceived = validAmount ? Math.round(amountNum / price) : 0;
 
   const progressPct = Math.min(100, Math.round((progressEth / threshold) * 100));
+
+  // Live activity: synthetic bids stream in while the auction is open and
+  // hasn't crossed the activation threshold. Gives the demo a sense of
+  // momentum on the auction page.
+  const seedRef = useRef(0);
+  const [pulse, setPulse] = useState(0);
+  useEffect(() => {
+    if (venture.stage !== "auction") return;
+    if (progressEth >= threshold) return;
+    const id = window.setInterval(
+      () => {
+        // Pseudo-random per-tick using a small LCG so bids are visually varied.
+        seedRef.current = (seedRef.current * 1664525 + 1013904223) >>> 0;
+        const r1 = (seedRef.current % 1000) / 1000;
+        seedRef.current = (seedRef.current * 1664525 + 1013904223) >>> 0;
+        const r2 = (seedRef.current % 1000) / 1000;
+
+        // Bid sizes: skew toward small, occasional whale.
+        const amt =
+          r1 < 0.85
+            ? 5 + Math.round(r2 * 80) // 5–85 USDC
+            : 100 + Math.round(r2 * 250); // 100–350 USDC
+
+        const useEns = r1 < 0.6;
+        const ensName = useEns
+          ? LIVE_BIDDERS[Math.floor(r2 * LIVE_BIDDERS.length)]
+          : undefined;
+        const addr = `0x${Math.floor(seedRef.current).toString(16).padStart(8, "0")}${"0".repeat(32)}`.slice(0, 42);
+
+        const newBid: MockBid = {
+          bidderEns: ensName,
+          bidderAddress: addr,
+          amountEth: amt,
+          tokensReceived: Math.max(1, Math.round(amt / price)),
+          placedAtMinutesAgo: 0,
+          txHash: `0x${(seedRef.current * 31).toString(16).padStart(8, "0")}${"0".repeat(56)}`.slice(0, 66),
+        };
+        setBids((prev) => [newBid, ...prev].slice(0, 24));
+        setProgressEth((p) => Math.min(threshold, +(p + amt).toFixed(2)));
+        setBidderCount((c) => c + (useEns ? 1 : 1));
+        setPulse((n) => n + 1);
+      },
+      // 3.5–6s jitter
+      3500 + Math.floor(Math.random() * 2500),
+    );
+    return () => window.clearInterval(id);
+  }, [venture.stage, progressEth, threshold, price]);
 
   const handleBid = async () => {
     if (!isConnected) {
@@ -80,13 +140,21 @@ export function AuctionBidPanel({ venture, initialBids, tokenSymbol }: Props) {
     <aside className="sticky top-32 rounded-xl border border-border bg-surface p-5 space-y-5">
       <div>
         <div className="flex items-baseline justify-between">
-          <h3 className="text-sm font-medium text-ink">Tailored auction</h3>
+          <h3 className="text-sm font-medium text-ink inline-flex items-center gap-2">
+            Tailored auction
+            {progressEth < threshold && (
+              <span className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-verify-ink">
+                <span className="h-1.5 w-1.5 rounded-full bg-verify animate-heartbeat" />
+                live
+              </span>
+            )}
+          </h3>
           <span className="font-mono text-[11px] text-ink-subtle">
             via Umia
           </span>
         </div>
         <p className="text-xs text-ink-muted mt-1">
-          Bid ETH for ${tokenSymbol}. When the treasury crosses{" "}
+          Bid USDC for ${tokenSymbol}. When the treasury crosses{" "}
           <span className="font-mono">{formatEth(threshold)}</span>, the
           venture goes live and its agent activates.
         </p>
@@ -120,12 +188,12 @@ export function AuctionBidPanel({ venture, initialBids, tokenSymbol }: Props) {
                 const v = e.target.value.replace(/[^0-9.]/g, "");
                 setAmount(v);
               }}
-              placeholder="0.01"
+              placeholder="50"
               className="flex-1 px-3 py-2.5 font-mono text-lg text-ink bg-transparent focus:outline-none"
               disabled={phase !== "idle"}
             />
             <span className="flex items-center px-3 bg-surface-2 text-sm font-medium text-ink-muted border-l border-border">
-              ETH
+              USDC
             </span>
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -142,7 +210,7 @@ export function AuctionBidPanel({ venture, initialBids, tokenSymbol }: Props) {
                 )}
                 disabled={phase !== "idle"}
               >
-                {a} ETH
+                {a} USDC
               </button>
             ))}
           </div>
@@ -172,7 +240,7 @@ export function AuctionBidPanel({ venture, initialBids, tokenSymbol }: Props) {
   );
 }
 
-const QUICK_AMOUNTS = ["0.005", "0.01", "0.05", "0.1"];
+const QUICK_AMOUNTS = ["10", "50", "100", "500"];
 
 function ProgressBlock({
   currentEth,

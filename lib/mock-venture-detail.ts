@@ -117,6 +117,26 @@ const RESEARCHERS: Record<string, MockResearcher> = {
     isVerified: false,
     offPlatformLinks: [],
   },
+  "lambros.eth": {
+    ens: "lambros.eth",
+    bio: "Computational chemist turned ML-for-bio researcher. Two prior antimicrobial-peptide papers, both with public wet-lab validation.",
+    priorVentures: 1,
+    isVerified: true,
+    offPlatformLinks: [
+      { label: "Scholar", url: "https://scholar.google.com" },
+      { label: "GitHub", url: "https://github.com" },
+    ],
+  },
+  "amelia.eth": {
+    ens: "amelia.eth",
+    bio: "Med-chem researcher focused on stabilized peptide therapeutics. Five years at a GLP-1-adjacent pharma program.",
+    priorVentures: 0,
+    isVerified: true,
+    offPlatformLinks: [
+      { label: "Scholar", url: "https://scholar.google.com" },
+      { label: "X", url: "https://x.com" },
+    ],
+  },
 };
 
 const SHARED_BIDDERS = [
@@ -142,7 +162,7 @@ function generateAuctionBids(venture: MockVenture, count: number): MockBid[] {
   const sumWeights = weights.reduce((a, b) => a + b, 0);
   const amounts = weights.map((w) => (w / sumWeights) * targetTotal);
 
-  const price = venture.impliedPriceEth ?? 0.005;
+  const price = venture.impliedPriceEth ?? 5;
 
   return amounts
     .map((amt, i): MockBid => {
@@ -156,8 +176,8 @@ function generateAuctionBids(venture: MockVenture, count: number): MockBid[] {
       return {
         bidderEns: ensName,
         bidderAddress: addr,
-        amountEth: Math.max(amt, 0.001),
-        tokensReceived: Math.round(Math.max(amt, 0.001) / price),
+        amountEth: Math.max(amt, 1),
+        tokensReceived: Math.round(Math.max(amt, 1) / price),
         placedAtMinutesAgo: Math.round(((count - i) / count) * 240),
         txHash: fakeTxHash(`${venture.ensName}-bid-${i}`),
       };
@@ -340,6 +360,90 @@ const MILESTONE_TEMPLATES: Record<string, MockMilestone[]> = {
       trancheReleaseEth: 0.5,
     },
   ],
+  "peptide-amr.ethesis.eth": [
+    {
+      ordinal: 1,
+      title: "Reproduce explainable-AMP screen (Wong 2023)",
+      successCriteria:
+        "Re-run the GNN screen on a refreshed 12M-compound library; publish a reproduction report with the same headline class hits.",
+      expectedOutputs: ["Reproduction report", "Trained checkpoint", "Eval notebook"],
+      deadlineInDays: -22,
+      status: "completed",
+      trancheReleaseEth: 1500,
+    },
+    {
+      ordinal: 2,
+      title: "Cryptic-AMP mining replication (Torres 2022)",
+      successCriteria:
+        "Re-implement the encrypted-peptide mining pipeline on the human proteome; identify ≥5 novel candidates, hand off to wet-lab partner.",
+      expectedOutputs: ["Candidate list", "Pipeline source", "MIC plan"],
+      deadlineInDays: -3,
+      status: "completed",
+      trancheReleaseEth: 1500,
+    },
+    {
+      ordinal: 3,
+      title: "MIC assays + resistance profiling on ESKAPE panel",
+      successCriteria:
+        "Wet-lab MIC against six ESKAPE pathogens for the top-10 candidates; resistance assay over 14 passages.",
+      expectedOutputs: ["Assay dataset (raw + processed)", "BSL-2 lab report"],
+      deadlineInDays: 9,
+      status: "in_progress",
+      trancheReleaseEth: 2400,
+    },
+    {
+      ordinal: 4,
+      title: "Active-learning iteration → preprint",
+      successCriteria:
+        "Two rounds of GNN-guided active learning informed by assay data; submit to bioRxiv with reproducible artifact.",
+      expectedOutputs: ["Updated checkpoints", "bioRxiv preprint", "Artifact archive"],
+      deadlineInDays: 64,
+      status: "pending",
+      trancheReleaseEth: 2400,
+    },
+  ],
+  "glp-tweaks.ethesis.eth": [
+    {
+      ordinal: 1,
+      title: "Synthesize 6-analogue NCAA panel",
+      successCriteria:
+        "Synthesize and HPLC-purify six GLP-1 analogues with NCAA substitution at position 2, ≥95% purity.",
+      expectedOutputs: ["Synthesis report", "HPLC traces", "Mass spec"],
+      deadlineInDays: 21,
+      status: "pending",
+      trancheReleaseEth: 1200,
+    },
+    {
+      ordinal: 2,
+      title: "Plasma-stability assay (DPP-4 + serum)",
+      successCriteria:
+        "Quantify half-life vs native GLP-1 across both DPP-4 and pooled human serum, n=3.",
+      expectedOutputs: ["Stability dataset", "Assay protocol"],
+      deadlineInDays: 56,
+      status: "pending",
+      trancheReleaseEth: 1200,
+    },
+    {
+      ordinal: 3,
+      title: "In-vitro receptor binding (GLP-1R)",
+      successCriteria:
+        "Measure receptor binding affinity for all six analogues; report Ki vs native.",
+      expectedOutputs: ["Binding dataset", "Lab report"],
+      deadlineInDays: 90,
+      status: "pending",
+      trancheReleaseEth: 1200,
+    },
+    {
+      ordinal: 4,
+      title: "Mouse PK pilot for top analogue",
+      successCriteria:
+        "Single-dose PK study (n=4) for the best stability/binding analogue.",
+      expectedOutputs: ["PK dataset", "CRO report", "Preprint draft"],
+      deadlineInDays: 150,
+      status: "pending",
+      trancheReleaseEth: 2000,
+    },
+  ],
 };
 
 const SOURCE_TEMPLATES: Record<string, MockSource[]> = {
@@ -437,6 +541,40 @@ const SOURCE_TEMPLATES: Record<string, MockSource[]> = {
       identifier: "dave-eth/plonk-mobile-v1",
       url: "https://github.com/dave-eth/plonk-mobile-v1",
       watchingSinceDays: 90,
+    },
+  ],
+  "peptide-amr.ethesis.eth": [
+    {
+      type: "github",
+      identifier: "lambros-eth/peptide-amr",
+      url: "https://github.com/lambros-eth/peptide-amr",
+      watchingSinceDays: 41,
+    },
+    {
+      type: "arxiv",
+      identifier: "Lambros K. (bioRxiv)",
+      url: "https://www.biorxiv.org/search/lambros",
+      watchingSinceDays: 41,
+    },
+    {
+      type: "huggingface",
+      identifier: "lambros-eth/amp-gnn",
+      url: "https://huggingface.co/lambros-eth/amp-gnn",
+      watchingSinceDays: 41,
+    },
+  ],
+  "glp-tweaks.ethesis.eth": [
+    {
+      type: "github",
+      identifier: "amelia-eth/glp-tweaks",
+      url: "https://github.com/amelia-eth/glp-tweaks",
+      watchingSinceDays: 6,
+    },
+    {
+      type: "arxiv",
+      identifier: "Amelia W. (bioRxiv)",
+      url: "https://www.biorxiv.org/search/amelia-glp",
+      watchingSinceDays: 6,
     },
   ],
 };

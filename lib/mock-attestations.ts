@@ -252,7 +252,7 @@ export const mockAttestations: MockAttestation[] = [
         ordinal: 31,
         title: "Final attestation before wind-down",
         body: "Liquidation Decision Market resolved Liquidate. Treasury refunded pro-rata to holders. ENS records preserved.",
-        evidence: [{ label: "Final treasury balance: 0 ETH" }],
+        evidence: [{ label: "Final treasury balance: 0 USDC" }],
         postedHoursAgo: 31 * 24,
         ipfsCid: fakeCid(`${ens}-31`),
         ensTextRecordKey: "ethesis.attestation.31",

@@ -42,21 +42,21 @@ export interface PortfolioSnapshot {
 }
 
 const TOKEN_PRICE_BY_VENTURE: Record<string, number> = {
-  "olympia-protein-folding.ethesis.eth": 0.0061,
-  "zk-rollup-research.ethesis.eth": 0.0034,
-  "mech-interp-tiny.ethesis.eth": 0.0042,
+  "olympia-protein-folding.ethesis.eth": 6.1,
+  "zk-rollup-research.ethesis.eth": 3.4,
+  "mech-interp-tiny.ethesis.eth": 4.2,
   "encrypted-mempool.ethesis.eth": 0,
-  "climate-replication-2024.ethesis.eth": 0.0015,
-  "plonk-mobile-prover.ethesis.eth": 0.0022,
+  "climate-replication-2024.ethesis.eth": 1.5,
+  "plonk-mobile-prover.ethesis.eth": 2.2,
 };
 
 const ENTRY_PRICE_BY_VENTURE: Record<string, number> = {
-  "olympia-protein-folding.ethesis.eth": 0.0042,
-  "zk-rollup-research.ethesis.eth": 0.0048,
-  "mech-interp-tiny.ethesis.eth": 0.0042,
+  "olympia-protein-folding.ethesis.eth": 4.2,
+  "zk-rollup-research.ethesis.eth": 4.8,
+  "mech-interp-tiny.ethesis.eth": 4.2,
   "encrypted-mempool.ethesis.eth": 0,
-  "climate-replication-2024.ethesis.eth": 0.0028,
-  "plonk-mobile-prover.ethesis.eth": 0.0050,
+  "climate-replication-2024.ethesis.eth": 2.8,
+  "plonk-mobile-prover.ethesis.eth": 5.0,
 };
 
 export function getPortfolioForAddress(address: string): PortfolioSnapshot {
@@ -77,16 +77,16 @@ export function getPortfolioForAddress(address: string): PortfolioSnapshot {
   const positions: PortfolioPosition[] = Array.from(picks).map((i) => {
     const venture = eligible[i];
     s = (s * 1664525 + 1013904223) >>> 0;
-    const ethBid = 0.005 + ((s % 100) / 100) * 0.18; // 0.005..0.185 ETH
-    const entry = ENTRY_PRICE_BY_VENTURE[venture.ensName] || 0.005;
+    const usdcBid = 5 + ((s % 100) / 100) * 180; // 5..185 USDC
+    const entry = ENTRY_PRICE_BY_VENTURE[venture.ensName] || 5;
     const current = TOKEN_PRICE_BY_VENTURE[venture.ensName] || entry;
-    const tokens = Math.round(ethBid / entry);
+    const tokens = Math.round(usdcBid / entry);
     const acquiredDaysAgo = 4 + (s % 60);
     return {
       venture,
       tokenAmount: tokens,
-      costBasisEth: +ethBid.toFixed(4),
-      currentValueEth: +(tokens * current).toFixed(4),
+      costBasisEth: +usdcBid.toFixed(2),
+      currentValueEth: +(tokens * current).toFixed(2),
       acquiredDaysAgo,
     };
   });
@@ -94,12 +94,12 @@ export function getPortfolioForAddress(address: string): PortfolioSnapshot {
   const totalCostBasisEth = +positions.reduce(
     (a, p) => a + p.costBasisEth,
     0,
-  ).toFixed(4);
+  ).toFixed(2);
   const totalValueEth = +positions.reduce(
     (a, p) => a + p.currentValueEth,
     0,
-  ).toFixed(4);
-  const unrealizedPnlEth = +(totalValueEth - totalCostBasisEth).toFixed(4);
+  ).toFixed(2);
+  const unrealizedPnlEth = +(totalValueEth - totalCostBasisEth).toFixed(2);
   const unrealizedPnlPct =
     totalCostBasisEth > 0
       ? +((unrealizedPnlEth / totalCostBasisEth) * 100).toFixed(1)

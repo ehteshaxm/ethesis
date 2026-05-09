@@ -129,8 +129,8 @@ const INITIAL_DRAFT: Draft = {
   tokenSymbol: "",
   tokenSupply: 1_000_000,
   auctionDurationHours: 48,
-  activationThresholdEth: 0.5,
-  monthlyAllowanceEth: 0.05,
+  activationThresholdEth: 500,
+  monthlyAllowanceEth: 50,
   autoLiquidateEnabled: true,
   autoLiquidateProgressThreshold: 30,
   autoLiquidateDays: 30,
@@ -974,7 +974,7 @@ function Step5Token({
       <StepHeader
         eyebrow="Step 5 of 7"
         title="Token & auction"
-        subtitle="Umia opens a Tailored Auction at launch. Funders bid ETH; tokens distribute pro-rata when it settles."
+        subtitle="Umia opens a Tailored Auction at launch. Funders bid USDC; tokens distribute pro-rata when it settles."
       />
       <div className="grid grid-cols-2 gap-3">
         <Field label="Token symbol" hint="3–5 letters">
@@ -1073,9 +1073,9 @@ function Step6Agent({
       >
         <SliderRow
           value={draft.activationThresholdEth}
-          min={0.1}
-          max={5}
-          step={0.05}
+          min={100}
+          max={5000}
+          step={50}
           onChange={(v) =>
             setDraft((d) => ({ ...d, activationThresholdEth: v }))
           }
@@ -1094,9 +1094,9 @@ function Step6Agent({
       >
         <SliderRow
           value={draft.monthlyAllowanceEth}
-          min={0.01}
-          max={0.5}
-          step={0.01}
+          min={10}
+          max={500}
+          step={10}
           onChange={(v) =>
             setDraft((d) => ({ ...d, monthlyAllowanceEth: v }))
           }
@@ -1780,8 +1780,8 @@ function isStepValid(step: number, draft: Draft): boolean {
       return draft.tokenSymbol.length >= 3 && draft.tokenSupply >= 1;
     case 6:
       return (
-        draft.activationThresholdEth >= 0.1 &&
-        draft.monthlyAllowanceEth >= 0.01
+        draft.activationThresholdEth >= 100 &&
+        draft.monthlyAllowanceEth >= 10
       );
     case 7:
       return true;
