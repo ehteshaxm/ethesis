@@ -19,7 +19,7 @@ type Msg =
       agentType?: string;
     };
 
-type AgentId = "salesforce" | "bio" | "aiml" | "maths";
+type AgentId = "sourcify" | "bio" | "aiml" | "maths";
 
 interface AgentDef {
   id: AgentId;
@@ -31,11 +31,11 @@ interface AgentDef {
 
 const AGENTS: AgentDef[] = [
   {
-    id: "salesforce",
-    label: "Salesforce",
-    icon: "☁",
-    description: "CRM pipelines, contract logic & business data",
-    accent: "#00A1E0",
+    id: "sourcify",
+    label: "Crypto",
+    icon: "⛓",
+    description: "Verified smart contracts & on-chain data",
+    accent: "#34e89e",
   },
   {
     id: "bio",

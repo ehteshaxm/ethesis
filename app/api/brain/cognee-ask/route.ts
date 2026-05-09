@@ -18,10 +18,10 @@ const AGENT_CONFIG: Record<
   string,
   { dataset: string; label: string; domainHint: string }
 > = {
-  salesforce: {
+  sourcify: {
     dataset: "sourcify-ethesis",
-    label: "Salesforce",
-    domainHint: "CRM pipeline contract",
+    label: "Crypto",
+    domainHint: "smart contract blockchain verification",
   },
   bio: {
     dataset: "sourcify-ethesis",
