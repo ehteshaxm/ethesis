@@ -116,7 +116,22 @@ export async function signDigestViaKms(
       `[sc-kms] unexpected signature shape (no 0x prefix): ${sig.slice(0, 16)}...`,
     );
   }
-  return sig as Hex;
+  // Normalise the recovery byte. KMS returns v ∈ {0, 1} per the BIP-32
+  // convention; on-chain ecrecover (used by EIP-3009 on USDC) requires
+  // v ∈ {27, 28}. viem's local-account signMessage already does this
+  // bump; we mirror it here so KMS sigs verify against the same code path.
+  return normalizeRecoveryByte(sig as Hex);
+}
+
+function normalizeRecoveryByte(sig: Hex): Hex {
+  if (sig.length !== 132) return sig; // 0x + 64 r + 64 s + 2 v
+  const vHex = sig.slice(130);
+  const v = parseInt(vHex, 16);
+  if (v === 0 || v === 1) {
+    const bumped = (v + 27).toString(16).padStart(2, "0");
+    return (sig.slice(0, 130) + bumped) as Hex;
+  }
+  return sig;
 }
 
 export function isKmsEnabled(): boolean {

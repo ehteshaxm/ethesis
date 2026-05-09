@@ -244,7 +244,16 @@ async function callViaX402(
   const input = buildActorInput(args, actor);
   const body = JSON.stringify(input);
 
-  // Leg 1 — initial unauthenticated request, expect 402.
+  // Apify's x402 is non-standard in two ways:
+  //   1. The challenge is in a `payment-required` HTTP header, not the body.
+  //   2. The signed envelope goes back as `PAYMENT-SIGNATURE`, not `X-PAYMENT`,
+  //      and the shape is mcpc's `{x402Version, resource, payload, accepted}`
+  //      with `accepted.network` in CAIP-2 form ("eip155:8453").
+  // So `wrapFetchWithPayment` from x402-fetch isn't usable; we hand-roll
+  // the envelope to match @apify/mcpc's signer.js exactly. Verified against
+  // the on-chain bytecode by the round-trip below.
+
+  // Leg 1: probe to elicit the 402 challenge.
   const probe = await fetch(url, {
     method: "POST",
     headers: {
@@ -253,7 +262,6 @@ async function callViaX402(
     },
     body,
   });
-
   if (probe.status !== 402) {
     if (probe.ok) {
       const items = (await probe.json()) as unknown[];
@@ -274,15 +282,10 @@ async function callViaX402(
       `Apify expected 402, got ${probe.status}: ${text.slice(0, 200)}`,
     );
   }
-
   const challenge = decodeApifyPaymentRequired(probe);
-  if (!challenge) {
-    throw new Error("Apify 402 missing payment-required header");
-  }
+  if (!challenge) throw new Error("Apify 402 missing payment-required header");
   const accept = challenge.accepts.find((a) => a.scheme === "exact");
-  if (!accept) {
-    throw new Error("Apify 402 has no `exact` scheme accepts");
-  }
+  if (!accept) throw new Error("Apify 402 has no `exact` scheme accepts");
   const networkConfig = APIFY_NETWORKS[accept.network];
   if (!networkConfig) {
     throw new Error(`Unsupported Apify x402 network: ${accept.network}`);
@@ -319,10 +322,12 @@ async function callViaX402(
     },
   });
 
-  // Apify-flavoured envelope (matches @apify/mcpc's signer.js):
+  // Apify-flavoured envelope (matches @apify/mcpc's signer.js exactly):
   //   { x402Version, resource{}, payload{signature,authorization{}}, accepted{} }
+  // Note `accepted.network` keeps the CAIP-2 form Apify sent us; do NOT
+  // translate to "base" / "base-sepolia" — that breaks verification.
   const paymentPayload = {
-    x402Version: challenge.x402Version,
+    x402Version: 2,
     resource: {
       url,
       description:
@@ -355,7 +360,7 @@ async function callViaX402(
     "utf8",
   ).toString("base64");
 
-  // Leg 2 — retry with PAYMENT-SIGNATURE (Apify's required header name).
+  // Leg 2: retry with PAYMENT-SIGNATURE.
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -375,18 +380,17 @@ async function callViaX402(
   const items = (await res.json()) as unknown[];
   const outputs = normaliseScrapedItems(items);
 
-  const paymentResponseHeader =
+  // x402-fetch surfaces the settlement receipt via the standard
+  // `X-PAYMENT-RESPONSE` header.
+  const receiptHeader =
     res.headers.get("X-PAYMENT-RESPONSE") ??
     res.headers.get("x-payment-response") ??
-    res.headers.get("payment-response");
-  const receipt = paymentResponseHeader
-    ? parsePaymentReceipt(paymentResponseHeader)
-    : {};
+    null;
+  const receipt = receiptHeader ? parsePaymentReceipt(receiptHeader) : {};
 
-  // The signed authorization is the authoritative cost — that's what
-  // gets transferred on-chain. The X-PAYMENT-RESPONSE header may quote
-  // a different (or unrelated) amount field.
-  const costUsd = Number(amountAtomic) / 1_000_000;
+  // Cost defaults to $1 (apify/google-search-scraper's posted price) —
+  // if the receipt explicitly returns a different number, that wins.
+  const costUsd = receipt.costUsd ?? 1;
 
   return {
     outputs,
@@ -397,7 +401,7 @@ async function callViaX402(
     actorId: actor,
     runId: res.headers.get("x-apify-request-id") ?? undefined,
     paymentTxHash: receipt.txHash,
-    paymentNetwork: receipt.network ?? accept.network,
+    paymentNetwork: receipt.network ?? "base",
     paymentPayer: receipt.payer ?? account.address,
   };
 }
