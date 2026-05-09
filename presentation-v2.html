@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ETHesis — Pitch Deck</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rubik+Glitch&display=swap');
+
+        :root {
+            --bg:          #060607;
+            --surface:     #0e0e10;
+            --surface-2:   #131316;
+            --border:      #1f1f23;
+            --border-str:  #2c2c31;
+            --ink:         #f6f5ee;
+            --ink-soft:    #c8c6bc;
+            --ink-muted:   #8c8a7f;
+            --ink-subtle:  #5a584e;
+            --verify:      #34e89e;
+            --verify-soft: rgba(52,232,158,0.13);
+            --accent:      #6e70ff;
+            --line:        rgba(255,255,255,0.055);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-weight: 400;
+            line-height: 1.4;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .deck { max-width: 1200px; margin: 0 auto; }
+
+        .slide {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 80px 100px;
+            border-bottom: 1px solid var(--line);
+            position: relative;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        .slide.surface  { background: var(--surface); }
+        .slide.surface2 { background: var(--surface-2); }
+
+        .slide > * { position: relative; z-index: 1; }
+
+        /* ── Logo ─────────────────────────────────────────────────── */
+        .logo {
+            position: absolute;
+            top: 40px;
+            left: 100px;
+            font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--ink);
+            z-index: 2;
+        }
+
+        .logo .dot { color: var(--accent); }
+
+        .slide-num {
+            position: absolute;
+            top: 40px;
+            right: 100px;
+            font-size: 13px;
+            color: var(--ink-subtle);
+            font-family: ui-monospace, monospace;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.04em;
+            z-index: 2;
+        }
+
+        /* ── Type ─────────────────────────────────────────────────── */
+        .label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--verify);
+            margin-bottom: 32px;
+            font-family: ui-monospace, monospace;
+        }
+
+        h1 {
+            font-size: 96px;
+            font-weight: 500;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            color: var(--ink);
+        }
+
+        h1.huge {
+            font-size: 128px;
+            letter-spacing: -0.05em;
+        }
+
+        .broken-word {
+            position: relative;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            font-family: "Rubik Glitch", "Impact", "Arial Black", sans-serif;
+            color: #ffffff;
+            filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.1));
+        }
+
+        .slide-1 {
+            align-items: center;
+            text-align: center;
+        }
+
+        .slide-1 h1,
+        .slide-1 p {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .slide-1 .row {
+            width: 100%;
+            justify-content: center;
+            gap: 56px;
+        }
+
+        .slide-1 .col {
+            flex: 0 1 260px;
+            text-align: center;
+        }
+
+        .broken-word::before,
+        .broken-word::after {
+            content: attr(data-text);
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.75;
+        }
+
+        .broken-word::before {
+            color: rgba(255, 255, 255, 0.86);
+            clip-path: polygon(0 0, 100% 0, 100% 42%, 0 62%);
+            transform: translate(-1.5px, -1px);
+        }
+
+        .broken-word::after {
+            color: rgba(255, 255, 255, 0.58);
+            clip-path: polygon(0 54%, 100% 36%, 100% 100%, 0 100%);
+            transform: translate(1.2px, 1.4px);
+        }
+
+        h2 {
+            font-size: 64px;
+            font-weight: 500;
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+            color: var(--ink);
+        }
+
+        p {
+            font-size: 20px;
+            line-height: 1.55;
+            color: var(--ink-soft);
+            max-width: 760px;
+        }
+
+        /* ── Row / cols ───────────────────────────────────────────── */
+        .row {
+            display: flex;
+            gap: 80px;
+            align-items: flex-start;
+            margin-top: 64px;
+        }
+
+        .col { flex: 1; min-width: 0; }
+
+        .stat-block {
+            font-size: 80px;
+            font-weight: 500;
+            letter-spacing: -0.04em;
+            line-height: 0.95;
+            color: var(--ink);
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 0;
+        }
+
+        /* ── Grids ────────────────────────────────────────────────── */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 40px;
+            margin-top: 64px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 56px;
+            margin-top: 64px;
+        }
+
+        /* ── Cards ────────────────────────────────────────────────── */
+        .card {
+            border-top: 1px solid var(--border-str);
+            padding-top: 24px;
+        }
+
+        .card .num {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--verify);
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            font-family: ui-monospace, monospace;
+        }
+
+        .card h4 {
+            font-size: 26px;
+            font-weight: 500;
+            line-height: 1.15;
+            color: var(--ink);
+            letter-spacing: -0.01em;
+        }
+
+        /* ── Flow ─────────────────────────────────────────────────── */
+        .flow {
+            display: flex;
+            align-items: center;
+            margin-top: 64px;
+            flex-wrap: wrap;
+        }
+
+        .flow-step {
+            flex: 1;
+            min-width: 140px;
+            padding: 28px 24px;
+            border-top: 2px solid var(--border-str);
+            position: relative;
+            transition: border-color 0.4s ease, background 0.4s ease;
+        }
+
+        .flow-step.active {
+            border-top-color: var(--verify);
+            background: var(--verify-soft);
+        }
+
+        .flow-step .step-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--ink-muted);
+            margin-bottom: 10px;
+            font-family: ui-monospace, monospace;
+            transition: color 0.4s ease;
+        }
+
+        .flow-step.active .step-label { color: var(--verify); }
+
+        .flow-step h5 {
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--ink);
+            letter-spacing: -0.01em;
+            transition: color 0.4s ease;
+        }
+
+        .flow-step.active h5 { color: var(--verify); }
+
+        .flow-arrow {
+            font-size: 18px;
+            color: var(--ink-subtle);
+            padding: 0 8px;
+            flex-shrink: 0;
+            align-self: flex-start;
+            margin-top: 36px;
+        }
+
+        /* ── CTA ──────────────────────────────────────────────────── */
+        .cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px 38px;
+            background: var(--ink);
+            color: var(--bg);
+            font-size: 18px;
+            font-weight: 500;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-top: 48px;
+            letter-spacing: -0.01em;
+        }
+
+        .cta-ghost {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px 38px;
+            border: 1px solid var(--border-str);
+            color: var(--ink);
+            font-size: 18px;
+            font-weight: 500;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-top: 48px;
+            margin-left: 12px;
+            letter-spacing: -0.01em;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .cta-ghost:hover { border-color: var(--ink-muted); background: var(--surface); }
+
+        .center { text-align: center; align-items: center; }
+        .center h1, .center p { margin-left: auto; margin-right: auto; }
+
+        .footnote {
+            font-size: 12px;
+            color: var(--ink-subtle);
+            margin-top: 48px;
+            letter-spacing: 0.02em;
+            font-family: ui-monospace, monospace;
+        }
+
+        .divider {
+            width: 48px;
+            height: 1px;
+            background: var(--border-str);
+            margin: 40px 0;
+        }
+
+        /* ── Pills ────────────────────────────────────────────────── */
+        .pill {
+            display: inline-block;
+            padding: 7px 16px;
+            border: 1px solid var(--border-str);
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--ink-soft);
+            margin-right: 8px;
+            margin-bottom: 8px;
+            letter-spacing: 0.01em;
+        }
+
+        .pill.solid {
+            background: var(--verify-soft);
+            color: var(--verify);
+            border-color: rgba(52,232,158,0.3);
+        }
+
+        /* ── Scroll-triggered fade-up ─────────────────────────────── */
+        .fade-up {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+
+        .fade-up.visible { opacity: 1; transform: none; }
+        .fade-up.d1 { transition-delay: 0.08s; }
+        .fade-up.d2 { transition-delay: 0.16s; }
+        .fade-up.d3 { transition-delay: 0.24s; }
+        .fade-up.d4 { transition-delay: 0.32s; }
+        .fade-up.d5 { transition-delay: 0.40s; }
+
+        /* ── Slide 1: Three.js canvas ─────────────────────────────── */
+        #particles {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.85;
+        }
+
+        /* radial vignette over particles */
+        .particle-vignette {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 0%, var(--bg) 82%);
+        }
+
+        /* ── Stat typewriter cursor ───────────────────────────────── */
+        .typewriter-cursor {
+            display: inline-block;
+            width: 3px;
+            background: var(--ink);
+            margin-left: 3px;
+            animation: blink 0.9s step-end infinite;
+            vertical-align: middle;
+            height: 0.75em;
+        }
+
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        /* ── Slide 3: card corner-converge ───────────────────────── */
+        .card-tl { opacity:0; transform:translate(-20px,-20px); transition:opacity 0.6s ease,transform 0.6s ease; transition-delay:0.1s; }
+        .card-tr { opacity:0; transform:translate(20px,-20px);  transition:opacity 0.6s ease,transform 0.6s ease; transition-delay:0.2s; }
+        .card-bl { opacity:0; transform:translate(-20px,20px);  transition:opacity 0.6s ease,transform 0.6s ease; transition-delay:0.3s; }
+        .card-br { opacity:0; transform:translate(20px,20px);   transition:opacity 0.6s ease,transform 0.6s ease; transition-delay:0.4s; }
+        .slide-3.in-view .card-tl,
+        .slide-3.in-view .card-tr,
+        .slide-3.in-view .card-bl,
+        .slide-3.in-view .card-br { opacity:1; transform:none; }
+
+
+        .slide-4-card { opacity:0; transform:translateY(28px); transition:opacity 0.65s ease,transform 0.65s ease; }
+        .slide-4-card.d1 { transition-delay:0.10s; }
+        .slide-4-card.d2 { transition-delay:0.22s; }
+        .slide-4-card.d3 { transition-delay:0.34s; }
+        .slide-4.in-view .slide-4-card { opacity:1; transform:none; }
+
+        /* ── Slide 5: expanding rings ─────────────────────────────── */
+        .rings {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%,-50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid rgba(52,232,158,0.18);
+            top: 50%; left: 50%;
+            transform: translate(-50%,-50%) scale(0.5);
+            opacity: 0;
+            animation: expandRing 4s ease-out infinite;
+        }
+
+        .ring:nth-child(1) { width:360px; height:360px; animation-delay:0s; }
+        .ring:nth-child(2) { width:580px; height:580px; animation-delay:1.35s; }
+        .ring:nth-child(3) { width:800px; height:800px; animation-delay:2.7s; }
+
+        @keyframes expandRing {
+            0%   { transform:translate(-50%,-50%) scale(0.4); opacity:0.55; }
+            100% { transform:translate(-50%,-50%) scale(1.5); opacity:0; }
+        }
+    </style>
+</head>
+
+<body>
+<div class="deck">
+
+<!-- ─── SLIDE 1 — The problem ──────────────────────────────────────── -->
+<section class="slide slide-1">
+    <div id="particles"></div>
+    <div class="particle-vignette"></div>
+
+    <div class="logo">ethesis<span class="dot">.</span></div>
+    <span class="slide-num">01 / 05</span>
+    <div class="label fade-up">The problem</div>
+
+    <h1 class="huge fade-up d1">Research<br>funding<br>is <span class="broken-word" data-text="BROKEN">BROKEN</span></h1>
+
+    <div class="row">
+        <div class="col fade-up d2">
+            <div class="stat-block" id="stat-spend">$0.0T</div>
+        </div>
+        <div class="col fade-up d3">
+            <div class="stat-block" id="stat-opaque">········</div>
+        </div>
+        <div class="col fade-up d4">
+            <div class="stat-block" id="stat-stranded"></div>
+        </div>
+    </div>
+
+    <p class="footnote fade-up d5"><sup>*</sup> OECD Main Science and Technology Indicators, 2023 (PPP-adjusted)</p>
+</section>
+
+<!-- ─── SLIDE 2 — How ETHesis works ───────────────────────────────── -->
+<section class="slide slide-2">
+    <div class="logo">ethesis<span class="dot">.</span></div>
+    <span class="slide-num">02 / 05</span>
+    <div class="label fade-up">How ETHesis works</div>
+
+    <h2 class="fade-up d1">Funding that holds researchers<br>accountable — automatically.</h2>
+
+    <div class="flow" id="pipeline">
+        <div class="flow-step" data-step="0">
+            <div class="step-label">01</div>
+            <h5>Proposal</h5>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" data-step="1">
+            <div class="step-label">02</div>
+            <h5>Community vote</h5>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" data-step="2">
+            <div class="step-label">03</div>
+            <h5>Live &amp; watched</h5>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" data-step="3">
+            <div class="step-label">04</div>
+            <h5>Signed attestation</h5>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step" data-step="4">
+            <div class="step-label">05</div>
+            <h5>Auto-exit if stalling</h5>
+        </div>
+    </div>
+</section>
+
+<!-- ─── SLIDE 3 — The participants ────────────────────────────────── -->
+<section class="slide slide-3">
+    <div class="logo">ethesis<span class="dot">.</span></div>
+    <span class="slide-num">03 / 05</span>
+    <div class="label fade-up">Who's in the room</div>
+
+    <h2 class="fade-up d1">Funders and researchers.<br>Everyone qualifies.</h2>
+
+    <div class="grid-2">
+        <div class="card card-tl">
+            <div class="num">Funders</div>
+            <h4>Anyone from anywhere can back research</h4>
+        </div>
+        <div class="card card-tr">
+            <div class="num">Companies &amp; Foundations</div>
+            <h4>Post a grant request. Let researchers come to you.</h4>
+        </div>
+        <div class="card card-bl">
+            <div class="num">Researchers</div>
+            <h4>Any researcher, from any field</h4>
+        </div>
+        <div class="card card-br">
+            <div class="num">The platform</div>
+            <h4>ETHesis earns when science ships</h4>
+        </div>
+    </div>
+</section>
+
+<!-- ─── SLIDE 4 — The market / Every field ────────────────────────── -->
+<section class="slide slide-4">
+    <div id="starfield" style="position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;"></div>
+
+    <div class="logo">ethesis<span class="dot">.</span></div>
+    <span class="slide-num">04 / 05</span>
+    <div class="label fade-up">The market</div>
+
+    <h2 class="fade-up d1">DeSci isn't just biology.<br>It's every field.</h2>
+
+    <div class="grid-3">
+        <div class="card slide-4-card d1">
+            <div class="num">The blind spot of current DeSci <sup>†</sup></div>
+            <h4>Social Sciences &amp; Humanities</h4>
+        </div>
+        <div class="card slide-4-card d2">
+            <div class="num">Already in the pipeline</div>
+            <h4>Machine Learning</h4>
+        </div>
+        <div class="card slide-4-card d3">
+            <div class="num">Natural home</div>
+            <h4>Crypto &amp; Protocol Research</h4>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <p class="fade-up d3" style="font-size:16px; color:var(--ink-muted);">Target partners: Mozilla, Protocol Labs, Ethereum Foundation — foundations that already distribute research grants. In early conversations with grant program leads at two of them.</p>
+
+    <p class="footnote fade-up d4"><sup>†</sup> Representative examples: VitaDAO (longevity), Molecule (drug discovery), LabDAO (life sciences)</p>
+</section>
+
+<!-- ─── SLIDE 5 — CTA ──────────────────────────────────────────────── -->
+<section class="slide center slide-5">
+    <div class="rings">
+        <div class="ring"></div>
+        <div class="ring"></div>
+        <div class="ring"></div>
+    </div>
+
+    <div class="logo" style="left:50%;transform:translateX(-50%);">ethesis<span class="dot">.</span></div>
+    <span class="slide-num">05 / 05</span>
+
+    <div class="label fade-up">Science Funding Made Easy</div>
+
+    <h1 class="huge fade-up d1" style="text-align:center;">Science that<br>proves itself.</h1>
+
+    <div style="margin-top:48px;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;" class="fade-up d2">
+        <span class="pill solid">Any field</span>
+        <span class="pill">AI-verified outputs</span>
+        <span class="pill">Onchain treasury</span>
+        <span class="pill">Auto-exit if stalling</span>
+        <span class="pill">Open to all</span>
+    </div>
+
+    <div class="fade-up d3">
+        <a href="#" class="cta">Submit a proposal →</a>
+        <a href="#" class="cta-ghost">Post a grant request →</a>
+    </div>
+
+    <p class="footnote fade-up d5" style="margin-top:80px;">ETHPrague 2026 · ethesis.eth</p>
+</section>
+
+</div>
+
+<script>
+// ── Fade-up: bidirectional, threshold 0 ──────────────────────────────
+const fadeObs = new IntersectionObserver(
+    (entries) => entries.forEach(e => e.target.classList.toggle('visible', e.isIntersecting)),
+    { threshold: 0 }
+);
+document.querySelectorAll('.fade-up').forEach(el => fadeObs.observe(el));
+
+// ── Canvas particle background (slide 1): wide spiral galaxy ejection ──
+(function initParticles() {
+    const mount = document.getElementById('particles');
+    let W = mount.offsetWidth || window.innerWidth;
+    let H = mount.offsetHeight || window.innerHeight;
+
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%';
+    mount.appendChild(canvas);
+    canvas.width  = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Galaxy stream particles (shooting out from core) + ambient white stars.
+    const STREAM_COUNT = 2100;
+    const STAR_COUNT   = 850;
+    const ARMS         = 4;
+    const LIFE_SEC     = 4.8;
+    let RADIUS         = Math.min(W, H) * 0.60;
+    let STREAM_X       = RADIUS * 1.55; // wider than tall for classic galaxy look
+    let STREAM_Y       = RADIUS * 0.56;
+
+    const armBase      = new Float32Array(STREAM_COUNT);
+    const angleJit     = new Float32Array(STREAM_COUNT);
+    const launchOff    = new Float32Array(STREAM_COUNT);
+    const seedR        = new Float32Array(STREAM_COUNT);
+    const twistAmt     = new Float32Array(STREAM_COUNT);
+    const radialSpeedX = new Float32Array(STREAM_COUNT);
+    const radialSpeedY = new Float32Array(STREAM_COUNT);
+    const turbAmp      = new Float32Array(STREAM_COUNT);
+    const turbFreq     = new Float32Array(STREAM_COUNT);
+    const hueSpread    = new Float32Array(STREAM_COUNT);
+    const pSize        = new Float32Array(STREAM_COUNT);
+    const pAlpha       = new Float32Array(STREAM_COUNT);
+
+    const starX      = new Float32Array(STAR_COUNT);
+    const starY      = new Float32Array(STAR_COUNT);
+    const starSize   = new Float32Array(STAR_COUNT);
+    const starAlpha  = new Float32Array(STAR_COUNT);
+    const starTw     = new Float32Array(STAR_COUNT);
+    const starPhase  = new Float32Array(STAR_COUNT);
+    const starVx     = new Float32Array(STAR_COUNT);
+    const starVy     = new Float32Array(STAR_COUNT);
+
+    function seedGalaxy() {
+        RADIUS   = Math.min(W, H) * 0.60;
+        STREAM_X = RADIUS * 1.55;
+        STREAM_Y = RADIUS * 0.56;
+
+        for (let i = 0; i < STREAM_COUNT; i++) {
+            const arm = i % ARMS;
+            armBase[i] = (arm / ARMS) * Math.PI * 2;
+            angleJit[i] = (Math.random() - 0.5) * 0.65;
+            launchOff[i] = Math.random() * LIFE_SEC;
+            seedR[i] = Math.pow(Math.random(), 2.5) * 24; // dense at source
+            twistAmt[i] = 4.4 + Math.random() * 4.8;
+            radialSpeedX[i] = 0.75 + Math.random() * 0.85;
+            radialSpeedY[i] = 0.62 + Math.random() * 0.75;
+            turbAmp[i] = 1.2 + Math.random() * 4.0;
+            turbFreq[i] = 1.0 + Math.random() * 3.0;
+            hueSpread[i] = Math.random() * 72;
+            pSize[i] = 0.65 + Math.random() * 1.2;
+            pAlpha[i] = 0.2 + Math.random() * 0.75;
+        }
+
+        for (let i = 0; i < STAR_COUNT; i++) {
+            starX[i] = Math.random() * W;
+            starY[i] = Math.random() * H;
+            starSize[i] = 0.25 + Math.random() * 1.6;
+            starAlpha[i] = 0.06 + Math.random() * 0.34;
+            starTw[i] = 0.25 + Math.random() * 1.9;
+            starPhase[i] = Math.random() * Math.PI * 2;
+            starVx[i] = (Math.random() - 0.5) * 0.05;
+            starVy[i] = 0.01 + Math.random() * 0.04;
+        }
+    }
+    seedGalaxy();
+
+    let startTime = performance.now();
+
+    function tick() {
+        const elapsed = (performance.now() - startTime) * 0.001;
+        const cx = W / 2, cy = H / 2;
+
+        // Trail: dampen previous frame (matches uDamp: 0.86)
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 0.14;
+        ctx.fillStyle = '#060607';
+        ctx.fillRect(0, 0, W, H);
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'lighter'; // additive blending
+
+        // Slowly sweep hue through cool-space tones.
+        const colorBase = 168 + Math.sin(elapsed * 0.23) * 22;
+
+        const rot  = elapsed * 0.01;
+        const cosR = Math.cos(rot);
+        const sinR = Math.sin(rot);
+
+        // Soft core glow so the center reads as a galaxy nucleus.
+        const corePulse = 0.34 + 0.12 * Math.sin(elapsed * 1.0);
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, RADIUS * 0.28);
+        grad.addColorStop(0, `rgba(210, 232, 255, ${corePulse})`);
+        grad.addColorStop(0.25, 'rgba(168, 210, 255, 0.16)');
+        grad.addColorStop(1, 'rgba(20, 28, 40, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, RADIUS * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ambient white stars around the galaxy.
+        for (let i = 0; i < STAR_COUNT; i++) {
+            starX[i] += starVx[i];
+            starY[i] += starVy[i];
+            if (starX[i] < 0) starX[i] += W;
+            if (starX[i] > W) starX[i] -= W;
+            if (starY[i] > H) starY[i] -= H;
+            if (starY[i] < 0) starY[i] += H;
+
+            const a = starAlpha[i] * (0.55 + 0.45 * Math.sin(elapsed * starTw[i] + starPhase[i]));
+            ctx.beginPath();
+            ctx.arc(starX[i], starY[i], starSize[i], 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,255,255,${a})`;
+            ctx.fill();
+        }
+
+        // Galaxy stream particles: emitted near core, spiral outwards, then recycle.
+        for (let i = 0; i < STREAM_COUNT; i++) {
+            const age = (elapsed + launchOff[i]) % LIFE_SEC;
+            const life = age / LIFE_SEC; // 0..1
+
+            // Outward ejection (accelerating) with per-particle spiral curvature.
+            const out = Math.pow(life, 1.28);
+            const rX = seedR[i] + out * STREAM_X * radialSpeedX[i];
+            const rY = seedR[i] * 0.58 + out * STREAM_Y * radialSpeedY[i];
+            const theta = armBase[i] + angleJit[i] + out * twistAmt[i];
+
+            // Per-particle turbulence breaks predictability and adds bursty lanes.
+            const wobble = out * (0.35 + (turbAmp[i] * 0.01));
+            const noiseX =
+              Math.sin(age * turbFreq[i] + i * 0.17) * turbAmp[i] * (1 + wobble * 9) +
+              Math.cos(age * (turbFreq[i] * 0.43) + i * 0.09) * turbAmp[i] * 0.5;
+            const noiseY =
+              Math.cos(age * (turbFreq[i] * 0.91) + i * 0.11) * turbAmp[i] * (0.8 + wobble * 8) +
+              Math.sin(age * (turbFreq[i] * 0.37) + i * 0.13) * turbAmp[i] * 0.4;
+
+            const px = Math.cos(theta) * rX + noiseX;
+            const py = Math.sin(theta) * rY + noiseY;
+
+            // Bright near source, then fading while shooting off-screen.
+            const head = Math.min(1, age / 0.45);
+            const tail = Math.pow(1 - life, 0.55);
+            const tw = 0.68 + 0.32 * Math.sin(age * (2.2 + turbFreq[i]) + i * 0.03);
+            const alpha = pAlpha[i] * head * tail * tw;
+            if (alpha < 0.015) continue;
+
+            const rx = cx + px * cosR - py * sinR;
+            const ry = cy + px * sinR + py * cosR;
+
+            const h = (colorBase + hueSpread[i]) % 360;
+            ctx.beginPath();
+            ctx.arc(rx, ry, pSize[i] * (1.15 - life * 0.45), 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${h},76%,68%,${alpha})`;
+            ctx.fill();
+        }
+
+        requestAnimationFrame(tick);
+    }
+    tick();
+
+    new ResizeObserver(() => {
+        W = mount.offsetWidth; H = mount.offsetHeight;
+        canvas.width = W; canvas.height = H;
+        seedGalaxy();
+    }).observe(mount);
+})();
+
+// ── Slide 1: stats ────────────────────────────────────────────────────
+let s1Timers = [];
+
+function resetSlide1() {
+    s1Timers.forEach(t => clearInterval(t));
+    s1Timers = [];
+    document.getElementById('stat-spend').textContent = '$0.0T';
+    document.getElementById('stat-opaque').textContent = '········';
+    const strEl = document.getElementById('stat-stranded');
+    strEl.innerHTML = '';
+    const cur = document.createElement('span');
+    cur.className = 'typewriter-cursor';
+    strEl.appendChild(cur);
+}
+
+function runSlide1() {
+    // count ~$2.5T
+    const spendEl = document.getElementById('stat-spend');
+    const dur = 1600, t0 = performance.now();
+    let raf;
+    (function tick(now) {
+        const t = Math.min((now - t0) / dur, 1);
+        const ease = 1 - Math.pow(1 - t, 3);
+        spendEl.textContent = '~$' + (ease * 2.5).toFixed(1) + 'T';
+        if (t < 1) raf = requestAnimationFrame(tick);
+    })(t0);
+
+    // scramble → Opaque
+    const opEl = document.getElementById('stat-opaque');
+    const target = 'Opaque';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789#@!%&';
+    let iter = 0;
+    const sc = setInterval(() => {
+        opEl.textContent = target.split('').map((ch, i) => i < iter ? ch : chars[Math.floor(Math.random() * chars.length)]).join('');
+        iter += 0.4;
+        if (iter >= target.length) { opEl.textContent = target; clearInterval(sc); }
+    }, 40);
+    s1Timers.push(sc);
+
+    // typewriter → Stranded
+    const strEl = document.getElementById('stat-stranded');
+    const word = 'Stranded';
+    let idx = 0;
+    const cursor = strEl.querySelector('.typewriter-cursor') || (() => { const c = document.createElement('span'); c.className = 'typewriter-cursor'; return c; })();
+    const tt = setInterval(() => {
+        strEl.textContent = word.slice(0, idx);
+        strEl.appendChild(cursor);
+        idx++;
+        if (idx > word.length) clearInterval(tt);
+    }, 90);
+    s1Timers.push(tt);
+}
+
+const s1obs = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) { resetSlide1(); runSlide1(); }
+    else resetSlide1();
+}, { threshold: 0 });
+s1obs.observe(document.querySelector('.slide-1'));
+// Slide 1 is visible on load — force-run after layout settles
+requestAnimationFrame(() => requestAnimationFrame(() => { resetSlide1(); runSlide1(); }));
+
+// ── Slide 2: pipeline cycle ───────────────────────────────────────────
+const slide2 = document.querySelector('.slide-2');
+const steps  = slide2.querySelectorAll('.flow-step');
+let pipelineInterval = null, pipelineTimeouts = [];
+
+steps.forEach(s => {
+    s.style.transition = 'opacity 0.5s ease, transform 0.5s ease, border-color 0.4s ease, background 0.4s ease';
+});
+
+function resetSlide2() {
+    pipelineTimeouts.forEach(clearTimeout); pipelineTimeouts = [];
+    steps.forEach(s => { s.classList.remove('active'); s.style.opacity='0'; s.style.transform='translateY(20px)'; });
+}
+
+new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+        resetSlide2();
+        // stagger steps in
+        steps.forEach((s, i) => {
+            const t = setTimeout(() => { s.style.opacity='1'; s.style.transform='none'; }, 100 + i*100);
+            pipelineTimeouts.push(t);
+        });
+        // activate each step in sequence, stop and hold at last
+        steps.forEach((s, i) => {
+            const t = setTimeout(() => {
+                steps.forEach(s2 => s2.classList.remove('active'));
+                s.classList.add('active');
+            }, 900 + i * 900);
+            pipelineTimeouts.push(t);
+        });
+    } else { resetSlide2(); }
+}, { threshold: 0 }).observe(slide2);
+
+// ── Slide 3: card converge ────────────────────────────────────────────
+new IntersectionObserver((entries) => {
+    document.querySelector('.slide-3').classList.toggle('in-view', entries[0].isIntersecting);
+}, { threshold: 0 }).observe(document.querySelector('.slide-3'));
+
+// ── Slide 4: animated canvas starfield ───────────────────────────────
+(function initStarfield() {
+    const mount = document.getElementById('starfield');
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%';
+    mount.appendChild(canvas);
+    let W = canvas.width  = mount.offsetWidth  || window.innerWidth;
+    let H = canvas.height = mount.offsetHeight || window.innerHeight;
+    const ctx = canvas.getContext('2d');
+
+    const COUNT = 360;
+    const stars = Array.from({ length: COUNT }, () => {
+        const depth = Math.random();          // 0 = far/slow/dim, 1 = near/fast/bright
+        return {
+            x:            Math.random() * W,
+            y:            Math.random() * H,
+            size:         0.3 + depth * 2.0,
+            vx:           (Math.random() - 0.5) * 0.08,
+            vy:           0.04 + depth * 0.14, // gentle downward drift; near stars faster
+            baseAlpha:    0.08 + depth * 0.52,
+            twinkleSpeed: 0.4 + Math.random() * 1.8,
+            twinklePhase: Math.random() * Math.PI * 2,
+            green:        Math.random() < 0.12,
+        };
+    });
+
+    function tick(ts) {
+        const t = ts * 0.001;
+        ctx.clearRect(0, 0, W, H);
+        for (const s of stars) {
+            s.x += s.vx;
+            s.y += s.vy;
+            if (s.x < 0)  s.x += W;
+            if (s.x > W)  s.x -= W;
+            if (s.y > H)  s.y -= H;
+            if (s.y < 0)  s.y += H;
+            const twinkle = 0.55 + 0.45 * Math.sin(t * s.twinkleSpeed + s.twinklePhase);
+            const alpha   = s.baseAlpha * twinkle;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.fillStyle = s.green ? `rgba(52,232,158,${alpha})` : `rgba(255,255,255,${alpha})`;
+            ctx.fill();
+        }
+        requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    new ResizeObserver(() => {
+        W = canvas.width  = mount.offsetWidth;
+        H = canvas.height = mount.offsetHeight;
+    }).observe(mount);
+})();
+
+new IntersectionObserver((entries) => {
+    document.querySelector('.slide-4').classList.toggle('in-view', entries[0].isIntersecting);
+}, { threshold: 0 }).observe(document.querySelector('.slide-4'));
+
+// ── Keyboard navigation ───────────────────────────────────────────────
+const slides = Array.from(document.querySelectorAll('.slide'));
+let currentSlide = 0;
+
+// Keep current index in sync with scroll position
+const slideObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+        if (e.isIntersecting) currentSlide = slides.indexOf(e.target);
+    });
+}, { threshold: 0.5 });
+slides.forEach(s => slideObs.observe(s));
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = Math.min(currentSlide + 1, slides.length - 1);
+        slides[next].scrollIntoView({ behavior: 'smooth' });
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prev = Math.max(currentSlide - 1, 0);
+        slides[prev].scrollIntoView({ behavior: 'smooth' });
+    }
+});
+</script>
+</body>
+</html>

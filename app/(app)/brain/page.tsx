@@ -16,7 +16,49 @@ type Msg =
       streaming?: boolean;
       cites?: BrainResponseCite[];
       matched?: boolean;
+      agentType?: string;
     };
+
+type AgentId = "sourcify" | "bio" | "aiml" | "maths";
+
+interface AgentDef {
+  id: AgentId;
+  label: string;
+  icon: string;
+  description: string;
+  accent: string;
+}
+
+const AGENTS: AgentDef[] = [
+  {
+    id: "sourcify",
+    label: "Crypto",
+    icon: "⛓",
+    description: "Verified smart contracts & on-chain data",
+    accent: "#34e89e",
+  },
+  {
+    id: "bio",
+    label: "Bio",
+    icon: "🧬",
+    description: "Biotech contracts, protocols & research outputs",
+    accent: "#34e89e",
+  },
+  {
+    id: "aiml",
+    label: "AI / ML",
+    icon: "⬡",
+    description: "Model inference, on-chain ML & verification",
+    accent: "#6e70ff",
+  },
+  {
+    id: "maths",
+    label: "Maths",
+    icon: "∑",
+    description: "Formal proofs, cryptographic primitives & ZK",
+    accent: "#f4b942",
+  },
+];
 
 const PROMPTS: Array<[string, string]> = [
   ["AMR peptides", "What's the most promising AMR peptide approach in funded ventures?"],
@@ -45,6 +87,7 @@ export default function BrainPage() {
   const [input, setInput] = useState("");
   const [queriesUsed, setQueriesUsed] = useState(1);
   const [busy, setBusy] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<AgentId | null>(null);
   const free = 5;
   const seededRef = useRef(false);
 
@@ -56,18 +99,23 @@ export default function BrainPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function runQuery(q: string, isSeed = false) {
+  async function runQuery(q: string, isSeed = false, agentOverride?: AgentId | null) {
     if (busy) return;
     setBusy(true);
+    const activeAgent = agentOverride !== undefined ? agentOverride : selectedAgent;
     setMessages((prev) => [...prev, { role: "user", text: q }]);
     if (!isSeed) setQueriesUsed((n) => n + 1);
 
     let res: BrainResponse;
     try {
-      const r = await fetch("/api/brain/ask", {
+      const endpoint = activeAgent ? "/api/brain/cognee-ask" : "/api/brain/ask";
+      const body = activeAgent
+        ? JSON.stringify({ question: q, agentType: activeAgent })
+        : JSON.stringify({ question: q });
+      const r = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question: q }),
+        body,
       });
       res = (await r.json()) as BrainResponse;
     } catch {
@@ -83,7 +131,7 @@ export default function BrainPage() {
     const msgIndex = await new Promise<number>((resolve) => {
       setMessages((prev) => {
         resolve(prev.length);
-        return [...prev, { role: "brain", text: "", streaming: true }];
+        return [...prev, { role: "brain", text: "", streaming: true, agentType: activeAgent ?? undefined }];
       });
     });
 
@@ -121,6 +169,11 @@ export default function BrainPage() {
     if (!q || busy) return;
     setInput("");
     void runQuery(q);
+  };
+
+  const selectAgent = (id: AgentId) => {
+    const next = selectedAgent === id ? null : id;
+    setSelectedAgent(next);
   };
 
   const empty = messages.length === 0;
@@ -199,10 +252,35 @@ export default function BrainPage() {
 
           <div className="absolute left-0 right-0 bottom-0 px-6 pb-6 pt-12 pointer-events-none bg-gradient-to-t from-canvas via-canvas to-transparent">
             <div className="max-w-[760px] mx-auto pointer-events-auto">
+              {selectedAgent && (() => {
+                const ag = AGENTS.find((a) => a.id === selectedAgent)!;
+                return (
+                  <div
+                    className="flex items-center gap-2 mb-2 px-3 py-1.5 rounded-lg border text-[12px]"
+                    style={{ borderColor: ag.accent + "44", background: ag.accent + "11" }}
+                  >
+                    <span style={{ color: ag.accent }}>{ag.icon}</span>
+                    <span className="text-ink-soft">
+                      Routing through <span className="font-medium text-ink">{ag.label} agent</span> · Cognee knowledge graph
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAgent(null)}
+                      className="ml-auto text-ink-muted hover:text-ink text-[11px]"
+                    >
+                      ✕ clear
+                    </button>
+                  </div>
+                );
+              })()}
               <div className="flex items-end gap-2 p-2.5 bg-surface border border-border rounded-xl">
                 <textarea
                   rows={1}
-                  placeholder="Ask anything verifiable. ENS names, paper titles, milestones…"
+                  placeholder={
+                    selectedAgent
+                      ? `Ask the ${AGENTS.find((a) => a.id === selectedAgent)?.label} agent…`
+                      : "Ask anything verifiable. ENS names, paper titles, milestones…"
+                  }
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -230,12 +308,85 @@ export default function BrainPage() {
           </div>
         </div>
 
-        <aside className="hidden xl:block border-l border-border p-6 sticky top-[var(--nav-h)] self-start h-[calc(100vh-var(--nav-h))] overflow-y-auto">
-          <RailHeading>Sources in context</RailHeading>
-          <SourcesPanel messages={messages} />
+        <aside className="hidden xl:flex flex-col border-l border-border p-5 sticky top-[var(--nav-h)] self-start h-[calc(100vh-var(--nav-h))] overflow-y-auto gap-5">
+          <AgentPanel
+            selected={selectedAgent}
+            onSelect={selectAgent}
+          />
+          <div>
+            <RailHeading>Sources in context</RailHeading>
+            <SourcesPanel messages={messages} />
+          </div>
         </aside>
       </div>
     </main>
+  );
+}
+
+function AgentPanel({
+  selected,
+  onSelect,
+}: {
+  selected: AgentId | null;
+  onSelect: (id: AgentId) => void;
+}) {
+  return (
+    <div>
+      <RailHeading>Agent</RailHeading>
+      <p className="text-[11.5px] text-ink-muted mb-3 leading-snug">
+        Select an agent to route answers through the Cognee knowledge graph.
+      </p>
+      <div className="flex flex-col gap-2">
+        {AGENTS.map((ag) => {
+          const active = selected === ag.id;
+          return (
+            <button
+              key={ag.id}
+              type="button"
+              onClick={() => onSelect(ag.id)}
+              className="w-full text-left rounded-lg border px-3 py-2.5 transition-all"
+              style={{
+                borderColor: active ? ag.accent : "var(--color-border)",
+                background: active ? ag.accent + "18" : "var(--color-surface)",
+              }}
+            >
+              <div className="flex items-center gap-2.5">
+                <span
+                  className="text-[18px] w-7 text-center leading-none shrink-0"
+                  style={{ color: active ? ag.accent : undefined }}
+                >
+                  {ag.icon}
+                </span>
+                <div className="min-w-0">
+                  <div
+                    className="text-[13px] font-medium leading-tight"
+                    style={{ color: active ? ag.accent : "var(--color-ink)" }}
+                  >
+                    {ag.label}
+                  </div>
+                  <div className="text-[11px] text-ink-muted truncate mt-0.5 leading-snug">
+                    {ag.description}
+                  </div>
+                </div>
+                {active && (
+                  <span
+                    className="ml-auto shrink-0 w-1.5 h-1.5 rounded-full"
+                    style={{ background: ag.accent }}
+                  />
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      {selected && (
+        <p
+          className="mt-3 font-mono text-[10px] text-ink-muted border-t border-border-soft pt-2"
+        >
+          via cognee · sourcify-ethesis · RAG_COMPLETION
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -332,6 +483,9 @@ function HistoryItem({
 
 function Bubble({ msg }: { msg: Msg }) {
   const isUser = msg.role === "user";
+  const agentDef = !isUser && msg.agentType
+    ? AGENTS.find((a) => a.id === msg.agentType)
+    : null;
   return (
     <div className={"flex gap-3 " + (isUser ? "justify-end" : "")}>
       <div
@@ -341,7 +495,17 @@ function Bubble({ msg }: { msg: Msg }) {
             ? "bg-surface-2 border-transparent text-ink"
             : "bg-surface border-border text-ink")
         }
+        style={agentDef ? { borderColor: agentDef.accent + "55" } : undefined}
       >
+        {agentDef && (
+          <div
+            className="flex items-center gap-1.5 mb-2 font-mono text-[10.5px]"
+            style={{ color: agentDef.accent }}
+          >
+            <span>{agentDef.icon}</span>
+            <span>{agentDef.label} agent · Cognee</span>
+          </div>
+        )}
         <RenderBody msg={msg} />
         {!isUser && msg.cites && msg.cites.length > 0 && (
           <div className="grid gap-2 mt-3 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
