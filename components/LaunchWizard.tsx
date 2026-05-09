@@ -41,12 +41,52 @@ const CATEGORIES = [
 type Category = (typeof CATEGORIES)[number]["value"];
 
 const SOURCE_TYPES = [
-  { value: "github", label: "GitHub", placeholder: "owner/repo" },
-  { value: "arxiv", label: "arXiv", placeholder: "author handle" },
-  { value: "huggingface", label: "HuggingFace", placeholder: "username" },
-  { value: "openreview", label: "OpenReview", placeholder: "username" },
-  { value: "x", label: "X / Twitter", placeholder: "@handle" },
-  { value: "substack", label: "Substack / Mirror", placeholder: "publication URL" },
+  {
+    value: "github",
+    label: "GitHub",
+    placeholder: "owner/repo",
+    /** OAuth-style redirect target. We open this in a popup, the user
+     * sees the real provider in the URL bar, and after a short delay we
+     * mark the source connected. No real OAuth flow runs — the demo
+     * just needs the visual "they redirected to github" beat. */
+    oauthUrl: "https://github.com/login",
+    sampleIdentifier: "programmablebio/amp-diffusion",
+  },
+  {
+    value: "arxiv",
+    label: "arXiv",
+    placeholder: "author handle",
+    oauthUrl: "https://arxiv.org/login",
+    sampleIdentifier: "de la Fuente-Nunez",
+  },
+  {
+    value: "huggingface",
+    label: "HuggingFace",
+    placeholder: "username",
+    oauthUrl: "https://huggingface.co/login",
+    sampleIdentifier: "facebook/esm2_t33_650M_UR50D",
+  },
+  {
+    value: "openreview",
+    label: "OpenReview",
+    placeholder: "username",
+    oauthUrl: "https://openreview.net/login",
+    sampleIdentifier: "~CesardelaFuenteNunez1",
+  },
+  {
+    value: "x",
+    label: "X / Twitter",
+    placeholder: "@handle",
+    oauthUrl: "https://x.com/i/flow/login",
+    sampleIdentifier: "delafuentelab",
+  },
+  {
+    value: "substack",
+    label: "Substack / Mirror",
+    placeholder: "publication URL",
+    oauthUrl: "https://substack.com/sign-in",
+    sampleIdentifier: "machinebiology.substack.com",
+  },
 ] as const;
 
 type SourceType = (typeof SOURCE_TYPES)[number]["value"];
@@ -79,6 +119,11 @@ interface SourceDraft {
   id: string;
   type: SourceType;
   identifier: string;
+  /** UI state — set to "connecting" while the OAuth-style popup is
+   * open, then "connected" once the identifier auto-populates. Doesn't
+   * gate validation directly; isStepValid only cares that identifier
+   * is non-empty. */
+  status?: "fresh" | "connecting" | "connected";
 }
 
 interface UploadedFile {
@@ -594,9 +639,14 @@ function lockReasonForStep(step: number, draft: Draft): string {
         return "Waiting for PDFs to finish indexing…";
       return "";
     case 3:
-      if (draft.sources.length === 0) return "Add at least one source.";
+      if (draft.sources.length < 3)
+        return `Connect ${3 - draft.sources.length} more source${
+          3 - draft.sources.length === 1 ? "" : "s"
+        }.`;
+      if (draft.sources.some((s) => s.status === "connecting"))
+        return "Finishing OAuth…";
       if (draft.sources.some((s) => !s.identifier.trim()))
-        return "Every source needs an identifier.";
+        return "Every source needs to finish connecting.";
       return "";
     case 4:
       if (draft.milestones.length < 3) return "Add at least 3 milestones.";
@@ -929,7 +979,10 @@ function Step3Sources({
   setDraft: React.Dispatch<React.SetStateAction<Draft>>;
 }) {
   const addSource = (type: SourceType) =>
-    setDraft((d) => ({ ...d, sources: [...d.sources, blankSource(type)] }));
+    setDraft((d) => ({
+      ...d,
+      sources: [...d.sources, { ...blankSource(type), status: "fresh" }],
+    }));
 
   const updateSource = (id: string, patch: Partial<SourceDraft>) =>
     setDraft((d) => ({
@@ -940,14 +993,46 @@ function Step3Sources({
   const removeSource = (id: string) =>
     setDraft((d) => ({ ...d, sources: d.sources.filter((s) => s.id !== id) }));
 
+  const connectSource = (id: string) => {
+    const source = draft.sources.find((s) => s.id === id);
+    if (!source) return;
+    const meta = SOURCE_TYPES.find((t) => t.value === source.type)!;
+
+    // Open the provider's login page in a popup so the URL bar shows
+    // a real github.com / x.com / huggingface.co address. The popup is
+    // closed automatically after a short OAuth-feeling delay; the source
+    // row in the wizard transitions fresh → connecting → connected.
+    const popup = window.open(
+      meta.oauthUrl,
+      `oauth-${meta.value}`,
+      "width=520,height=640,menubar=no,toolbar=no,location=yes,status=no",
+    );
+    updateSource(id, { status: "connecting" });
+
+    setTimeout(() => {
+      try {
+        popup?.close();
+      } catch {
+        // popup may be cross-origin; closing can throw — safe to ignore
+      }
+      updateSource(id, {
+        identifier: meta.sampleIdentifier,
+        status: "connected",
+      });
+    }, 1800);
+  };
+
   const usedTypes = new Set(draft.sources.map((s) => s.type));
+  const connectedCount = draft.sources.filter(
+    (s) => s.identifier.trim().length > 0,
+  ).length;
 
   return (
     <div className="space-y-5">
       <StepHeader
         eyebrow="Step 3 of 7"
         title="Connect sources"
-        subtitle="Your agent will start watching these once treasury crosses the activation threshold. Connect at least one."
+        subtitle="Your agent watches these once treasury crosses the activation threshold. Connect at least 3 — they redirect through each provider's OAuth flow."
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -968,37 +1053,80 @@ function Step3Sources({
         ))}
       </div>
 
+      <div className="flex items-baseline justify-between text-[11px] text-ink-muted">
+        <span>{connectedCount} / 3 minimum connected</span>
+        {connectedCount >= 3 && (
+          <span className="text-verify-ink">✓ ready</span>
+        )}
+      </div>
+
       {draft.sources.length === 0 ? (
         <p className="text-xs text-ink-subtle text-center py-6">
-          No sources connected yet. Pick at least one above.
+          No sources connected yet. Pick at least 3 above.
         </p>
       ) : (
         <ul className="space-y-2">
           {draft.sources.map((s) => {
             const meta = SOURCE_TYPES.find((t) => t.value === s.type)!;
+            const status = s.status ?? (s.identifier ? "connected" : "fresh");
             return (
               <li
                 key={s.id}
-                className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2"
+                className={cn(
+                  "rounded-md border bg-surface px-3 py-2.5 transition-colors",
+                  status === "connected"
+                    ? "border-verify/30"
+                    : "border-border",
+                )}
               >
-                <span className="text-[10px] uppercase tracking-wider text-ink-subtle font-medium w-20 shrink-0">
-                  {meta.label}
-                </span>
-                <input
-                  type="text"
-                  value={s.identifier}
-                  onChange={(e) => updateSource(s.id, { identifier: e.target.value })}
-                  placeholder={meta.placeholder}
-                  className="flex-1 bg-transparent text-sm font-mono text-ink focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeSource(s.id)}
-                  className="text-ink-subtle hover:text-dispute-ink transition-colors"
-                  aria-label="Remove source"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-wider text-ink-subtle font-medium w-20 shrink-0">
+                    {meta.label}
+                  </span>
+
+                  {status === "fresh" && (
+                    <button
+                      type="button"
+                      onClick={() => connectSource(s.id)}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-canvas hover:bg-ink-soft transition-colors"
+                    >
+                      Connect with {meta.label} →
+                    </button>
+                  )}
+
+                  {status === "connecting" && (
+                    <span className="flex-1 inline-flex items-center gap-2 text-[12px] text-ink-muted font-mono">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      authorizing on {meta.label.toLowerCase()}…
+                    </span>
+                  )}
+
+                  {status === "connected" && (
+                    <>
+                      <span className="text-verify-ink text-[10px] font-medium shrink-0">
+                        ✓ connected
+                      </span>
+                      <input
+                        type="text"
+                        value={s.identifier}
+                        onChange={(e) =>
+                          updateSource(s.id, { identifier: e.target.value })
+                        }
+                        placeholder={meta.placeholder}
+                        className="flex-1 bg-transparent text-sm font-mono text-ink focus:outline-none min-w-0"
+                      />
+                    </>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => removeSource(s.id)}
+                    className="text-ink-subtle hover:text-dispute-ink transition-colors shrink-0"
+                    aria-label="Remove source"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </li>
             );
           })}
@@ -1956,7 +2084,10 @@ function isStepValid(step: number, draft: Draft): boolean {
         draft.uploads.every((u) => u.ingested)
       );
     case 3:
-      return draft.sources.length >= 1 && draft.sources.every((s) => s.identifier.trim().length > 0);
+      return (
+        draft.sources.length >= 3 &&
+        draft.sources.every((s) => s.identifier.trim().length > 0)
+      );
     case 4:
       return (
         draft.milestones.length >= 3 &&
