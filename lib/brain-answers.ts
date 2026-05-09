@@ -32,15 +32,17 @@ export const BRAIN_ANSWERS: BrainAnswer[] = [
       "resistance",
       "eskape",
       "mrsa",
+      "diffusion",
+      "ampsphere",
     ],
     question:
       "What's the most promising AMR peptide approach in funded ventures?",
     body:
-      "Across the indexed corpus, three threads matter most. (1) Explainable graph-neural-network screens [1] are the de-facto blueprint — they let auditors verify *why* a candidate was nominated, which is what makes attestations meaningful here. (2) Sequence-conditioned generative models trained on extinct-hominin proteomes [2] keep producing in-vitro hits against ESKAPE pathogens at a higher rate than de-novo libraries. (3) Cryptic AMP mining inside the human proteome [3] gives candidates with built-in immunogenicity priors — the most translation-ready of the three. The peptide-amr.ethesis.eth venture is set up to replicate (2) and (3) in parallel, which is the strongest portfolio bet.",
+      "The strongest current evidence stacks: (1) latent-diffusion over ESM-2 embeddings [1] generates AMPs that beat random-baseline hit rates at a fraction of the wet-lab cost — and the in-vivo follow-up [2] showed two of the synthesized peptides cleared drug-resistant skin infections in mice with no observed toxicity. (2) Global-microbiome mining via AMPSphere [3] gives a ~863K-candidate library with 79/100 in-vitro positives against drug-resistant pathogens — the largest validated AMP corpus to date. The peptide-amr venture re-trains AMP-Diffusion on AMPSphere's refreshed library and runs the resulting top-50 panel through a pre-registered ESKAPE screen, every step attested.",
     cites: [
-      { paperId: "wong-2023-explainable-amp", num: 1 },
-      { paperId: "maasch-2023-de-extinction", num: 2 },
-      { paperId: "torres-2022-encrypted-amp", num: 3 },
+      { paperId: "chen-2024-amp-diffusion", num: 1 },
+      { paperId: "torres-2025-generative-latent-diffusion", num: 2 },
+      { paperId: "santos-junior-2024-global-microbiome", num: 3 },
     ],
   },
   {

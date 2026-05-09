@@ -66,13 +66,14 @@ const hoursFromNow = (h: number) => new Date(now.getTime() + h * 3600 * 1000);
 export const mockVentures: MockVenture[] = [
   {
     ensName: "peptide-amr.ethesis.eth",
-    title: "Peptide-AMR: ML-designed peptides against ESKAPE pathogens",
+    title:
+      "Peptide-AMR: latent-diffusion AMP design against ESKAPE pathogens",
     pitch:
-      "Replicating two AMP-discovery papers, then running our own active-learning loop on a refreshed peptidomic library.",
+      "Extending AMP-Diffusion + AMPSphere mining to a pre-registered ESKAPE wet-lab panel, with all generated peptides and assay data attested on-chain.",
     description:
-      "Antimicrobial resistance kills ~1.3M/yr globally. We're combining the explainable-deep-learning pipeline (Wong et al. 2023) with the cryptic-peptide mining approach (Torres et al. 2022), validating both on ESKAPE pathogens, then running our own GNN-guided active-learning loop. Wet-lab partner: a CRO with BSL-2 capability for MIC + resistance profiling.",
+      "Antimicrobial resistance kills ~1.3M/yr globally. The Machine Biology Group at UPenn (de la Fuente Lab) has shown that latent-diffusion over ESM-2 embeddings (AMP-Diffusion, Chen et al. 2024) and global-microbiome mining (Santos-Júnior et al. 2024, Cell) both yield in-vitro hits at ≥40% rates. This venture extends that pipeline: we re-train AMP-Diffusion on a refreshed peptidomic library, generate 50K candidates, screen down to a 50-peptide panel, then run MIC + resistance profiling against six ESKAPE pathogens. Wet-lab partner: BSL-2 CRO. Generated peptides, top hits, and raw assay data are uploaded to Swarm and anchored to ENS as the agent verifies each milestone.",
     category: "bio",
-    ownerEns: "lambros.eth",
+    ownerEns: "delafuente.eth",
     stage: "live",
     status: "healthy",
     progressScore: 74,
@@ -83,10 +84,11 @@ export const mockVentures: MockVenture[] = [
     totalFunders: 64,
     nextMilestoneInDays: 9,
     paperIds: [
-      "wong-2023-explainable-amp",
+      "santos-junior-2024-global-microbiome",
+      "chen-2024-amp-diffusion",
+      "torres-2025-generative-latent-diffusion",
       "maasch-2023-de-extinction",
       "torres-2022-encrypted-amp",
-      "stokes-2020-halicin",
     ],
     pulse: [
       "verified",

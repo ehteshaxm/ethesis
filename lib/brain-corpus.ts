@@ -32,6 +32,65 @@ export interface Paper {
 
 export const BRAIN_CORPUS: Paper[] = [
   {
+    id: "santos-junior-2024-global-microbiome",
+    title:
+      "Discovery of antimicrobial peptides in the global microbiome with machine learning",
+    authors:
+      "C. D. Santos-Júnior, M. D. T. Torres, et al. (de la Fuente-Nunez lab)",
+    year: 2024,
+    venue: "Cell",
+    blurb:
+      "AMPSphere — 863,498 non-redundant AMP candidates mined from 63K metagenomes + 88K prokaryotic genomes. 79/100 synthesised peptides hit drug-resistant pathogens in vitro. The reference corpus this venture re-trains on.",
+    tags: [
+      "amp",
+      "antimicrobial",
+      "machine-learning",
+      "microbiome",
+      "ampsphere",
+      "amr",
+    ],
+    ventureEnsName: "peptide-amr.ethesis.eth",
+  },
+  {
+    id: "chen-2024-amp-diffusion",
+    title:
+      "AMP-Diffusion: Integrating latent diffusion with protein language models for antimicrobial peptide generation",
+    authors: "T. Chen, P. Vure, R. Pulugurta, P. Chatterjee",
+    year: 2024,
+    venue: "arXiv",
+    blurb:
+      "Latent-diffusion model trained over ESM-2 embeddings; produces functional AMPs without retraining a peptide-specific encoder. Reference repo: github.com/programmablebio/amp-diffusion. Direct backbone for this venture's generative loop.",
+    tags: [
+      "amp",
+      "antimicrobial",
+      "diffusion",
+      "esm-2",
+      "latent-diffusion",
+      "amr",
+    ],
+    ventureEnsName: "peptide-amr.ethesis.eth",
+  },
+  {
+    id: "torres-2025-generative-latent-diffusion",
+    title:
+      "Generative latent diffusion language modeling yields anti-infective synthetic peptides",
+    authors:
+      "M. D. T. Torres, T. Chen, C. Wan, P. Chatterjee, C. de la Fuente-Nunez",
+    year: 2025,
+    venue: "Cell",
+    blurb:
+      "From 50K AMP-Diffusion candidates, 46 synthesised; 2 reduced drug-resistant skin infections in mice with efficacy comparable to clinical antibiotics, no observed toxicity. The validation result this venture's milestones target.",
+    tags: [
+      "amp",
+      "antimicrobial",
+      "in-vivo",
+      "skin-infection",
+      "diffusion",
+      "amr",
+    ],
+    ventureEnsName: "peptide-amr.ethesis.eth",
+  },
+  {
     id: "wong-2023-explainable-amp",
     title:
       "Discovery of a structural class of antibiotics with explainable deep learning",
