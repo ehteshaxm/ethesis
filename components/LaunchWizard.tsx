@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { umia } from "@/lib/umia";
 import { cn, formatEth, identiconColors } from "@/lib/utils";
-import { LaunchAnimation } from "./LaunchAnimation";
+import { LaunchReel } from "./LaunchReel";
 import { UmiaCliHandoff } from "./UmiaCliHandoff";
 
 // ─── Draft model ────────────────────────────────────────────────────
@@ -372,33 +372,22 @@ export function LaunchWizard() {
     });
   };
 
-  // Stable callback so LaunchAnimation's effect doesn't restart on re-render.
+  // Stable callback so the reel's effect doesn't restart on re-render.
   const handleAnimationComplete = useCallback(() => {
     setPhase("done");
   }, []);
 
   if (phase === "submitting") {
-    if (!submitResult) {
-      return (
-        <FullScreen>
-          <PlatformProvisionProgress
-            ensSubname={ensSubname}
-            step={provisionStep}
-            error={provisionError}
-            onRetry={() => {
-              setProvisionError(null);
-              setPhase("form");
-            }}
-          />
-        </FullScreen>
-      );
-    }
-    // ENS done; play the rest of the launch animation while umia.openAuction
-    // resolves (mocked) and then move on to success.
     return (
       <FullScreen>
-        <LaunchAnimation
+        <LaunchReel
           ensSubname={ensSubname}
+          done={Boolean(submitResult)}
+          error={provisionError}
+          onRetry={() => {
+            setProvisionError(null);
+            setPhase("form");
+          }}
           onComplete={handleAnimationComplete}
         />
       </FullScreen>

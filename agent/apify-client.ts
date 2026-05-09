@@ -206,18 +206,29 @@ function randomBytes32(): `0x${string}` {
 }
 
 /** Resolve the viem account that should sign x402 typed data.
- * Prefers the SpaceComputer KMS-held platform key when KMS_ENABLED=1;
- * otherwise falls back to the agent's locally-derived EOA. */
+ *
+ * Selection order:
+ *   1. X402_SIGNER=kms       → SpaceComputer KMS platform wallet
+ *   2. X402_SIGNER=agent     → per-venture deterministic EOA
+ *   3. (unset, KMS_ENABLED=1)→ KMS (back-compat)
+ *   4. (unset)               → per-venture EOA
+ *
+ * Letting the operator pick avoids the trap of "KMS_ENABLED is on but
+ * the KMS wallet has no USDC" — they can fall back to the agent EOA
+ * without a code change. */
 async function resolveX402Account(
   agentPrivateKey: Hex | undefined,
 ): Promise<LocalAccount> {
-  if (isKmsEnabled()) {
+  const explicit = (process.env.X402_SIGNER ?? "").toLowerCase();
+  const useKms =
+    explicit === "kms" || (explicit === "" && isKmsEnabled());
+  if (useKms && isKmsEnabled()) {
     const key = await getOrCreatePlatformKey();
     return createKmsAccount({ keyId: key.keyId, address: key.address });
   }
   if (!agentPrivateKey) {
     throw new Error(
-      "[apify] no signer available — set KMS_ENABLED=1 or pass agentPrivateKey",
+      "[apify] no signer available — set KMS_ENABLED=1 + X402_SIGNER=kms, or pass agentPrivateKey",
     );
   }
   return privateKeyToAccount(agentPrivateKey);
