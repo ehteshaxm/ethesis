@@ -242,3 +242,35 @@ body {
 .reel-arrow {
   animation: reel-arrow 1.4s ease-in-out infinite;
 }
+
+/* Shimmer that runs L→R along the LaunchReel progress bar while the
+ * provisioning is still in flight. Sits on top of the static fill so
+ * the bar always reads "still working" even when the scene timer has
+ * caught up to the last scene and is parked waiting for `done`. */
+@keyframes reel-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.reel-shimmer {
+  animation: reel-shimmer 1.6s linear infinite;
+}
+
+/* Soft, slow glow that breathes underneath the shimmer track. */
+@keyframes reel-glow {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.reel-glow {
+  animation: reel-glow 2s ease-in-out infinite;
+}

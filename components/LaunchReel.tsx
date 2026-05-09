@@ -263,12 +263,27 @@ export function LaunchReel({
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="h-1 bg-surface-2">
+        {/* Progress bar — static fill plus an always-on shimmer track
+         * so the reel keeps signalling "still working" when the scene
+         * timer has caught up but `done` hasn't flipped yet. */}
+        <div className="relative h-1 bg-surface-2 overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-accent to-verify transition-[width] duration-700 ease-out"
             style={{ width: `${progress}%` }}
           />
+          {!done && (
+            <>
+              {/* breathing under-glow that hugs the static fill */}
+              <div
+                className="absolute inset-y-0 left-0 reel-glow bg-gradient-to-r from-accent/40 via-verify/40 to-accent/40 blur-[2px]"
+                style={{ width: `${progress}%` }}
+              />
+              {/* moving highlight that crosses the entire bar */}
+              <div className="pointer-events-none absolute inset-y-0 left-0 right-0">
+                <div className="reel-shimmer h-full w-1/3 bg-gradient-to-r from-transparent via-white/70 to-transparent mix-blend-screen" />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Footer dots */}
@@ -279,7 +294,9 @@ export function LaunchReel({
               className={cn(
                 "h-1 rounded-full transition-all duration-500",
                 i === scene
-                  ? "w-6 bg-accent"
+                  ? !done
+                    ? "w-6 bg-accent reel-pulse"
+                    : "w-6 bg-accent"
                   : i < scene
                     ? "w-1 bg-verify"
                     : "w-1 bg-border-strong",
@@ -288,6 +305,13 @@ export function LaunchReel({
           ))}
         </div>
       </div>
+
+      {!done && scene >= SCENES.length - 1 && (
+        <p className="mt-3 text-center text-[11px] text-ink-muted inline-flex items-center justify-center gap-2 w-full">
+          <span className="h-1.5 w-1.5 rounded-full bg-accent animate-heartbeat" />
+          Waiting for chain confirmations — Sepolia takes ~30s for 4 sequential txns…
+        </p>
+      )}
 
       {done && scene < SCENES.length - 1 && (
         <p className="mt-3 text-center text-[11px] text-ink-subtle">
