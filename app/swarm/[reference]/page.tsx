@@ -46,25 +46,28 @@ async function fetchFromDb(
 ): Promise<{ row: Record<string, unknown>; kind: "attestation" | "document" } | null> {
   if (!process.env.DATABASE_URL) return null;
   try {
-    const att = (await db.execute(sql`
+    // db.execute returns { rows, rowCount, ... } — not a bare array.
+    // Iterating directly is what tripped the earlier "no payload found"
+    // flag for legacy attestations whose rows DO exist.
+    const attRes = (await db.execute(sql`
       SELECT a.*, v.ens_name AS venture_ens_name
       FROM attestations a
       JOIN ventures v ON v.id = a.venture_id
       WHERE a.ipfs_hash = ${reference}
       LIMIT 1
-    `)) as unknown as Array<Record<string, unknown>>;
-    if (att && att.length > 0) {
-      return { row: att[0]!, kind: "attestation" };
+    `)) as { rows: Array<Record<string, unknown>> };
+    if (attRes.rows && attRes.rows.length > 0) {
+      return { row: attRes.rows[0]!, kind: "attestation" };
     }
 
-    const doc = (await db.execute(sql`
+    const docRes = (await db.execute(sql`
       SELECT id, title, authors, source, full_text, ingested_at
       FROM kb_documents
       WHERE ipfs_hash = ${reference}
       LIMIT 1
-    `)) as unknown as Array<Record<string, unknown>>;
-    if (doc && doc.length > 0) {
-      return { row: doc[0]!, kind: "document" };
+    `)) as { rows: Array<Record<string, unknown>> };
+    if (docRes.rows && docRes.rows.length > 0) {
+      return { row: docRes.rows[0]!, kind: "document" };
     }
   } catch (err) {
     console.warn(
@@ -95,17 +98,38 @@ export default async function SwarmViewerPage({ params }: Props) {
   const { reference } = await params;
 
   // Strip optional bzz:// scheme + leading 0x just in case.
-  const ref = decodeURIComponent(reference)
+  const decoded = decodeURIComponent(reference)
     .replace(/^bzz:\/\//, "")
-    .replace(/^0x/, "")
-    .toLowerCase();
+    .replace(/^ipfs:\/\//, "");
+  const ref = decoded.startsWith("0x")
+    ? decoded.slice(2).toLowerCase()
+    : decoded;
 
-  if (!/^[0-9a-f]{64}$/.test(ref)) {
+  // Two valid shapes:
+  //   - Swarm reference: 64-char hex (current — uploaded via lib/swarm.ts)
+  //   - Legacy IPFS CID: bafy… / bafkre… (from attestations posted before
+  //     the IPFS→Swarm migration — kept in the same `ipfs_hash` DB column).
+  // For the IPFS-flavoured refs the gateway fetch will 404 (they were
+  // never uploaded to Bee), but the DB cache still has the structured
+  // attestation row, which is what the viewer actually needs.
+  const isSwarmRef = /^[0-9a-f]{64}$/.test(ref);
+  // CIDv1 starts with `b` (base32) or `f` (base16); CIDv0 starts with `Qm`.
+  // Mock seed values may include chars outside the strict base32 alphabet,
+  // so the regex stays permissive — the viewer falls back to DB cache for
+  // anything we recognise as a "non-Swarm hash-shaped string".
+  const isLegacyCid =
+    /^b[a-z0-9]{30,}$/.test(ref) ||
+    /^f[a-z0-9]{30,}$/.test(ref) ||
+    /^Qm[1-9A-HJ-NP-Za-km-z]{44}$/.test(ref);
+  if (!isSwarmRef && !isLegacyCid) {
     notFound();
   }
 
   const resolved = await resolve(ref);
-  const gatewayUrl = swarmReadUrl(ref);
+  const gatewayUrl = isSwarmRef
+    ? swarmReadUrl(ref)
+    : `https://ipfs.io/ipfs/${ref}`;
+  const scheme = isSwarmRef ? "bzz" : "ipfs";
 
   return (
     <main className="flex-1">
@@ -113,7 +137,7 @@ export default async function SwarmViewerPage({ params }: Props) {
       <section className="mx-auto max-w-4xl px-6 pt-10 pb-24">
         <header className="mb-6">
           <p className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
-            Swarm payload
+            {isSwarmRef ? "Swarm payload" : "Legacy IPFS payload"}
           </p>
           <h1
             className="mt-1 text-ink"
@@ -124,7 +148,7 @@ export default async function SwarmViewerPage({ params }: Props) {
               lineHeight: 1.1,
             }}
           >
-            <span className="font-mono break-all">bzz://{ref}</span>
+            <span className="font-mono break-all">{scheme}://{ref}</span>
           </h1>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
             <ProvenanceBadge source={resolved.source} />
@@ -134,7 +158,7 @@ export default async function SwarmViewerPage({ params }: Props) {
               rel="noreferrer noopener"
               className="inline-flex items-center gap-1 text-accent hover:text-accent-ink"
             >
-              raw bytes on bzz.limo
+              raw bytes on {isSwarmRef ? "bzz.limo" : "ipfs.io"}
               <ExternalLink className="h-3 w-3" />
             </Link>
           </div>

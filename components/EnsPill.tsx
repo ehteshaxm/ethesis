@@ -18,10 +18,10 @@ interface EnsPillProps {
   linkToEnsApp?: boolean;
 }
 
-const ENS_APP_BASE =
-  (process.env.NEXT_PUBLIC_ENS_CHAIN ?? "sepolia") === "sepolia"
-    ? "https://sepolia.app.ens.domains"
-    : "https://app.ens.domains";
+import { ensAppUrl } from "@/lib/ens-app-url";
+
+// Re-export so existing client-side callers keep working.
+export { ensAppUrl };
 
 /**
  * Avatar (deterministic identicon) + ENS name in mono.
@@ -88,7 +88,7 @@ export function EnsPill({
     <span className={cn("inline-flex items-center gap-1.5", className)}>
       {dot}
       <a
-        href={`${ENS_APP_BASE}/${name}`}
+        href={ensAppUrl(name)}
         target="_blank"
         rel="noreferrer noopener"
         className="text-ink hover:text-accent inline-flex items-center gap-1 transition-colors"

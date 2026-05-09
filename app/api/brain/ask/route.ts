@@ -118,7 +118,10 @@ async function searchUploadedDocs(
   const tsq = tokens.join(" & ");
 
   try {
-    const rows = (await db.execute(sql`
+    // db.execute returns { rows, rowCount } — not a bare array. Treating
+    // it as one always evaluated as length=undefined and the kb fallback
+    // never kicked in.
+    const result = (await db.execute(sql`
       SELECT id, title, full_text, ts_rank(
         to_tsvector('english', coalesce(full_text, '')),
         to_tsquery('english', ${tsq})
@@ -129,13 +132,16 @@ async function searchUploadedDocs(
         AND to_tsvector('english', full_text) @@ to_tsquery('english', ${tsq})
       ORDER BY rank DESC
       LIMIT 3
-    `)) as unknown as Array<{
-      id: string;
-      title: string;
-      full_text: string;
-      rank: number;
-    }>;
-    if (!rows || rows.length === 0) return null;
+    `)) as {
+      rows: Array<{
+        id: string;
+        title: string;
+        full_text: string;
+        rank: number;
+      }>;
+    };
+    const rows = result.rows ?? [];
+    if (rows.length === 0) return null;
 
     const top = rows[0];
     const snippet = excerpt(top.full_text, tokens, 320);

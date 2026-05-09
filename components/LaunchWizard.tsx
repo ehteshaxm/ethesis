@@ -20,6 +20,7 @@ import { umia } from "@/lib/umia";
 import { cn, formatEth, identiconColors } from "@/lib/utils";
 import { LaunchReel } from "./LaunchReel";
 import { UmiaCliHandoff } from "./UmiaCliHandoff";
+import { ensAppUrl } from "@/lib/ens-app-url";
 
 // ─── Draft model ────────────────────────────────────────────────────
 
@@ -1641,7 +1642,7 @@ function SuccessCard({
 
       <div className="mt-3 flex items-center gap-2 text-xs">
         <a
-          href={`https://app.ens.domains/${result.ensSubname}?tab=records`}
+          href={ensAppUrl(result.ensSubname, "records")}
           target="_blank"
           rel="noopener noreferrer"
           className="rounded-md border border-border-strong bg-surface px-3 py-1.5 font-medium text-ink hover:bg-surface-2 transition-colors"
@@ -1649,7 +1650,7 @@ function SuccessCard({
           Venture records →
         </a>
         <a
-          href={`https://app.ens.domains/${result.agentEnsName}?tab=records`}
+          href={ensAppUrl(result.agentEnsName, "records")}
           target="_blank"
           rel="noopener noreferrer"
           className="rounded-md border border-border-strong bg-surface px-3 py-1.5 font-medium text-ink hover:bg-surface-2 transition-colors"
