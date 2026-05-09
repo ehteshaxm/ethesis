@@ -27,7 +27,8 @@ export interface OutputWatcherSource {
 
 export type ScrapedSource =
   | OutputWatcherSource["type"]
-  | "sourcify";
+  | "sourcify"
+  | "fatcat";
 
 export type ScrapedOutputType =
   | "commit"

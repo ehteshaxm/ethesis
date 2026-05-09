@@ -20,6 +20,7 @@ import { emitTeeEvent } from "./tee";
 import { sendProposalScoredNotification } from "./notifications";
 import { swarmList, isSwarmConfigured } from "./swarm-client";
 import { fetchSourcifyOutputs, isSourcifyConfigured } from "./sourcify-client";
+import { searchFatcat, isFatcatConfigured } from "./fatcat-client";
 
 export interface ProposalEvalResult {
   ventureEnsName: string;
@@ -127,7 +128,18 @@ export async function runProposalEval(
       })
     : [];
 
-  // ─── 2c. Sourcify: pre-registered contract sources (if any) ─────
+  // ─── 2c. Fatcat / IA Scholar: peer-reviewed paper search ────────
+  const fatcatOutputs = isFatcatConfigured()
+    ? await searchFatcat(
+        `${venture.title} ${venture.category}`,
+        8,
+      ).catch((err) => {
+        console.warn("[proposal-eval] Fatcat search failed:", err.message);
+        return [];
+      })
+    : [];
+
+  // ─── 2d. Sourcify: pre-registered contract sources (if any) ─────
   const sourcifyConnected = isSourcifyConfigured()
     ? await db.query.connectedSources.findMany({
         where: and(
@@ -171,6 +183,12 @@ export async function runProposalEval(
         .join("\n\n")
     : "(none)";
 
+  const fatcatText = fatcatOutputs.length > 0
+    ? fatcatOutputs
+        .map((o) => `${o.title}\n  ${o.body.slice(0, 350)}\n  URL: ${o.url}`)
+        .join("\n\n")
+    : "(none)";
+
   const userPrompt = `Proposal title: ${venture.title}
 Category: ${venture.category}
 Pitch: ${venture.pitch}
@@ -180,6 +198,9 @@ Funding goal: ${venture.fundingGoalEth ?? "unspecified"} ETH
 
 Web search results (${allOutputs.length} items found):
 ${outputsText || "(no results retrieved)"}
+
+Peer-reviewed papers from Internet Archive Scholar / Fatcat (${fatcatOutputs.length} items):
+${fatcatText}
 
 User-uploaded documents (${swarmDocs.length} items from Swarm):
 ${swarmText}
@@ -226,6 +247,7 @@ Evaluate this proposal. Score novelty, feasibility, and impact 0-100. Identify a
     teeGatewayProof: teeGatewayProof ?? null,
     searchOutputsObserved: allOutputs.length,
     swarmDocsObserved: swarmDocs.length,
+    fatcatPapersObserved: fatcatOutputs.length,
     sourcifyOutputsObserved: sourcifyOutputs.length,
   };
 
@@ -257,6 +279,7 @@ Evaluate this proposal. Score novelty, feasibility, and impact 0-100. Identify a
       ipfsCid,
       searchOutputsObserved: allOutputs.length,
       swarmDocsObserved: swarmDocs.length,
+      fatcatPapersObserved: fatcatOutputs.length,
       sourcifyOutputsObserved: sourcifyOutputs.length,
       teeGatewayProof: teeGatewayProof ?? null,
     },
