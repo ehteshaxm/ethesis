@@ -11,6 +11,7 @@ import { AuctionBidPanel } from "@/components/AuctionBidPanel";
 import { VenturePapers } from "@/components/VenturePapers";
 import { DemoAgentRunner } from "@/components/DemoAgentRunner";
 import { LiveScrapePanel } from "@/components/LiveScrapePanel";
+import { FundLivePanel } from "@/components/FundLivePanel";
 
 interface Props {
   params: Promise<{ ensName: string }>;
@@ -324,43 +325,6 @@ function Rule({ label, value }: { label: string; value: string }) {
   );
 }
 
-function FundLivePanel({
-  venture,
-  tokenSymbol,
-}: {
-  venture: import("@/lib/mock-data").MockVenture;
-  tokenSymbol: string;
-}) {
-  return (
-    <aside className="sticky top-32 rounded-xl border border-border bg-surface p-5 space-y-4">
-      <h3 className="text-sm font-medium text-ink">Fund this venture</h3>
-      <p className="text-xs text-ink-muted leading-relaxed">
-        Buy ${tokenSymbol} on the secondary market. Funders share treasury
-        upside and get pro-rata refund rights if a Decision Market liquidates
-        the venture.
-      </p>
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <KV label="Treasury" value={formatEth(venture.treasuryBalanceEth ?? 0)} />
-        <KV label="Funders" value={(venture.totalFunders ?? 0).toString()} />
-      </div>
-      <button
-        type="button"
-        className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-ink transition-colors"
-      >
-        Buy ${tokenSymbol} →
-      </button>
-      <button
-        type="button"
-        className="w-full rounded-md border border-border-strong bg-surface px-4 py-2 text-sm font-medium text-ink hover:bg-surface-2 transition-colors inline-flex items-center justify-center gap-2"
-      >
-        <Star className="h-3.5 w-3.5" /> Follow
-      </button>
-      <p className="text-[10px] text-ink-subtle text-center">
-        Secondary market routing lands in a later session.
-      </p>
-    </aside>
-  );
-}
 
 function IdeaWaitingPanel({
   venture,

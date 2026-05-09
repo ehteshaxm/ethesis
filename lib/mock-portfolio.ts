@@ -48,6 +48,8 @@ const TOKEN_PRICE_BY_VENTURE: Record<string, number> = {
   "encrypted-mempool.ethesis.eth": 0,
   "climate-replication-2024.ethesis.eth": 1.5,
   "plonk-mobile-prover.ethesis.eth": 2.2,
+  "peptide-amr.ethesis.eth": 7.4,
+  "glp-tweaks.ethesis.eth": 3.8,
 };
 
 const ENTRY_PRICE_BY_VENTURE: Record<string, number> = {
@@ -57,7 +59,15 @@ const ENTRY_PRICE_BY_VENTURE: Record<string, number> = {
   "encrypted-mempool.ethesis.eth": 0,
   "climate-replication-2024.ethesis.eth": 2.8,
   "plonk-mobile-prover.ethesis.eth": 5.0,
+  "peptide-amr.ethesis.eth": 5.5,
+  "glp-tweaks.ethesis.eth": 3.8,
 };
+
+/** Current secondary-market price (USDC per token) for a venture. Returns
+ * 0 if unknown — callers should treat that as "trading paused". */
+export function getCurrentTokenPrice(ensName: string): number {
+  return TOKEN_PRICE_BY_VENTURE[ensName] ?? 0;
+}
 
 export function getPortfolioForAddress(address: string): PortfolioSnapshot {
   // Eligible ventures = anything that's been live or wound-down (had a token).
