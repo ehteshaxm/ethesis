@@ -16,7 +16,15 @@ import {
   isApifyConfigured,
   apifyMode,
   type OutputWatcherSource,
+  type ScrapedOutput,
 } from "./apify-client";
+import {
+  fetchSourcifyOutputs,
+  isSourcifyConfigured,
+} from "./sourcify-client";
+import {
+  sendProgressUpdateNotification,
+} from "./notifications";
 import {
   finalizeAttestation,
   generateAttestationDraft,
@@ -27,6 +35,7 @@ import { deriveAgentAccount, ventureSlug } from "./wallet";
 import { checkAndTrigger, type TriggerResult } from "./triggers";
 import { isCtrngConfigured } from "./ctrng";
 import { emitTeeEvent, getCycleQuote } from "./tee";
+import { createKmsLocalAccount, isKmsConfigured } from "./kms-signer";
 
 export interface CycleResult {
   ventureEnsName: string;
@@ -84,11 +93,24 @@ export async function runCycleForVenture(
   });
 
   // ─── 2. Apify Output Watcher ─────────────────────────────────────
-  const apifySources: OutputWatcherSource[] = sources.map((s) => ({
-    type: s.sourceType as OutputWatcherSource["type"],
-    identifier: s.identifier,
-    since: venture.agentLastSyncAt?.toISOString(),
-  }));
+  // Sourcify sources are fetched directly (free REST API, not via Apify).
+  const apifySources: OutputWatcherSource[] = sources
+    .filter((s) => s.sourceType !== "sourcify")
+    .map((s) => ({
+      type: s.sourceType as OutputWatcherSource["type"],
+      identifier: s.identifier,
+      since: venture.agentLastSyncAt?.toISOString(),
+    }));
+
+  // KMS signing is only permitted for funded (live) ventures — it's gated
+  // by the KMS access policy and enforced here before any signing attempt.
+  const kmsSigner =
+    venture.stage === "live" && isKmsConfigured()
+      ? await createKmsLocalAccount().catch((err) => {
+          console.warn("[cycle] KMS signer unavailable, falling back to derived key:", err.message);
+          return undefined;
+        })
+      : undefined;
 
   const apify = await callOutputWatcher({
     sources: apifySources,
@@ -98,8 +120,25 @@ export async function runCycleForVenture(
         : [],
     ),
     ventureSlug: slug,
-    agentPrivateKey: deriveAgentPrivateKey(slug),
+    agentPrivateKey: kmsSigner ? undefined : deriveAgentPrivateKey(slug),
+    kmsSigner,
   });
+
+  // ─── 2b. Sourcify contract verification data ─────────────────────
+  const sourcifyOutputs: ScrapedOutput[] = [];
+  if (isSourcifyConfigured()) {
+    const sourcifySources = sources.filter((s) => s.sourceType === "sourcify" && s.isActive);
+    for (const src of sourcifySources) {
+      // Identifier format: "{chainId}:{address}"
+      const [chainId, address] = src.identifier.split(":");
+      if (chainId && address) {
+        const outputs = await fetchSourcifyOutputs(chainId, address);
+        sourcifyOutputs.push(...outputs);
+      }
+    }
+  }
+
+  const allOutputs = [...apify.outputs, ...sourcifyOutputs];
 
   // Log the Apify call to the activity log so the agent tab can show it
   // (and so the venture's funders can see what their treasury paid for).
@@ -112,6 +151,7 @@ export async function runCycleForVenture(
       runId: apify.runId ?? null,
       sources: apifySources.map((s) => `${s.type}:${s.identifier}`),
       outputCount: apify.outputs.length,
+      sourcifyOutputCount: sourcifyOutputs.length,
       paymentNetwork: apify.paymentNetwork ?? null,
       paymentPayer: apify.paymentPayer ?? null,
     },
@@ -135,17 +175,18 @@ export async function runCycleForVenture(
         (m.deadline.getTime() - Date.now()) / 86400000,
       ),
     })),
-    recentOutputs: apify.outputs,
+    recentOutputs: allOutputs,
     recentClaims: [],
   };
-  const draft = await generateAttestationDraft(attestationInput);
+  const { draft, teeGatewayProof } = await generateAttestationDraft(attestationInput);
 
   // ─── 4 + 5. Sign + pin to IPFS ───────────────────────────────────
   const account = deriveAgentAccount(slug);
   const { signed, swarmReference } = await finalizeAttestation(draft, account, {
     ventureEnsName,
     agentEnsName,
-    observedOutputs: apify.outputs.length,
+    observedOutputs: allOutputs.length,
+    teeGatewayProof,
   });
 
   // ─── 6. Determine the next ordinal ──────────────────────────────
@@ -193,6 +234,14 @@ export async function runCycleForVenture(
       `${ventureEnsName}|${ordinal}|${swarmReference}`,
     );
   }
+
+  // Notify all investors of the new attestation result.
+  await sendProgressUpdateNotification(venture.id, ventureEnsName, {
+    type: signed.type,
+    ordinal,
+    summary: signed.summary,
+    swarmReference,
+  });
 
   // Log the attestation creation to the activity log too.
   await db.insert(schema.agentActivityLog).values({
@@ -242,7 +291,7 @@ export async function runCycleForVenture(
     ensTxHash: ensResult.txHash,
     ensWritten: ensResult.written,
     ensSkipReason: ensResult.reason,
-    observedOutputs: apify.outputs.length,
+    observedOutputs: allOutputs.length,
     apifyMode: apify.mode,
     apifyCostUsd: apify.costUsd,
     apifyPaymentTxHash: apify.paymentTxHash,

@@ -32,9 +32,22 @@ export interface OutputWatcherSource {
   since?: string;
 }
 
+export type ScrapedSource =
+  | OutputWatcherSource["type"]
+  | "sourcify";
+
+export type ScrapedOutputType =
+  | "commit"
+  | "paper"
+  | "release"
+  | "post"
+  | "model"
+  | "dataset"
+  | "contract_verified";
+
 export interface ScrapedOutput {
-  source: OutputWatcherSource["type"];
-  outputType: "commit" | "paper" | "release" | "post" | "model" | "dataset";
+  source: ScrapedSource;
+  outputType: ScrapedOutputType;
   identifier: string;
   title: string;
   body: string;
@@ -67,8 +80,13 @@ export interface CallOutputWatcherArgs {
   sources: OutputWatcherSource[];
   milestoneKeywords?: string[];
   ventureSlug: string;
-  /** Agent's deterministic private key — required for x402 mode. */
+  /** Agent's deterministic private key — used for x402 when KMS is not available. */
   agentPrivateKey?: Hex;
+  /**
+   * KMS-backed LocalAccount for x402 signing (post-funding only).
+   * When set, this takes priority over agentPrivateKey for x402 calls.
+   */
+  kmsSigner?: LocalAccount;
 }
 
 const APIFY_API_BASE = "https://api.apify.com/v2";
@@ -611,9 +629,10 @@ function guessSource(url: string): OutputWatcherSource["type"] {
 function guessOutputType(
   url: string,
   hint: string,
-): ScrapedOutput["outputType"] {
-  if (hint && ["commit", "paper", "release", "post", "model", "dataset"].includes(hint)) {
-    return hint as ScrapedOutput["outputType"];
+): ScrapedOutputType {
+  const valid: ScrapedOutputType[] = ["commit", "paper", "release", "post", "model", "dataset", "contract_verified"];
+  if (hint && valid.includes(hint as ScrapedOutputType)) {
+    return hint as ScrapedOutputType;
   }
   if (url.includes("/commit/")) return "commit";
   if (url.includes("arxiv.org")) return "paper";
@@ -677,6 +696,96 @@ function hexish(seed: string, len: number): string {
     hex += h.toString(16).padStart(8, "0");
   }
   return hex.slice(0, len);
+}
+
+/**
+ * Convenience wrapper for a free-form web search query, used during
+ * proposal evaluation. Calls the RAG web browser actor (same x402/token/mock
+ * priority chain as callOutputWatcher) with a raw query string instead of a
+ * source list.
+ *
+ * Pass `kmsSigner` for post-funding (live) ventures; `agentPrivateKey` for
+ * proposal-stage (pre-funding) ventures. KMS takes priority when both provided.
+ */
+export async function callWebSearch(
+  query: string,
+  agentPrivateKey: Hex | null,
+  maxResults = 10,
+  kmsSigner?: LocalAccount,
+): Promise<{ outputs: ScrapedOutput[]; mode: string; costUsd: number }> {
+  const x402Enabled = process.env.X402_ENABLED === "1";
+  const x402Actor = process.env.APIFY_X402_ACTOR;
+  const token = process.env.APIFY_TOKEN;
+  const tokenActor = process.env.APIFY_ACTOR_ID_OUTPUT_WATCHER;
+
+  const ragInput = { query, maxResults };
+
+  if (x402Enabled && x402Actor && (kmsSigner ?? agentPrivateKey)) {
+    try {
+      const network = process.env.X402_NETWORK ?? "base";
+      const { wrapFetchWithPayment, createSigner } = await import("x402-fetch");
+      const signer = kmsSigner
+        ? (kmsSigner as Parameters<typeof wrapFetchWithPayment>[1])
+        : await createSigner(network, agentPrivateKey!);
+      const fetchWithPay = wrapFetchWithPayment(fetch, signer);
+      const slug = x402Actor.replace("/", "~");
+      const url = `${APIFY_API_BASE}/acts/${slug}/run-sync-get-dataset-items`;
+      const res = await fetchWithPay(url, {
+        method: "POST",
+        headers: { "X-APIFY-PAYMENT-PROTOCOL": "X402", "Content-Type": "application/json" },
+        body: JSON.stringify(ragInput),
+      });
+      if (res.ok) {
+        const items = (await res.json()) as unknown[];
+        // wrapFetchWithPayment doesn't work against Apify's non-standard
+        // envelope (see callViaX402 for the manual flow). This branch
+        // tends to 401 — left here as a fallback only.
+        return {
+          outputs: normaliseScrapedItems(items),
+          mode: "x402",
+          costUsd: 0.05,
+        };
+      }
+    } catch (err) {
+      console.warn("[apify] web-search x402 failed:", (err as { message?: string })?.message ?? err);
+    }
+  }
+
+  if (token && tokenActor) {
+    try {
+      const { ApifyClient } = await import("apify-client");
+      const client = new ApifyClient({ token });
+      const run = await client.actor(tokenActor).call(ragInput);
+      const dataset = await client.dataset(run.defaultDatasetId).listItems();
+      return {
+        outputs: normaliseScrapedItems(dataset.items as unknown[]),
+        mode: "token",
+        costUsd: 0.05,
+      };
+    } catch (err) {
+      console.warn("[apify] web-search token failed:", (err as { message?: string })?.message ?? err);
+    }
+  }
+
+  // Mock: return deterministic web-search results
+  const h = (s: string) => { let n = 2166136261; for (const c of s) { n ^= c.charCodeAt(0); n = Math.imul(n, 16777619); } return (n >>> 0).toString(16); };
+  return {
+    outputs: [
+      {
+        source: "arxiv" as const,
+        outputType: "paper" as const,
+        identifier: `2026.${h(query).slice(0, 5)}`,
+        title: `Related work: ${query.slice(0, 60)}`,
+        body: "Mock search result for proposal evaluation.",
+        url: `https://arxiv.org/abs/2026.${h(query).slice(0, 5)}`,
+        publishedAt: new Date().toISOString(),
+        matchedMilestoneKeywords: [],
+      },
+    ],
+    mode: "mock",
+    costUsd: 0,
+  };
+
 }
 
 export function isApifyConfigured(): boolean {

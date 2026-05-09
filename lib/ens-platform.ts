@@ -271,14 +271,16 @@ export interface ProvisionVentureInput {
   description: string;
   pitch: string;
   category: string;
-  tokenSymbol: string;
-  tokenSupply: number;
+  tokenSymbol?: string;
+  tokenSupply?: number;
   activationThresholdEth: number;
   /** JSON-stringified array of {type, identifier} sources. */
   sources: string;
   /** URL of the venture page on the ETHesis app. */
   ventureUrl: string;
   avatarUrl?: string;
+  /** Override the initial stage written to ENS. Defaults to "auction". */
+  initialStage?: string;
 }
 
 export interface ProvisionResult {
@@ -346,13 +348,13 @@ export async function provisionVentureAndAgent(
     { key: k.SOURCES, value: input.sources },
     { key: k.AGENT_WALLET, value: agent.address },
     { key: k.ETHESIS_CATEGORY, value: input.category },
-    { key: k.ETHESIS_TOKEN_SYMBOL, value: input.tokenSymbol },
+    ...(input.tokenSymbol ? [{ key: k.ETHESIS_TOKEN_SYMBOL, value: input.tokenSymbol }] : []),
     {
       key: k.ETHESIS_ACTIVATION_THRESHOLD,
       value: String(input.activationThresholdEth),
     },
     { key: k.ETHESIS_OWNER, value: input.ownerEns ?? input.ownerAddress },
-    { key: k.ETHESIS_STAGE, value: "auction" },
+    { key: k.ETHESIS_STAGE, value: input.initialStage ?? "auction" },
     ...(input.avatarUrl ? [{ key: k.AVATAR, value: input.avatarUrl }] : []),
   ];
 

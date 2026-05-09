@@ -13,6 +13,10 @@
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db, schema } from "./db";
 import { umia } from "../lib/umia";
+import {
+  sendFundingAtRiskNotification,
+  sendLiquidationVoteNotification,
+} from "./notifications";
 
 export interface TriggerCheckInput {
   ventureId: string;
@@ -98,6 +102,9 @@ async function checkAutoLiquidation(
 
   const reason = `Progress ${currentProgress} below threshold ${rules.autoLiquidateProgressThreshold} with only ${verifiedInWindow} verified attestations in the trailing ${rules.autoLiquidateDays} days.`;
 
+  // Warn researchers and investors before opening the vote.
+  await sendFundingAtRiskNotification(input.ventureId, input.ventureEnsName, reason);
+
   const closesAt = new Date(Date.now() + 3 * MILLIS_PER_DAY);
   const result = await umia.triggerMarket({
     ventureEnsName: input.ventureEnsName,
@@ -150,6 +157,16 @@ async function checkAutoLiquidation(
     },
     txHash: result.txHash,
   });
+
+  // Notify investors that the vote is now live.
+  if (inserted[0]?.id) {
+    await sendLiquidationVoteNotification(
+      input.ventureId,
+      input.ventureEnsName,
+      reason,
+      inserted[0].id,
+    );
+  }
 
   return {
     triggered: true,

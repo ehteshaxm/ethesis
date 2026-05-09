@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ConnectWallet } from "./ConnectWallet";
+import { NotificationBell } from "./NotificationBell";
 
 export function SiteHeader() {
   return (
@@ -25,6 +26,9 @@ export function SiteHeader() {
             <Link href="/launch" className="hover:text-ink transition-colors">
               Launch
             </Link>
+            <Link href="/proposals" className="hover:text-ink transition-colors">
+              Proposals
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-3">
@@ -32,6 +36,7 @@ export function SiteHeader() {
             placeholder="Search ventures…"
             className="hidden md:block w-56 rounded-md border border-border bg-surface px-3 py-1.5 text-sm placeholder:text-ink-subtle focus:outline-none focus:border-border-strong"
           />
+          <NotificationBell />
           <ConnectWallet />
         </div>
       </div>

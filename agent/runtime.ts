@@ -9,14 +9,38 @@ config({ path: ".env" });
 config({ path: ".env.local", override: true });
 
 import { db, schema } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import { runCycleForVenture, reportAgentConfig } from "./cycle";
+import { runProposalEval } from "./proposal-eval";
 import { getTeeInfo } from "./tee";
+import { isTeeGatewayConfigured } from "./tee-gateway";
 
 const CYCLE_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours per spec
 const TICK_INTERVAL_MS = 60 * 1000; // check for due ventures every minute
 
 async function tick() {
+  // ── Proposal evaluation: ventures awaiting their first agent score ──
+  const proposals = await db.query.ventures.findMany({
+    where: eq(schema.ventures.stage, "proposal"),
+    columns: { ensName: true, proposalEvalIpfsCid: true },
+  });
+
+  for (const v of proposals) {
+    if (v.proposalEvalIpfsCid) continue; // already evaluated
+    try {
+      const result = await runProposalEval(v.ensName);
+      console.log(
+        `[agent] proposal-eval ${result.ventureEnsName} → novelty=${result.novelty} feasibility=${result.feasibility} impact=${result.impact}  cid=${result.ipfsCid}  ${result.durationMs}ms`,
+      );
+    } catch (err) {
+      console.error(
+        `[agent] ${v.ensName} proposal-eval failed:`,
+        (err as { message?: string })?.message ?? err,
+      );
+    }
+  }
+
+  // ── Attestation cycles: live ventures due for a cycle ────────────
   const live = await db.query.ventures.findMany({
     where: eq(schema.ventures.stage, "live"),
   });
@@ -54,6 +78,7 @@ async function main() {
   );
   console.log(`  Swarm:        ${cfg.swarm ? `bzz ${process.env.SWARM_BEE_URL ?? "https://bzz.limo"}` : "MOCK"}`);
   console.log(`  ENS writer:   ${cfg.ens ? "configured" : "skipped (no platform key)"}`);
+  console.log(`  TEE gateway:  ${isTeeGatewayConfigured() ? `SpaceComputer (${process.env.SPACE_COMPUTER_GATEWAY_URL})` : "direct Anthropic API"}`);
   console.log(`  Cycle:        every ${CYCLE_INTERVAL_MS / 3600000}h per venture`);
 
   const teeInfo = await getTeeInfo();
