@@ -162,6 +162,10 @@ export function LaunchWizard() {
   const { openConnectModal } = useConnectModal();
   const ensQuery = useEnsName({ address, chainId: mainnet.id });
   const ownerEns = ensQuery.data;
+  // Display label: prefer primary ENS, fall back to short address. We
+  // don't gate on having a primary ENS — the platform-signed flow
+  // creates a subname regardless of what the user owns on mainnet.
+  const ownerLabel = ownerEns ?? (address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "—");
 
   const [step, setStep] = useState<number>(1);
   const [draft, setDraft] = useState<Draft>(INITIAL_DRAFT);
@@ -400,7 +404,7 @@ export function LaunchWizard() {
         <SuccessCard
           draft={draft}
           result={submitResult}
-          ownerEns={ownerEns!}
+          ownerEns={ownerLabel}
           ownerAddress={address!}
         />
       </FullScreen>
@@ -432,28 +436,9 @@ export function LaunchWizard() {
     );
   }
 
-  if (!ensQuery.isLoading && !ownerEns) {
-    return (
-      <FullScreen>
-        <SoftBlock
-          icon={<Sparkles className="h-7 w-7 text-ink-subtle" />}
-          title="Set a primary ENS name first"
-          body="Ventures use ENS as their permanent identity. Set a primary ENS name on your connected wallet, then come back."
-          cta={
-            <a
-              href="https://app.ens.domains"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-ink transition-colors"
-            >
-              Open ens.app →
-            </a>
-          }
-        />
-      </FullScreen>
-    );
-  }
-
+  // No more "Set a primary ENS name first" gate — useEnsName flickers
+  // null on flaky RPC and the platform-signed flow creates the subname
+  // regardless. Any connected wallet can launch.
   return (
     <FullScreen>
       <div className="w-full max-w-xl">
@@ -465,7 +450,7 @@ export function LaunchWizard() {
               draft={draft}
               setDraft={setDraft}
               ensSubname={ensSubname}
-              ownerEns={ownerEns!}
+              ownerEns={ownerLabel}
             />
           )}
           {step === 2 && <Step2Description draft={draft} setDraft={setDraft} />}
@@ -477,7 +462,7 @@ export function LaunchWizard() {
             <Step7Review
               draft={draft}
               ensSubname={ensSubname}
-              ownerEns={ownerEns!}
+              ownerEns={ownerLabel}
             />
           )}
         </div>
