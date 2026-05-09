@@ -306,12 +306,12 @@ export default function ProposalDetailPage() {
               <p className="mt-3 text-[11px] text-ink-subtle">
                 Full evaluation:{" "}
                 <a
-                  href={`https://ipfs.io/ipfs/${proposal.proposalEvalIpfsCid}`}
+                  href={`https://bzz.limo/bytes/${proposal.proposalEvalIpfsCid}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-mono text-accent hover:underline"
                 >
-                  ipfs://{proposal.proposalEvalIpfsCid.slice(0, 20)}…
+                  bzz://{proposal.proposalEvalIpfsCid.slice(0, 20)}…
                 </a>
               </p>
             )}

@@ -31,7 +31,7 @@ import { sepolia } from "viem/chains";
 const SEPOLIA_ETH_REGISTRAR_CONTROLLER =
   "0xfb3cE5D01e0f33f41DbB39035dB9745962F1f968" as const;
 const SEPOLIA_PUBLIC_RESOLVER =
-  "0x8FADE66B79cC9f707aB26799354482EB93a5B7dD" as const;
+  "0xE99638b40E4Fff0129D56f03b55b6bbC4BBE49b5" as const;
 const SEPOLIA_ENS_REGISTRY =
   "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e" as const;
 
@@ -62,19 +62,28 @@ const controllerAbi = [
       },
     ],
   },
+  // The Sepolia controller takes a single Registration tuple, not 8 separate
+  // args. reverseRecord is uint8, fuses dropped, referrer added.
+  // Source: ensdomains/ens-contracts staging deployments/sepolia/ETHRegistrarController.json
   {
     name: "makeCommitment",
     type: "function",
-    stateMutability: "view",
+    stateMutability: "pure",
     inputs: [
-      { name: "name", type: "string" },
-      { name: "owner", type: "address" },
-      { name: "duration", type: "uint256" },
-      { name: "secret", type: "bytes32" },
-      { name: "resolver", type: "address" },
-      { name: "data", type: "bytes[]" },
-      { name: "reverseRecord", type: "bool" },
-      { name: "ownerControlledFuses", type: "uint16" },
+      {
+        name: "registration",
+        type: "tuple",
+        components: [
+          { name: "label", type: "string" },
+          { name: "owner", type: "address" },
+          { name: "duration", type: "uint256" },
+          { name: "secret", type: "bytes32" },
+          { name: "resolver", type: "address" },
+          { name: "data", type: "bytes[]" },
+          { name: "reverseRecord", type: "uint8" },
+          { name: "referrer", type: "bytes32" },
+        ],
+      },
     ],
     outputs: [{ name: "", type: "bytes32" }],
   },
@@ -90,14 +99,20 @@ const controllerAbi = [
     type: "function",
     stateMutability: "payable",
     inputs: [
-      { name: "name", type: "string" },
-      { name: "owner", type: "address" },
-      { name: "duration", type: "uint256" },
-      { name: "secret", type: "bytes32" },
-      { name: "resolver", type: "address" },
-      { name: "data", type: "bytes[]" },
-      { name: "reverseRecord", type: "bool" },
-      { name: "ownerControlledFuses", type: "uint16" },
+      {
+        name: "registration",
+        type: "tuple",
+        components: [
+          { name: "label", type: "string" },
+          { name: "owner", type: "address" },
+          { name: "duration", type: "uint256" },
+          { name: "secret", type: "bytes32" },
+          { name: "resolver", type: "address" },
+          { name: "data", type: "bytes[]" },
+          { name: "reverseRecord", type: "uint8" },
+          { name: "referrer", type: "bytes32" },
+        ],
+      },
     ],
     outputs: [],
   },
@@ -243,20 +258,22 @@ async function main() {
   const secret = keccak256(
     encodePacked(["string", "uint256"], ["ethesis-bootstrap-secret", BigInt(Date.now())]),
   );
+  const registration = {
+    label,
+    owner: account.address,
+    duration,
+    secret,
+    resolver: SEPOLIA_PUBLIC_RESOLVER,
+    data: [] as `0x${string}`[],
+    reverseRecord: 1, // 1 = set primary; 0 = skip
+    referrer:
+      "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
+  };
   const commitment = (await publicClient.readContract({
     address: SEPOLIA_ETH_REGISTRAR_CONTROLLER,
     abi: controllerAbi,
     functionName: "makeCommitment",
-    args: [
-      label,
-      account.address,
-      duration,
-      secret,
-      SEPOLIA_PUBLIC_RESOLVER,
-      [], // no resolver records yet
-      true, // reverseRecord
-      0, // no fuses
-    ],
+    args: [registration],
   })) as `0x${string}`;
 
   console.log("");
@@ -288,16 +305,7 @@ async function main() {
     address: SEPOLIA_ETH_REGISTRAR_CONTROLLER,
     abi: controllerAbi,
     functionName: "register",
-    args: [
-      label,
-      account.address,
-      duration,
-      secret,
-      SEPOLIA_PUBLIC_RESOLVER,
-      [],
-      true,
-      0,
-    ],
+    args: [registration],
     value: total,
   });
   console.log(`  register tx: ${registerTx}`);

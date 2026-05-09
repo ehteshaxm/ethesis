@@ -208,7 +208,10 @@ async function createSubname({
   }
 
   await publicClient.waitForTransactionReceipt({ hash: txHash });
-  return { txHash, subnameNode: toHex(subnameNode) };
+  // namehash already returns a 0x-prefixed 32-byte Hex — never re-encode
+  // via toHex(...), that turns it into UTF-8 bytes of the string and
+  // produces a 66-byte value the resolver rejects as bytes32.
+  return { txHash, subnameNode };
 }
 
 interface SetRecordsArgs {

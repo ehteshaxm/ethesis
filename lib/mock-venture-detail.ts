@@ -117,14 +117,18 @@ const RESEARCHERS: Record<string, MockResearcher> = {
     isVerified: false,
     offPlatformLinks: [],
   },
-  "lambros.eth": {
-    ens: "lambros.eth",
-    bio: "Computational chemist turned ML-for-bio researcher. Two prior antimicrobial-peptide papers, both with public wet-lab validation.",
-    priorVentures: 1,
+  "delafuente.peptide-amr.ethesis.eth": {
+    ens: "delafuente.peptide-amr.ethesis.eth",
+    bio: "César de la Fuente-Nunez · Presidential Associate Professor at UPenn (Bioengineering, Chemical & Biomolecular Engineering, Microbiology, Psychiatry). Leads the Machine Biology Group, applying ML to antibiotic discovery — published work spans AMP-Diffusion, AMPSphere, and ancient-proteome AMP de-extinction.",
+    priorVentures: 0,
     isVerified: true,
     offPlatformLinks: [
-      { label: "Scholar", url: "https://scholar.google.com" },
-      { label: "GitHub", url: "https://github.com" },
+      {
+        label: "Scholar",
+        url: "https://scholar.google.com/citations?user=N2OdcFYAAAAJ",
+      },
+      { label: "Lab", url: "https://delafuentelab.seas.upenn.edu/" },
+      { label: "UPenn", url: "https://www.bioeng.upenn.edu/people/cesar-de-la-fuente-nunez" },
     ],
   },
   "amelia.eth": {
@@ -363,20 +367,28 @@ const MILESTONE_TEMPLATES: Record<string, MockMilestone[]> = {
   "peptide-amr.ethesis.eth": [
     {
       ordinal: 1,
-      title: "Reproduce explainable-AMP screen (Wong 2023)",
+      title: "AMP-Diffusion fork + AMPSphere data ingest",
       successCriteria:
-        "Re-run the GNN screen on a refreshed 12M-compound library; publish a reproduction report with the same headline class hits.",
-      expectedOutputs: ["Reproduction report", "Trained checkpoint", "Eval notebook"],
+        "Fork programmablebio/amp-diffusion; ingest the AMPSphere v1 catalog; reproduce the headline ESM-2 latent-diffusion checkpoint and publish loss curves matching the paper within ±2%.",
+      expectedOutputs: [
+        "Forked repo with reproducible env",
+        "AMPSphere ingest script",
+        "Trained checkpoint",
+      ],
       deadlineInDays: -22,
       status: "completed",
       trancheReleaseEth: 1500,
     },
     {
       ordinal: 2,
-      title: "Cryptic-AMP mining replication (Torres 2022)",
+      title: "Generate 50K candidate peptides + screening filter",
       successCriteria:
-        "Re-implement the encrypted-peptide mining pipeline on the human proteome; identify ≥5 novel candidates, hand off to wet-lab partner.",
-      expectedOutputs: ["Candidate list", "Pipeline source", "MIC plan"],
+        "Sample 50K peptides from AMP-Diffusion; filter by predicted activity, sequence diversity, and novelty against AMPSphere/UniProt; reduce to a 50-peptide synthesis panel.",
+      expectedOutputs: [
+        "Candidate FASTA (50K)",
+        "Screening notebook",
+        "50-peptide synthesis order",
+      ],
       deadlineInDays: -3,
       status: "completed",
       trancheReleaseEth: 1500,
@@ -385,18 +397,26 @@ const MILESTONE_TEMPLATES: Record<string, MockMilestone[]> = {
       ordinal: 3,
       title: "MIC assays + resistance profiling on ESKAPE panel",
       successCriteria:
-        "Wet-lab MIC against six ESKAPE pathogens for the top-10 candidates; resistance assay over 14 passages.",
-      expectedOutputs: ["Assay dataset (raw + processed)", "BSL-2 lab report"],
+        "BSL-2 wet-lab MIC against six ESKAPE pathogens for the 50-peptide panel; 14-passage resistance assay on the top-10 hits.",
+      expectedOutputs: [
+        "Raw + processed assay dataset",
+        "CRO report",
+        "Top-10 hit list",
+      ],
       deadlineInDays: 9,
       status: "in_progress",
       trancheReleaseEth: 2400,
     },
     {
       ordinal: 4,
-      title: "Active-learning iteration → preprint",
+      title: "Active-learning iteration → bioRxiv preprint",
       successCriteria:
-        "Two rounds of GNN-guided active learning informed by assay data; submit to bioRxiv with reproducible artifact.",
-      expectedOutputs: ["Updated checkpoints", "bioRxiv preprint", "Artifact archive"],
+        "Re-condition AMP-Diffusion on assay-labeled hits; run a second 50-peptide panel; submit a reproducible-artifact bioRxiv preprint.",
+      expectedOutputs: [
+        "Updated checkpoints + assay-conditioned dataset",
+        "bioRxiv preprint",
+        "Artifact archive (Swarm-pinned)",
+      ],
       deadlineInDays: 64,
       status: "pending",
       trancheReleaseEth: 2400,
@@ -546,20 +566,20 @@ const SOURCE_TEMPLATES: Record<string, MockSource[]> = {
   "peptide-amr.ethesis.eth": [
     {
       type: "github",
-      identifier: "lambros-eth/peptide-amr",
-      url: "https://github.com/lambros-eth/peptide-amr",
+      identifier: "programmablebio/amp-diffusion",
+      url: "https://github.com/programmablebio/amp-diffusion",
+      watchingSinceDays: 41,
+    },
+    {
+      type: "github",
+      identifier: "BigDataBiology/SantosJunior_Torres_2024_AMPSphere_v1",
+      url: "https://github.com/BigDataBiology/SantosJunior_Torres_2024_AMPSphere_v1",
       watchingSinceDays: 41,
     },
     {
       type: "arxiv",
-      identifier: "Lambros K. (bioRxiv)",
-      url: "https://www.biorxiv.org/search/lambros",
-      watchingSinceDays: 41,
-    },
-    {
-      type: "huggingface",
-      identifier: "lambros-eth/amp-gnn",
-      url: "https://huggingface.co/lambros-eth/amp-gnn",
+      identifier: "de la Fuente-Nunez (bioRxiv)",
+      url: "https://www.biorxiv.org/search/de%2Bla%2BFuente-Nunez",
       watchingSinceDays: 41,
     },
   ],

@@ -11,6 +11,7 @@ import {
   resolveVenture,
 } from "@/lib/db-reads";
 import { AttestationCard } from "@/components/AttestationCard";
+import { ensAppUrl } from "@/lib/ens-app-url";
 
 interface Props {
   params: Promise<{ ensName: string }>;
@@ -222,11 +223,14 @@ export default async function PulseTab({ params }: Props) {
               footerLinks={[
                 {
                   label: `view payload on Swarm`,
-                  href: `https://bzz.limo/bytes/${a.swarmReference}`,
+                  href: `/swarm/${a.swarmReference}`,
                 },
                 {
                   label: `view ENS record`,
-                  href: `https://app.ens.domains/${venture.ensName}?tab=records`,
+                  href: ensAppUrl(
+                    `auditor.${venture.ensName}`,
+                    "records",
+                  ),
                 },
               ]}
             />

@@ -91,15 +91,10 @@ export function VentureHeader({ venture }: VentureHeaderProps) {
                 {venture.title}
               </h1>
               <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-ink-muted">
-                <span className="font-mono text-ink">{venture.ensName}</span>
+                <EnsPill name={venture.ensName} size="sm" />
                 <span>·</span>
                 <span>by</span>
-                <Link
-                  href={`/u/${venture.ownerEns}`}
-                  className="hover:text-ink transition-colors"
-                >
-                  <EnsPill name={venture.ownerEns} size="sm" />
-                </Link>
+                <EnsPill name={venture.ownerEns} size="sm" />
               </div>
             </div>
           </div>
