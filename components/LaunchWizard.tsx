@@ -15,6 +15,7 @@ import {
   X,
   Sparkles,
   FileText,
+  Loader2,
 } from "lucide-react";
 import { umia } from "@/lib/umia";
 import { cn, formatEth, identiconColors } from "@/lib/utils";
@@ -687,6 +688,12 @@ function Step2Description({
             }))
           }
         />
+        {draft.uploads.some((u) => !u.ingested) && (
+          <p className="mt-2 text-[11px] text-ink-muted">
+            Indexing in progress — Continue unlocks once every PDF lands in
+            the brain corpus and on Swarm.
+          </p>
+        )}
       </Field>
     </div>
   );
@@ -1848,7 +1855,13 @@ function isStepValid(step: number, draft: Draft): boolean {
         !!draft.category
       );
     case 2:
-      return draft.description.length >= 40;
+      // Block Continue while any uploaded PDF is still being indexed —
+      // otherwise the brain corpus is incomplete by the time the venture
+      // launches and the agent tries to use it.
+      return (
+        draft.description.length >= 40 &&
+        draft.uploads.every((u) => u.ingested)
+      );
     case 3:
       return draft.sources.length >= 1 && draft.sources.every((s) => s.identifier.trim().length > 0);
     case 4:
