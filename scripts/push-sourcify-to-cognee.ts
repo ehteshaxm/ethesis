@@ -73,10 +73,11 @@ const SEED_CONTRACTS: { chainId: string; address: string; label: string }[] = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function cogneeHeaders(): Record<string, string> {
+  // Non-null asserted: process.exit(1) above guarantees these are set.
   return {
     "Content-Type": "application/json",
-    "X-Api-Key": COGNEE_API_KEY,
-    "X-Tenant-Id": COGNEE_TENANT_ID,
+    "X-Api-Key": COGNEE_API_KEY!,
+    "X-Tenant-Id": COGNEE_TENANT_ID!,
   };
 }
 
