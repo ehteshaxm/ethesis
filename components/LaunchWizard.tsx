@@ -475,6 +475,7 @@ export function LaunchWizard() {
         <BackNext
           step={step}
           canAdvance={canAdvance}
+          lockReason={!canAdvance ? lockReasonForStep(step, draft) : undefined}
           onBack={() => setStep((s) => Math.max(1, s - 1))}
           onNext={() => setStep((s) => Math.min(TOTAL_STEPS, s + 1))}
           onLaunch={onLaunch}
@@ -524,19 +525,21 @@ function ProgressDots({ step, total }: { step: number; total: number }) {
 function BackNext({
   step,
   canAdvance,
+  lockReason,
   onBack,
   onNext,
   onLaunch,
 }: {
   step: number;
   canAdvance: boolean;
+  lockReason?: string;
   onBack: () => void;
   onNext: () => void;
   onLaunch: () => void;
 }) {
   const isLast = step === TOTAL_STEPS;
   return (
-    <div className="mt-6 flex items-center justify-between">
+    <div className="mt-6 flex items-center justify-between gap-3">
       <button
         type="button"
         onClick={onBack}
@@ -551,22 +554,75 @@ function BackNext({
         <ArrowLeft className="h-4 w-4" />
         Back
       </button>
-      <button
-        type="button"
-        onClick={isLast ? onLaunch : onNext}
-        disabled={!canAdvance}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-md px-5 py-2.5 text-sm font-medium transition-colors",
-          canAdvance
-            ? "bg-accent text-white hover:bg-accent-ink"
-            : "bg-surface-2 text-ink-subtle cursor-not-allowed",
+      <div className="flex items-center gap-3">
+        {lockReason && (
+          <p className="text-[11px] text-ink-muted text-right max-w-xs">
+            {lockReason}
+          </p>
         )}
-      >
-        {isLast ? "Launch venture" : "Continue"}
-        {!isLast && <ArrowRight className="h-4 w-4" />}
-      </button>
+        <button
+          type="button"
+          onClick={isLast ? onLaunch : onNext}
+          disabled={!canAdvance}
+          title={lockReason}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-md px-5 py-2.5 text-sm font-medium transition-colors",
+            canAdvance
+              ? "bg-accent text-white hover:bg-accent-ink"
+              : "bg-surface-2 text-ink-subtle cursor-not-allowed",
+          )}
+        >
+          {isLast ? "Launch venture" : "Continue"}
+          {!isLast && <ArrowRight className="h-4 w-4" />}
+        </button>
+      </div>
     </div>
   );
+}
+
+function lockReasonForStep(step: number, draft: Draft): string {
+  switch (step) {
+    case 1:
+      if (draft.title.length < 4) return "Title needs ≥ 4 characters.";
+      if (draft.pitch.length < 10) return "Pitch needs ≥ 10 characters.";
+      if (!draft.category) return "Pick a category.";
+      return "";
+    case 2:
+      if (draft.description.length < 20)
+        return `Description: ${draft.description.length} / 20 minimum.`;
+      if (draft.uploads.some((u) => !u.ingested))
+        return "Waiting for PDFs to finish indexing…";
+      return "";
+    case 3:
+      if (draft.sources.length === 0) return "Add at least one source.";
+      if (draft.sources.some((s) => !s.identifier.trim()))
+        return "Every source needs an identifier.";
+      return "";
+    case 4:
+      if (draft.milestones.length < 3) return "Add at least 3 milestones.";
+      if (
+        draft.milestones.some(
+          (m) =>
+            !m.title.length ||
+            m.successCriteria.length < 8 ||
+            m.deadlineDays < 1,
+        )
+      )
+        return "Each milestone: title + ≥ 8-char criteria + future deadline.";
+      return "";
+    case 5:
+      if (draft.tokenSymbol.length < 3) return "Token symbol: 3–5 letters.";
+      if (draft.tokenSupply < 1) return "Token supply must be > 0.";
+      return "";
+    case 6:
+      if (draft.activationThresholdEth < 100)
+        return "Activation threshold ≥ 100 USDC.";
+      if (draft.monthlyAllowanceEth < 10)
+        return "Monthly allowance ≥ 10 USDC.";
+      return "";
+    default:
+      return "";
+  }
 }
 
 // ─── Step 1: Identity ──────────────────────────────────────────────
@@ -660,7 +716,14 @@ function Step2Description({
         title="Describe the work"
         subtitle="Funders read this. The brain indexes it. Be specific about scope, methodology, and prior art."
       />
-      <Field label="Description (markdown)" hint={`${draft.description.length} / 2000`}>
+      <Field
+        label="Description (markdown)"
+        hint={
+          draft.description.length < 20
+            ? `${draft.description.length} / 20 minimum`
+            : `${draft.description.length} / 2000`
+        }
+      >
         <textarea
           rows={8}
           maxLength={2000}
@@ -1889,7 +1952,7 @@ function isStepValid(step: number, draft: Draft): boolean {
       // otherwise the brain corpus is incomplete by the time the venture
       // launches and the agent tries to use it.
       return (
-        draft.description.length >= 40 &&
+        draft.description.length >= 20 &&
         draft.uploads.every((u) => u.ingested)
       );
     case 3:
