@@ -26,15 +26,18 @@ import { fetchSourcifyOutputs } from "../agent/sourcify-client";
 
 // ─── Cognee config ────────────────────────────────────────────────────────────
 
-const COGNEE_BASE =
-  process.env.COGNEE_BASE_URL ??
-  "https://tenant-d98b701a-80e7-4bf8-8261-d9c08b0a9aae.aws.cognee.ai";
-const COGNEE_API_KEY =
-  process.env.COGNEE_API_KEY ??
-  "41645038687a02fbd92c492b1d4f3fb29ea0b9e47102b2bf0563dcdd7310ba9e";
-const COGNEE_TENANT_ID =
-  process.env.COGNEE_TENANT_ID ?? "d98b701a-80e7-4bf8-8261-d9c08b0a9aae";
+const COGNEE_BASE = process.env.COGNEE_BASE_URL;
+const COGNEE_API_KEY = process.env.COGNEE_API_KEY;
+const COGNEE_TENANT_ID = process.env.COGNEE_TENANT_ID;
 const DATASET_NAME = "sourcify-ethesis";
+
+if (!COGNEE_BASE || !COGNEE_API_KEY || !COGNEE_TENANT_ID) {
+  console.error(
+    "Missing required env vars: COGNEE_BASE_URL, COGNEE_API_KEY, COGNEE_TENANT_ID\n" +
+    "Set them in .env.local before running this script.",
+  );
+  process.exit(1);
+}
 
 // ─── Seed contracts ────────────────────────────────────────────────────────────
 // Representative well-known contracts across chains. When DATABASE_URL is set

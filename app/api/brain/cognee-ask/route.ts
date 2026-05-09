@@ -3,14 +3,9 @@ import type { BrainResponse, BrainResponseCite } from "@/app/api/brain/ask/route
 
 export const runtime = "nodejs";
 
-const COGNEE_BASE =
-  process.env.COGNEE_BASE_URL ??
-  "https://tenant-d98b701a-80e7-4bf8-8261-d9c08b0a9aae.aws.cognee.ai";
-const COGNEE_API_KEY =
-  process.env.COGNEE_API_KEY ??
-  "41645038687a02fbd92c492b1d4f3fb29ea0b9e47102b2bf0563dcdd7310ba9e";
-const COGNEE_TENANT_ID =
-  process.env.COGNEE_TENANT_ID ?? "d98b701a-80e7-4bf8-8261-d9c08b0a9aae";
+const COGNEE_BASE = process.env.COGNEE_BASE_URL;
+const COGNEE_API_KEY = process.env.COGNEE_API_KEY;
+const COGNEE_TENANT_ID = process.env.COGNEE_TENANT_ID;
 
 // Each agent type maps to a Cognee dataset and a short domain focus tag
 // appended to the query to steer RAG_COMPLETION toward relevant graph nodes.
@@ -59,6 +54,10 @@ export async function POST(req: Request) {
 
   if (!question.trim()) {
     return NextResponse.json({ error: "missing question" }, { status: 400 });
+  }
+
+  if (!COGNEE_BASE || !COGNEE_API_KEY || !COGNEE_TENANT_ID) {
+    return NextResponse.json({ error: "Cognee not configured" }, { status: 503 });
   }
 
   const agent = AGENT_CONFIG[agentType] ?? AGENT_CONFIG.bio;
