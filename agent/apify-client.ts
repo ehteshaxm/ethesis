@@ -1,10 +1,13 @@
 // Apify client wrapper. Three modes, in priority order:
 //
 //   1. x402 mode  — set X402_ENABLED=1 + APIFY_X402_ACTOR=<owner/actor>.
-//      Pays per call in USDC on Base mainnet using x402-fetch. Wallet is
-//      the agent's derived EOA (from AGENT_MASTER_SEED + venture slug).
-//      Apify natively supports x402 via the X-APIFY-PAYMENT-PROTOCOL
-//      header. ~$0.05/call. Real money — no testnet.
+//      Pays per call in USDC on Base mainnet using x402. Wallet is the
+//      agent's derived EOA (from AGENT_MASTER_SEED + venture slug). Cost
+//      is per-Actor (e.g. apify/rag-web-browser is $1/call); the exact
+//      amount comes back in the 402 challenge. The agent EOA needs USDC
+//      on Base; it does NOT need ETH for gas — the x402 facilitator
+//      submits the EIP-3009 settlement tx and pays gas itself. Real
+//      money, no testnet.
 //
 //   2. token mode — set APIFY_TOKEN + APIFY_ACTOR_ID_OUTPUT_WATCHER.
 //      Standard apify-client SDK call against any Actor.
@@ -16,8 +19,10 @@
 // the cycle is mode-agnostic.
 
 import { ApifyClient } from "apify-client";
-import { wrapFetchWithPayment, createSigner } from "x402-fetch";
-import type { Hex } from "viem";
+import { createWalletClient, http, type Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { base, baseSepolia } from "viem/chains";
+import { fetchSourceFree } from "./source-fetchers";
 
 export interface OutputWatcherSource {
   type: "github" | "arxiv" | "huggingface" | "openreview" | "x" | "substack";
@@ -41,13 +46,19 @@ export interface OutputWatcherResult {
   fetchedAt: string;
   sourceStats: { type: string; count: number }[];
   /** Mode that produced these results. */
-  mode: "x402" | "token" | "mock";
+  mode: "x402" | "token" | "direct" | "mock";
   /** Cost paid for this call (USDC on Base for x402, est. for token, 0 for mock). */
   costUsd: number;
   /** Underlying Apify actor invoked, if real. */
   actorId?: string;
   /** Apify run ID, if real. */
   runId?: string;
+  /** On-chain settlement tx hash for the x402 USDC payment (Base mainnet). */
+  paymentTxHash?: string;
+  /** Network the x402 payment settled on (e.g. "base"). */
+  paymentNetwork?: string;
+  /** Address that paid (the agent's derived EOA). */
+  paymentPayer?: string;
 }
 
 export interface CallOutputWatcherArgs {
@@ -68,15 +79,55 @@ export async function callOutputWatcher(
   const token = process.env.APIFY_TOKEN;
   const tokenActor = process.env.APIFY_ACTOR_ID_OUTPUT_WATCHER;
 
-  if (x402Enabled && x402Actor && args.agentPrivateKey) {
+  // Pull free outputs from sources that have public APIs (GitHub, arXiv,
+  // Hugging Face). No payment, no rate-limit chargeback.
+  const directOutputs: ScrapedOutput[] = [];
+  const uncoveredSources: OutputWatcherSource[] = [];
+  for (const s of args.sources) {
+    const free = await fetchSourceFree(s, args.milestoneKeywords ?? []);
+    if (free === null) {
+      uncoveredSources.push(s);
+    } else {
+      directOutputs.push(...free);
+    }
+  }
+
+  // x402 path — pay once for the Google leg covering anything the free
+  // fetchers couldn't handle (e.g. x.com / substack / generic web).
+  // Skip x402 entirely if every source was covered for free.
+  if (
+    x402Enabled &&
+    x402Actor &&
+    args.agentPrivateKey &&
+    uncoveredSources.length > 0
+  ) {
     try {
-      return await callViaX402(args, x402Actor, args.agentPrivateKey);
+      const x402Result = await callViaX402(
+        { ...args, sources: uncoveredSources },
+        x402Actor,
+        args.agentPrivateKey,
+      );
+      return {
+        ...x402Result,
+        outputs: [...directOutputs, ...x402Result.outputs],
+        sourceStats: tallyByType([...directOutputs, ...x402Result.outputs]),
+      };
     } catch (err) {
       console.warn(
         "[apify] x402 call failed, falling through:",
         (err as { message?: string })?.message ?? err,
       );
     }
+  }
+
+  if (directOutputs.length > 0) {
+    return {
+      outputs: directOutputs,
+      fetchedAt: new Date().toISOString(),
+      sourceStats: tallyByType(directOutputs),
+      mode: "direct",
+      costUsd: 0,
+    };
   }
 
   if (token && tokenActor) {
@@ -94,50 +145,194 @@ export async function callOutputWatcher(
 }
 
 // ─── x402 path ──────────────────────────────────────────────────────
+//
+// Apify's x402 implementation uses a non-standard envelope (different
+// from the Coinbase x402 spec). The reference client is @apify/mcpc;
+// this code mirrors its `signer.js` exactly so the facilitator accepts
+// our payload.
+
+const TRANSFER_WITH_AUTHORIZATION_TYPES = {
+  TransferWithAuthorization: [
+    { name: "from", type: "address" },
+    { name: "to", type: "address" },
+    { name: "value", type: "uint256" },
+    { name: "validAfter", type: "uint256" },
+    { name: "validBefore", type: "uint256" },
+    { name: "nonce", type: "bytes32" },
+  ],
+} as const;
+
+const APIFY_NETWORKS: Record<
+  string,
+  { chain: typeof base | typeof baseSepolia; rpcUrl: string }
+> = {
+  "eip155:8453": { chain: base, rpcUrl: "https://mainnet.base.org" },
+  "eip155:84532": { chain: baseSepolia, rpcUrl: "https://sepolia.base.org" },
+};
+
+function randomBytes32(): `0x${string}` {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return ("0x" +
+    Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("")) as `0x${string}`;
+}
 
 async function callViaX402(
   args: CallOutputWatcherArgs,
   actor: string,
   agentPrivateKey: Hex,
 ): Promise<OutputWatcherResult> {
-  // Apify x402 settles on Base mainnet. createSigner builds the right
-  // Signer for that network from a raw private key.
-  const network = process.env.X402_NETWORK ?? "base";
-  const signer = await createSigner(network, agentPrivateKey);
-  const fetchWithPay = wrapFetchWithPayment(fetch, signer);
-
   const slug = actor.replace("/", "~");
   const url = `${APIFY_API_BASE}/acts/${slug}/run-sync-get-dataset-items`;
-
-  // Each Actor's input shape differs. For the demo we use a generic
-  // "search" payload that the chosen Actor (e.g. apify/rag-web-browser)
-  // can interpret. Tune APIFY_X402_INPUT or override per-source if needed.
   const input = buildActorInput(args, actor);
+  const body = JSON.stringify(input);
 
-  const res = await fetchWithPay(url, {
+  // Leg 1 — initial unauthenticated request, expect 402.
+  const probe = await fetch(url, {
     method: "POST",
     headers: {
       "X-APIFY-PAYMENT-PROTOCOL": "X402",
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(input),
+    body,
+  });
+
+  if (probe.status !== 402) {
+    if (probe.ok) {
+      const items = (await probe.json()) as unknown[];
+      const outputs = normaliseScrapedItems(items);
+      return {
+        outputs,
+        fetchedAt: new Date().toISOString(),
+        sourceStats: tallyByType(outputs),
+        mode: "x402",
+        costUsd: 0,
+        actorId: actor,
+        runId: probe.headers.get("x-apify-request-id") ?? undefined,
+        paymentNetwork: "base",
+      };
+    }
+    const text = await probe.text();
+    throw new Error(
+      `Apify expected 402, got ${probe.status}: ${text.slice(0, 200)}`,
+    );
+  }
+
+  const challenge = decodeApifyPaymentRequired(probe);
+  if (!challenge) {
+    throw new Error("Apify 402 missing payment-required header");
+  }
+  const accept = challenge.accepts.find((a) => a.scheme === "exact");
+  if (!accept) {
+    throw new Error("Apify 402 has no `exact` scheme accepts");
+  }
+  const networkConfig = APIFY_NETWORKS[accept.network];
+  if (!networkConfig) {
+    throw new Error(`Unsupported Apify x402 network: ${accept.network}`);
+  }
+
+  const account = privateKeyToAccount(agentPrivateKey);
+  const walletClient = createWalletClient({
+    account,
+    chain: networkConfig.chain,
+    transport: http(networkConfig.rpcUrl),
+  });
+  const amountAtomic = BigInt(accept.amount);
+  const expirySec = accept.maxTimeoutSeconds || 3600;
+  const validBefore = BigInt(Math.floor(Date.now() / 1000) + expirySec);
+  const nonce = randomBytes32();
+  const eip3009Name = (accept.extra?.name as string | undefined) ?? "USDC";
+  const eip3009Version = (accept.extra?.version as string | undefined) ?? "2";
+
+  const signature = await walletClient.signTypedData({
+    domain: {
+      name: eip3009Name,
+      version: eip3009Version,
+      chainId: networkConfig.chain.id,
+      verifyingContract: accept.asset as `0x${string}`,
+    },
+    types: TRANSFER_WITH_AUTHORIZATION_TYPES,
+    primaryType: "TransferWithAuthorization",
+    message: {
+      from: account.address,
+      to: accept.payTo as `0x${string}`,
+      value: amountAtomic,
+      validAfter: 0n,
+      validBefore,
+      nonce,
+    },
+  });
+
+  // Apify-flavoured envelope (matches @apify/mcpc's signer.js):
+  //   { x402Version, resource{}, payload{signature,authorization{}}, accepted{} }
+  const paymentPayload = {
+    x402Version: challenge.x402Version,
+    resource: {
+      url,
+      description:
+        challenge.resource?.description ?? "Apify Actor invocation",
+      mimeType: challenge.resource?.mimeType ?? "application/json",
+    },
+    payload: {
+      signature,
+      authorization: {
+        from: account.address,
+        to: accept.payTo,
+        value: amountAtomic.toString(),
+        validAfter: "0",
+        validBefore: validBefore.toString(),
+        nonce,
+      },
+    },
+    accepted: {
+      scheme: "exact" as const,
+      network: accept.network,
+      asset: accept.asset,
+      amount: amountAtomic.toString(),
+      payTo: accept.payTo,
+      maxTimeoutSeconds: expirySec,
+      extra: { name: eip3009Name, version: eip3009Version },
+    },
+  };
+  const paymentHeader = Buffer.from(
+    JSON.stringify(paymentPayload),
+    "utf8",
+  ).toString("base64");
+
+  // Leg 2 — retry with PAYMENT-SIGNATURE (Apify's required header name).
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "X-APIFY-PAYMENT-PROTOCOL": "X402",
+      "Content-Type": "application/json",
+      "PAYMENT-SIGNATURE": paymentHeader,
+      "Access-Control-Expose-Headers": "X-PAYMENT-RESPONSE",
+    },
+    body,
   });
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Apify x402 ${res.status}: ${text.slice(0, 256)}`);
+    throw new Error(`Apify x402 retry ${res.status}: ${text.slice(0, 256)}`);
   }
 
   const items = (await res.json()) as unknown[];
   const outputs = normaliseScrapedItems(items);
 
-  // x402-fetch puts the settled-payment receipt in a custom response header.
   const paymentResponseHeader =
     res.headers.get("X-PAYMENT-RESPONSE") ??
+    res.headers.get("x-payment-response") ??
     res.headers.get("payment-response");
-  const costUsd = paymentResponseHeader
-    ? parsePaymentCost(paymentResponseHeader)
-    : 0.05;
+  const receipt = paymentResponseHeader
+    ? parsePaymentReceipt(paymentResponseHeader)
+    : {};
+
+  // The signed authorization is the authoritative cost — that's what
+  // gets transferred on-chain. The X-PAYMENT-RESPONSE header may quote
+  // a different (or unrelated) amount field.
+  const costUsd = Number(amountAtomic) / 1_000_000;
 
   return {
     outputs,
@@ -147,7 +342,41 @@ async function callViaX402(
     costUsd,
     actorId: actor,
     runId: res.headers.get("x-apify-request-id") ?? undefined,
+    paymentTxHash: receipt.txHash,
+    paymentNetwork: receipt.network ?? accept.network,
+    paymentPayer: receipt.payer ?? account.address,
   };
+}
+
+interface ApifyPaymentChallenge {
+  x402Version: number;
+  accepts: Array<{
+    scheme: string;
+    network: string;
+    asset: string;
+    amount: string;
+    payTo: string;
+    maxTimeoutSeconds: number;
+    extra?: Record<string, unknown>;
+  }>;
+  resource?: { description?: string; mimeType?: string };
+  error?: string;
+}
+
+function decodeApifyPaymentRequired(
+  res: Response,
+): ApifyPaymentChallenge | null {
+  const header =
+    res.headers.get("payment-required") ??
+    res.headers.get("Payment-Required") ??
+    res.headers.get("x-payment-required");
+  if (!header) return null;
+  try {
+    const decoded = Buffer.from(header, "base64").toString("utf8");
+    return JSON.parse(decoded) as ApifyPaymentChallenge;
+  } catch {
+    return null;
+  }
 }
 
 // ─── Token path ─────────────────────────────────────────────────────
@@ -248,6 +477,19 @@ function buildActorInput(args: CallOutputWatcherArgs, actor: string): unknown {
     return { query, maxResults: 5 };
   }
 
+  // Google Search Scraper — newline-separated queries, supports operators.
+  if (a.includes("google-search-scraper")) {
+    const queries = args.sources
+      .map((s) => sourceToSearchQuery(s, args.milestoneKeywords ?? []))
+      .join("\n");
+    return {
+      queries,
+      maxPagesPerQuery: 1,
+      resultsPerPage: 10,
+      countryCode: "us",
+    };
+  }
+
   // Website content crawler — takes startUrls
   if (a.includes("website-content-crawler") || a.includes("web-scraper")) {
     return {
@@ -265,6 +507,27 @@ function buildActorInput(args: CallOutputWatcherArgs, actor: string): unknown {
     maxResults: 50,
     ventureSlug: args.ventureSlug,
   };
+}
+
+function sourceToSearchQuery(
+  s: OutputWatcherSource,
+  keywords: string[],
+): string {
+  const kw = keywords.slice(0, 2).join(" ");
+  switch (s.type) {
+    case "github":
+      return `site:github.com "${s.identifier}" ${kw}`.trim();
+    case "arxiv":
+      return `site:arxiv.org ${s.identifier} ${kw}`.trim();
+    case "huggingface":
+      return `site:huggingface.co "${s.identifier}" ${kw}`.trim();
+    case "openreview":
+      return `site:openreview.net "${s.identifier}" ${kw}`.trim();
+    case "x":
+      return `site:x.com OR site:twitter.com "${s.identifier.replace(/^@/, "")}" ${kw}`.trim();
+    case "substack":
+      return `site:substack.com "${s.identifier}" ${kw}`.trim();
+  }
 }
 
 function sourceToUrl(s: OutputWatcherSource): string {
@@ -334,22 +597,34 @@ function guessOutputType(
   return "post";
 }
 
-function parsePaymentCost(headerValue: string): number {
-  // x402-fetch usually base64-encodes a JSON receipt. Try to decode and
-  // extract amount; fall back to a best-effort numeric parse.
+interface PaymentReceipt {
+  costUsd?: number;
+  txHash?: string;
+  network?: string;
+  payer?: string;
+}
+
+function parsePaymentReceipt(headerValue: string): PaymentReceipt {
+  // Extract on-chain settlement metadata (txHash / network / payer) from
+  // the X-PAYMENT-RESPONSE header. Cost is *not* read here — the signed
+  // authorization amount is the source of truth.
   try {
     const decoded = Buffer.from(headerValue, "base64").toString("utf8");
-    const json = JSON.parse(decoded) as {
-      amount?: number | string;
-      total?: number | string;
+    const json = JSON.parse(decoded) as Record<string, unknown>;
+    const txHash =
+      (json.transaction as string | undefined) ??
+      (json.txHash as string | undefined) ??
+      (json.transactionHash as string | undefined) ??
+      (json.hash as string | undefined);
+    return {
+      txHash:
+        typeof txHash === "string" && txHash.startsWith("0x") ? txHash : undefined,
+      network: typeof json.network === "string" ? json.network : undefined,
+      payer: typeof json.payer === "string" ? json.payer : undefined,
     };
-    const amount = json.amount ?? json.total;
-    if (typeof amount === "number") return amount;
-    if (typeof amount === "string") return parseFloat(amount) || 0.05;
   } catch {
-    /* ignore */
+    return {};
   }
-  return 0.05;
 }
 
 function tallyByType(
@@ -388,7 +663,7 @@ export function isApifyConfigured(): boolean {
   );
 }
 
-export function apifyMode(): "x402" | "token" | "mock" {
+export function apifyMode(): "x402" | "token" | "direct" | "mock" {
   if (process.env.X402_ENABLED === "1" && process.env.APIFY_X402_ACTOR) {
     return "x402";
   }

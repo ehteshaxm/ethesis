@@ -30,6 +30,8 @@ async function main() {
   const db = drizzle(sql, { schema });
 
   console.log("[seed] clearing existing rows…");
+  await db.delete(schema.agentActivityLog);
+  await db.delete(schema.decisionMarkets);
   await db.delete(schema.attestations);
   await db.delete(schema.tokenPositions);
   await db.delete(schema.connectedSources);

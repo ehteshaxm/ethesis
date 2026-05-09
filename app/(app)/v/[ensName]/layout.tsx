@@ -6,6 +6,7 @@ import {
   ventureFromEnsRecords,
   type MockVenture,
 } from "@/lib/mock-data";
+import { ventureFromDb } from "@/lib/db-reads";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { VentureHeader } from "@/components/VentureHeader";
@@ -20,11 +21,15 @@ export default async function VentureLayout({ children, params }: Props) {
   const { ensName } = await params;
   const decoded = decodeURIComponent(ensName);
 
-  // Seeded mock ventures (`*.ethesis.eth`) take precedence — that ENS root
-  // doesn't actually exist on chain so the RPC read would 404 anyway.
-  // For unseeded names (user-launched under their own ENS), we read text
-  // records live via viem.
+  // Resolve order:
+  //   1. Seeded mock (fastest, fully-detailed for demo ventures)
+  //   2. DB row (user-launched ventures from /api/launch/finalize)
+  //   3. On-chain ENS text records (legacy / external launches)
   let venture: MockVenture | undefined = getVentureByEns(decoded);
+  if (!venture) {
+    const dbVenture = await ventureFromDb(decoded);
+    if (dbVenture) venture = dbVenture;
+  }
   if (!venture) {
     const onchain = await resolveVentureFromEns(decoded);
     if (onchain) venture = ventureFromEnsRecords(onchain);

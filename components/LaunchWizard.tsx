@@ -275,22 +275,95 @@ export function LaunchWizard() {
       return;
     }
 
-    // ENS provisioned. Now fire the (mocked) Umia auction call so the rest
-    // of the app sees this as an open auction.
-    const auction = await umia.openAuction({
-      ventureEnsName: result.ventureEnsName,
-      ownerAddress: address,
-      tokenSymbol: symbol,
-      tokenSupply: draft.tokenSupply.toString(),
-      durationHours: draft.auctionDurationHours,
-      activationThresholdEth: draft.activationThresholdEth,
-    });
+    // ENS provisioned. Persist the venture (and milestones, sources) to
+    // Neon so the rest of the app — home grid, Pulse tab, agent runtime
+    // — can see it. Then kick off the first cycle in the background so
+    // by the time the user navigates to Pulse, real attestations are
+    // landing.
+    let finalize: {
+      tokenAddress: string;
+      treasuryAddress: string;
+      tokenMintTxHash: string;
+      auctionOpenTxHash: string;
+    };
+    try {
+      const finRes = await fetch("/api/launch/finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ventureEnsName: result.ventureEnsName,
+          agentEnsName: result.agentEnsName,
+          agentWalletAddress: result.agentWalletAddress,
+          ownerWalletAddress: address,
+          ownerEns: ownerEns ?? null,
+          title: draft.title,
+          pitch: draft.pitch,
+          category: draft.category,
+          description: draft.description,
+          sources: draft.sources.map((s) => ({
+            type: s.type,
+            identifier: s.identifier,
+          })),
+          milestones: draft.milestones.map((m, i) => ({
+            ordinal: i + 1,
+            title: m.title,
+            successCriteria: m.successCriteria,
+            expectedOutputs: m.expectedOutputs,
+            deadlineDays: m.deadlineDays,
+          })),
+          tokenSymbol: symbol,
+          tokenSupply: draft.tokenSupply,
+          auctionDurationHours: draft.auctionDurationHours,
+          activationThresholdEth: draft.activationThresholdEth,
+          monthlyAllowanceEth: draft.monthlyAllowanceEth,
+          autoLiquidateEnabled: draft.autoLiquidateEnabled,
+          autoLiquidateProgressThreshold: draft.autoLiquidateProgressThreshold,
+          autoLiquidateDays: draft.autoLiquidateDays,
+          autoPivotEnabled: draft.autoPivotEnabled,
+        }),
+      });
+      if (!finRes.ok) {
+        const err = await finRes.json().catch(() => ({}));
+        throw new Error(
+          (err as { error?: string })?.error ?? "Finalize failed",
+        );
+      }
+      finalize = await finRes.json();
+    } catch (err) {
+      // ENS already happened — surface but don't block the success card.
+      console.error("[launch] finalize failed:", err);
+      const fallback = await umia.openAuction({
+        ventureEnsName: result.ventureEnsName,
+        ownerAddress: address,
+        tokenSymbol: symbol,
+        tokenSupply: draft.tokenSupply.toString(),
+        durationHours: draft.auctionDurationHours,
+        activationThresholdEth: draft.activationThresholdEth,
+      });
+      finalize = {
+        tokenAddress: fallback.tokenAddress,
+        treasuryAddress: fallback.treasuryAddress,
+        tokenMintTxHash: fallback.txHash,
+        auctionOpenTxHash: fallback.txHash,
+      };
+    }
+
+    // Fire-and-forget: trigger the first agent cycle. Don't await — the
+    // user gets to the Success card immediately, attestations land while
+    // they read it. The cycle hits the venture's free fetchers
+    // (GitHub/arXiv/HF) and Anthropic; no x402 spend unless explicitly
+    // configured for sources without free coverage.
+    void fetch("/api/agent/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ensName: result.ventureEnsName }),
+    }).catch((e) => console.warn("[launch] background cycle failed:", e));
 
     setSubmitResult({
-      auctionId: auction.auctionId,
-      treasuryAddress: auction.treasuryAddress,
-      tokenAddress: auction.tokenAddress,
-      txHash: auction.txHash,
+      auctionId: finalize.auctionOpenTxHash.slice(0, 10),
+      treasuryAddress: finalize.treasuryAddress,
+      tokenAddress: finalize.tokenAddress,
+      txHash: finalize.tokenMintTxHash,
       ensSubname: result.ventureEnsName,
       agentEnsName: result.agentEnsName,
       agentWalletAddress: result.agentWalletAddress,
@@ -627,6 +700,14 @@ function Step2Description({
           onRemove={(id) =>
             setDraft((d) => ({ ...d, uploads: d.uploads.filter((u) => u.id !== id) }))
           }
+          onIngested={(fileId, _docId, sectionsIndexed) =>
+            setDraft((d) => ({
+              ...d,
+              uploads: d.uploads.map((u) =>
+                u.id === fileId ? { ...u, ingested: true, sectionsIndexed } : u,
+              ),
+            }))
+          }
         />
       </Field>
     </div>
@@ -637,35 +718,54 @@ function FileDropzone({
   uploads,
   onAdd,
   onRemove,
+  onIngested,
 }: {
   uploads: UploadedFile[];
   onAdd: (files: UploadedFile[]) => void;
   onRemove: (id: string) => void;
+  onIngested?: (
+    fileId: string,
+    documentId: string,
+    sectionsIndexed: number,
+  ) => void;
 }) {
   const [dragOver, setDragOver] = useState(false);
 
-  const handleFiles = (files: FileList | File[]) => {
-    const next: UploadedFile[] = Array.from(files)
-      .slice(0, 10 - uploads.length)
-      .map((f) => ({
+  const handleFiles = (filesIn: FileList | File[]) => {
+    const fileArray = Array.from(filesIn).slice(0, 10 - uploads.length);
+    const placeholders: Array<UploadedFile & { _file: File }> = fileArray.map(
+      (f) => ({
         id: `f-${Math.random().toString(36).slice(2, 8)}`,
         name: f.name,
         sizeBytes: f.size,
         ingested: false,
         sectionsIndexed: 0,
-      }));
-    onAdd(next);
-    // Simulate ingestion progress.
-    next.forEach((u, i) => {
-      setTimeout(
-        () => {
-          // No-op; we'd setState ingested:true in real impl. For demo, we
-          // accept the staged-but-unfinished display since uploads array is
-          // immutable in parent — keeping the demo tight.
-        },
-        500 + i * 200,
-      );
-    });
+        _file: f,
+      }),
+    );
+    onAdd(placeholders);
+
+    // POST each file to /api/brain/ingest in parallel; mark ingested
+    // when the response lands. The wizard is a client component, so we
+    // can fire these without blocking the form.
+    for (const p of placeholders) {
+      const fd = new FormData();
+      fd.append("files", p._file);
+      fetch("/api/brain/ingest", { method: "POST", body: fd })
+        .then(async (r) => {
+          if (!r.ok) throw new Error(`ingest ${r.status}`);
+          const json = (await r.json()) as {
+            documents: Array<{ id: string; sectionsIndexed: number }>;
+          };
+          const doc = json.documents?.[0];
+          if (doc && onIngested) {
+            onIngested(p.id, doc.id, doc.sectionsIndexed);
+          }
+        })
+        .catch((err) =>
+          console.warn("[upload] ingest failed for", p.name, err),
+        );
+    }
   };
 
   return (
@@ -714,9 +814,15 @@ function FileDropzone({
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-verify-ink text-[10px] font-medium">
-                  ✓ Indexed
-                </span>
+                {u.ingested ? (
+                  <span className="text-verify-ink text-[10px] font-medium">
+                    ✓ Indexed{u.sectionsIndexed > 0 ? ` · ${u.sectionsIndexed}p` : ""}
+                  </span>
+                ) : (
+                  <span className="text-ink-subtle text-[10px] font-mono">
+                    indexing…
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => onRemove(u.id)}

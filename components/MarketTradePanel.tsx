@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { ArrowDown, ArrowUp, Check, Loader2, Wallet } from "lucide-react";
@@ -15,6 +15,56 @@ interface Position {
   amountEth: number;
   shares: number;
   txHash: string;
+  /** Wall-clock when the trade was placed — used to render "5m ago". */
+  placedAt: number;
+}
+
+// localStorage keys — namespaced per-market so different decision
+// markets don't collide. Survives refresh; clears never (user can wipe
+// site data if they want a fresh slate).
+const positionsKey = (marketId: string) => `market-positions-v1-${marketId}`;
+const twapsKey = (marketId: string) => `market-twaps-v1-${marketId}`;
+
+function loadPositions(marketId: string): Position[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(positionsKey(marketId));
+    if (!raw) return [];
+    return JSON.parse(raw) as Position[];
+  } catch {
+    return [];
+  }
+}
+
+function savePositions(marketId: string, positions: Position[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      positionsKey(marketId),
+      JSON.stringify(positions),
+    );
+  } catch {
+    /* quota — ignore */
+  }
+}
+
+function loadTwaps(marketId: string): MarketOutcome[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(twapsKey(marketId));
+    return raw ? (JSON.parse(raw) as MarketOutcome[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveTwaps(marketId: string, outcomes: MarketOutcome[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(twapsKey(marketId), JSON.stringify(outcomes));
+  } catch {
+    /* ignore */
+  }
 }
 
 interface Props {
@@ -32,6 +82,18 @@ export function MarketTradePanel({ market }: Props) {
   const [amount, setAmount] = useState<string>("0.05");
   const [phase, setPhase] = useState<Phase>("idle");
   const [positions, setPositions] = useState<Position[]>([]);
+
+  // Hydrate from localStorage on mount so trades and TWAP nudges
+  // survive a refresh.
+  useEffect(() => {
+    const saved = loadPositions(market.id);
+    if (saved.length > 0) setPositions(saved);
+    const savedTwaps = loadTwaps(market.id);
+    if (savedTwaps && savedTwaps.length === market.outcomes.length) {
+      setOutcomes(savedTwaps);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [market.id]);
 
   const totalDeposits = outcomes.reduce((s, o) => s + o.totalDepositsEth, 0);
   const sortedTwaps = [...outcomes].sort((a, b) => b.twap - a.twap);
@@ -85,14 +147,20 @@ export function MarketTradePanel({ market }: Props) {
     const sum = updated.reduce((s, o) => s + o.twap, 0);
     const normed = updated.map((o) => ({ ...o, twap: o.twap / sum }));
     setOutcomes(normed);
+    saveTwaps(market.id, normed);
 
     const newPosition: Position = {
       outcomeName: selected,
       amountEth: amountNum,
       shares: result.sharesAcquired,
       txHash: result.txHash,
+      placedAt: Date.now(),
     };
-    setPositions((p) => [newPosition, ...p]);
+    setPositions((p) => {
+      const next = [newPosition, ...p];
+      savePositions(market.id, next);
+      return next;
+    });
     setPhase("success");
     await wait(1300);
     setPhase("idle");

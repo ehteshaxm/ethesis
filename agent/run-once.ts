@@ -41,6 +41,14 @@ async function main() {
   console.log(
     `  Apify mode:       ${result.apifyMode}  (cost: $${result.apifyCostUsd.toFixed(4)})`,
   );
+  if (result.apifyPaymentTxHash) {
+    console.log(
+      `  x402 settled:     ${result.apifyPaymentTxHash} (${result.apifyPaymentNetwork ?? "base"})`,
+    );
+    console.log(
+      `                    https://basescan.org/tx/${result.apifyPaymentTxHash}`,
+    );
+  }
   console.log(`  IPFS CID:         ${result.ipfsCid}`);
   console.log(
     `  Cosmic nonce:     ${result.cosmicNonceSource ?? "unavailable"}`,

@@ -39,8 +39,10 @@ export interface CycleResult {
   ensWritten: boolean;
   ensSkipReason?: string;
   observedOutputs: number;
-  apifyMode: "x402" | "token" | "mock";
+  apifyMode: "x402" | "token" | "direct" | "mock";
   apifyCostUsd: number;
+  apifyPaymentTxHash?: string;
+  apifyPaymentNetwork?: string;
   cosmicNonceSource?: string;
   /** Set when the agent ran inside a DStack TEE — TDX quote bound to the attestation. */
   teeQuote?: { quote: string; reportData: string };
@@ -111,8 +113,11 @@ export async function runCycleForVenture(
       runId: apify.runId ?? null,
       sources: apifySources.map((s) => `${s.type}:${s.identifier}`),
       outputCount: apify.outputs.length,
+      paymentNetwork: apify.paymentNetwork ?? null,
+      paymentPayer: apify.paymentPayer ?? null,
     },
     costUsd: apify.costUsd,
+    txHash: apify.paymentTxHash,
   });
 
   // ─── 3. Generate attestation via Claude ──────────────────────────
@@ -239,6 +244,8 @@ export async function runCycleForVenture(
     observedOutputs: apify.outputs.length,
     apifyMode: apify.mode,
     apifyCostUsd: apify.costUsd,
+    apifyPaymentTxHash: apify.paymentTxHash,
+    apifyPaymentNetwork: apify.paymentNetwork,
     cosmicNonceSource: signed.cosmicNonce?.source,
     teeQuote: teeQuote
       ? { quote: teeQuote.quote, reportData: teeQuote.reportData }
@@ -251,7 +258,7 @@ export async function runCycleForVenture(
 /** Surface what the agent has and hasn't been configured with. */
 export function reportAgentConfig(): {
   apify: boolean;
-  apifyMode: "x402" | "token" | "mock";
+  apifyMode: "x402" | "token" | "direct" | "mock";
   pinata: boolean;
   ens: boolean;
   anthropic: boolean;
