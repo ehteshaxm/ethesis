@@ -12,6 +12,8 @@ export type Category =
   | "oss"
   | "security"
   | "bio"
+  | "chemistry"
+  | "social_science"
   | "other";
 export type PulseDay = "verified" | "disputed" | "silence" | "none";
 
@@ -340,6 +342,8 @@ export function ventureFromEnsRecords(input: {
       "oss",
       "security",
       "bio",
+      "chemistry",
+      "social_science",
       "other",
     ] as const
   ).includes((input.category ?? "other") as Category)

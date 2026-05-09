@@ -26,11 +26,14 @@ import { ensAppUrl } from "@/lib/ens-app-url";
 
 const CATEGORIES = [
   { value: "ml", label: "ML / AI" },
+  { value: "bio", label: "Biotech" },
+  { value: "chemistry", label: "Chemistry" },
   { value: "crypto", label: "Cryptography" },
   { value: "climate", label: "Climate" },
   { value: "math", label: "Mathematics" },
-  { value: "oss", label: "Open Source" },
+  { value: "social_science", label: "Social Science" },
   { value: "security", label: "Security" },
+  { value: "oss", label: "Open Source" },
   { value: "other", label: "Other" },
 ] as const;
 
@@ -794,7 +797,8 @@ function FileDropzone({
                     ✓ Indexed{u.sectionsIndexed > 0 ? ` · ${u.sectionsIndexed}p` : ""}
                   </span>
                 ) : (
-                  <span className="text-ink-subtle text-[10px] font-mono">
+                  <span className="inline-flex items-center gap-1 text-ink-muted text-[10px] font-mono">
+                    <Loader2 className="h-3 w-3 animate-spin" />
                     indexing…
                   </span>
                 )}
