@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   ) => Promise<{ text: string; numpages: number }>;
 
   // Look up ventureId if the wizard supplied an ENS — uploads can also
-  // be ingested without a venture (e.g. brain-only research papers).
+  // be ingested without a research project (e.g. brain-only research papers).
   let ventureId: string | null = null;
   if (typeof ventureEnsName === "string" && ventureEnsName.length > 0) {
     const v = await db.query.ventures.findFirst({

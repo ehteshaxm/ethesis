@@ -141,7 +141,7 @@ export default async function PulseTab({ params }: Props) {
             Every claim, signed and anchored
           </h2>
           <p className="mt-2 text-sm text-ink-muted leading-relaxed max-w-2xl">
-            Each entry is a JSON payload signed by the venture&apos;s agent,
+            Each entry is a JSON payload signed by the research&apos;s agent,
             uploaded to Ethereum Swarm, and written into a per-attestation ENS
             text record on{" "}
             <span className="font-mono text-ink">{venture.ensName}</span>.

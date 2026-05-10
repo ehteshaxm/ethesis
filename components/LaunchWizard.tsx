@@ -329,7 +329,7 @@ export function LaunchWizard() {
       return;
     }
 
-    // ENS provisioned. Persist the venture (and milestones, sources) to
+    // ENS provisioned. Persist the research (and milestones, sources) to
     // Neon so the rest of the app — home grid, Pulse tab, agent runtime
     // — can see it. Then kick off the first cycle in the background so
     // by the time the user navigates to Pulse, real attestations are
@@ -404,7 +404,7 @@ export function LaunchWizard() {
 
     // Fire-and-forget: trigger the first agent cycle. Don't await — the
     // user gets to the Success card immediately, attestations land while
-    // they read it. The cycle hits the venture's free fetchers
+    // they read it. The cycle hits the research's free fetchers
     // (GitHub/arXiv/HF) and Anthropic; no x402 spend unless explicitly
     // configured for sources without free coverage.
     void fetch("/api/agent/run", {
@@ -470,8 +470,8 @@ export function LaunchWizard() {
       <FullScreen>
         <SoftBlock
           icon={<Wallet className="h-7 w-7 text-ink-subtle" />}
-          title="Connect to launch a venture"
-          body="ETHesis ventures are tied to the ENS identity on your wallet. Connect to begin."
+          title="Connect to launch a research project"
+          body="ETHesis research is tied to the ENS identity on your wallet. Connect to begin."
           cta={
             <button
               type="button"
@@ -617,7 +617,7 @@ function BackNext({
               : "bg-surface-2 text-ink-subtle cursor-not-allowed",
           )}
         >
-          {isLast ? "Launch venture" : "Continue"}
+          {isLast ? "Launch research" : "Continue"}
           {!isLast && <ArrowRight className="h-4 w-4" />}
         </button>
       </div>
@@ -693,9 +693,9 @@ function Step1Identity({
       <StepHeader
         eyebrow="Step 1 of 7"
         title="Identity"
-        subtitle="Name and describe the venture. We'll provision an ENS subname under ethesis.eth."
+        subtitle="Name and describe the research. We'll provision an ENS subname under ethesis.eth."
       />
-      <Field label="Venture name" hint={`${draft.title.length} / 50`}>
+      <Field label="Research name" hint={`${draft.title.length} / 50`}>
         <input
           type="text"
           maxLength={50}
@@ -737,7 +737,7 @@ function Step1Identity({
 
       <div className="rounded-md border border-dashed border-border bg-surface-2/50 p-4">
         <p className="text-[11px] uppercase tracking-wider text-ink-subtle font-medium">
-          Your venture will live at
+          Your research will live at
         </p>
         <p className="mt-1 font-mono text-base text-accent-ink">{ensSubname}</p>
         <p className="mt-1 text-[11px] text-ink-subtle">
@@ -781,7 +781,7 @@ function Step2Description({
           onChange={(e) =>
             setDraft((d) => ({ ...d, description: e.target.value }))
           }
-          placeholder="What you're researching, why it matters, how this venture differs from prior work..."
+          placeholder="What you're researching, why it matters, how this research differs from prior work..."
           className="w-full rounded-md border border-border-strong bg-surface px-3 py-2.5 text-sm leading-relaxed resize-none focus:outline-none focus:border-accent"
         />
       </Field>
@@ -1382,7 +1382,7 @@ function Step6Agent({
 
       <Block
         label="Activation threshold"
-        body="Your agent activates when treasury crosses this amount. Below this, the venture is an indexed idea — browseable but not operating."
+        body="Your agent activates when treasury crosses this amount. Below this, the research is an indexed idea — browseable but not operating."
       >
         <SliderRow
           value={draft.activationThresholdEth}
@@ -1664,8 +1664,8 @@ function PlatformProvisionProgress({
   onRetry: () => void;
 }) {
   const steps = [
-    "Creating venture subname",
-    "Writing venture text records",
+    "Creating research subname",
+    "Writing research text records",
     "Creating agent subname",
     "Writing agent text records",
   ];
@@ -1807,7 +1807,7 @@ function SuccessCard({
       </div>
 
       <h2 className="mt-6 text-2xl font-medium text-ink leading-tight">
-        Your venture is live.
+        Your research is live.
       </h2>
       <p className="mt-2 text-sm text-ink-muted leading-relaxed">
         The Tailored Auction is open on Umia. ${symbol} is biddable now. When
@@ -1819,7 +1819,7 @@ function SuccessCard({
       </p>
 
       <div className="mt-6 space-y-1.5 rounded-md border border-border bg-surface-2/50 p-3 text-xs">
-        <KV label="Venture ENS" value={result.ensSubname} mono />
+        <KV label="Research ENS" value={result.ensSubname} mono />
         <KV label="Agent ENS" value={result.agentEnsName} mono />
         <KV
           label="Agent wallet"
@@ -1843,7 +1843,7 @@ function SuccessCard({
             rel="noopener noreferrer"
             className="rounded-md border border-border bg-surface px-3 py-1.5 font-mono text-ink-muted hover:bg-surface-2 transition-colors truncate"
           >
-            tx1 venture · {shorten(result.txHashes.ventureCreate, 4)}
+            tx1 research · {shorten(result.txHashes.ventureCreate, 4)}
           </a>
           <a
             href={etherscanTxUrl(result.txHashes.ventureRecords, result.chain)}
@@ -1879,7 +1879,7 @@ function SuccessCard({
           rel="noopener noreferrer"
           className="rounded-md border border-border-strong bg-surface px-3 py-1.5 font-medium text-ink hover:bg-surface-2 transition-colors"
         >
-          Venture records →
+          Research records →
         </a>
         <a
           href={ensAppUrl(result.agentEnsName, "records")}
@@ -2077,7 +2077,7 @@ function isStepValid(step: number, draft: Draft): boolean {
       );
     case 2:
       // Block Continue while any uploaded PDF is still being indexed —
-      // otherwise the brain corpus is incomplete by the time the venture
+      // otherwise the brain corpus is incomplete by the time the research
       // launches and the agent tries to use it.
       return (
         draft.description.length >= 20 &&

@@ -50,14 +50,14 @@ const OWNER_ACTIONS: ActionDef[] = [
     key: "liquidation",
     Icon: MinusCircle,
     title: "Voluntary liquidation",
-    description: "Wind down the venture and refund holders pro-rata.",
+    description: "Wind down the research and refund holders pro-rata.",
     marketType: "liquidation",
   },
   {
     key: "spinoff",
     Icon: Sparkles,
     title: "Spinoff proposal",
-    description: "Propose carving out a new sub-venture from existing research.",
+    description: "Propose carving out a new sub-project from existing research.",
     marketType: "spinoff",
   },
 ];
@@ -185,7 +185,7 @@ export function OwnerActionPanel({ ventureEns, ownerEns, agentEns }: Props) {
           Token holder actions
         </p>
         <p className="mt-1 text-sm text-ink-muted">
-          Available to anyone holding the venture&apos;s token. Requires
+          Available to anyone holding the research&apos;s token. Requires
           support from N other holders before going live.
         </p>
         <div className="mt-3">
@@ -385,7 +385,7 @@ function ActionForm({
       )}
 
       {action.marketType === "spinoff" && (
-        <Field label="Spinoff venture name">
+        <Field label="Spinoff research name">
           <input
             type="text"
             value={form.spinoffName}
@@ -435,7 +435,7 @@ function ActionForm({
           />
           <span>
             I understand this proposes refunding all holders pro-rata and
-            permanently winding down the venture.
+            permanently winding down the research.
           </span>
         </label>
       )}
@@ -635,11 +635,11 @@ function phaseHint(type: MarketType): string {
     case "budget_extension":
       return "Funders will price a YES/NO on releasing this amount from treasury. If TWAP differential exceeds 5% at close, the disbursement executes onchain.";
     case "pivot":
-      return "Funders price whether the venture's plan should change as you describe. If approved, the new milestone replaces the current one.";
+      return "Funders price whether the research's plan should change as you describe. If approved, the new milestone replaces the current one.";
     case "liquidation":
-      return "Funders price whether to wind down this venture. If approved, the treasury refunds holders pro-rata and the venture moves to wound-down state.";
+      return "Funders price whether to wind down this research. If approved, the treasury refunds holders pro-rata and the research moves to wound-down state.";
     case "spinoff":
-      return "Funders price whether to carve out a new sub-venture. If approved, a new ENS subname is provisioned and a portion of treasury seeds it.";
+      return "Funders price whether to carve out a new sub-project. If approved, a new ENS subname is provisioned and a portion of treasury seeds it.";
     default:
       return "Funders price your proposal. The leading TWAP at close — if the differential clears the threshold — executes onchain.";
   }
@@ -707,9 +707,9 @@ function buildMarket({
       case "pivot":
         return `${form.pivotTitle || "Milestone pivot"}. ${form.reason || ""}`.trim();
       case "liquidation":
-        return `Liquidate the treasury and refund holders pro-rata. Wind down the venture. ${form.reason || ""}`.trim();
+        return `Liquidate the treasury and refund holders pro-rata. Wind down the research. ${form.reason || ""}`.trim();
       case "spinoff":
-        return `Carve out ${form.spinoffName || "a spinoff"} from this venture. ${form.reason || ""}`.trim();
+        return `Carve out ${form.spinoffName || "a spinoff"} from this research. ${form.reason || ""}`.trim();
       default:
         return form.reason;
     }
@@ -738,7 +738,7 @@ function buildMarket({
     thresholdRequired: 0.05,
     currentDifferential: 0,
     supportingEvidence: [
-      { label: `Submitted by venture owner (${ownerEns})` },
+      { label: `Submitted by research owner (${ownerEns})` },
       { label: `Visible to the agent (${agentEns}) for monitoring` },
     ],
   };

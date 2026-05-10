@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
     initialStage: "proposal",
   });
 
-  // Insert the venture row in "proposal" stage
+  // Insert the research row in "proposal" stage
   const inserted = await db
     .insert(schema.ventures)
     .values({

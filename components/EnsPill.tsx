@@ -25,7 +25,7 @@ export { ensAppUrl };
 
 /**
  * Avatar (deterministic identicon) + ENS name in mono.
- * Used everywhere a venture, agent, or user appears. Clicking the name
+ * Used everywhere a research project, agent, or user appears. Clicking the name
  * opens the ENS app for the platform's configured chain so the underlying
  * records are auditable.
  */

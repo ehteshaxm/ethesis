@@ -32,7 +32,7 @@ interface AgentDef {
 const AGENTS: AgentDef[] = [
   {
     id: "sourcify",
-    label: "Crypto",
+    label: "Sourcify",
     icon: "⛓",
     description: "Verified smart contracts & on-chain data",
     accent: "#34e89e",
@@ -61,8 +61,8 @@ const AGENTS: AgentDef[] = [
 ];
 
 const PROMPTS: Array<[string, string]> = [
-  ["AMR peptides", "What's the most promising AMR peptide approach in funded ventures?"],
-  ["GLP-1 stability", "How are funded ventures improving GLP-1 stability?"],
+  ["AMR peptides", "What's the most promising AMR peptide approach in funded research?"],
+  ["GLP-1 stability", "How are funded projects improving GLP-1 stability?"],
   ["Mech interp", "What's the state of mechanistic-interpretability research?"],
   ["Disputes", "What did agents dispute most often in the last 30 days?"],
 ];
@@ -80,7 +80,7 @@ const HISTORY = {
   ],
 };
 
-const SEED_QUESTION = "What's the most promising AMR peptide approach in funded ventures?";
+const SEED_QUESTION = "What's the most promising AMR peptide approach in funded research?";
 
 export default function BrainPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -102,6 +102,20 @@ export default function BrainPage() {
   async function runQuery(q: string, isSeed = false, agentOverride?: AgentId | null) {
     if (busy) return;
     setBusy(true);
+    try {
+      await runQueryInner(q, isSeed, agentOverride);
+    } finally {
+      // Guarantee busy resets even if anything inside throws — otherwise
+      // a single bad response wedges the input forever.
+      setBusy(false);
+    }
+  }
+
+  async function runQueryInner(
+    q: string,
+    isSeed: boolean,
+    agentOverride?: AgentId | null,
+  ) {
     const activeAgent = agentOverride !== undefined ? agentOverride : selectedAgent;
     setMessages((prev) => [...prev, { role: "user", text: q }]);
     if (!isSeed) setQueriesUsed((n) => n + 1);
@@ -117,7 +131,32 @@ export default function BrainPage() {
         headers: { "content-type": "application/json" },
         body,
       });
-      res = (await r.json()) as BrainResponse;
+      const json = (await r.json()) as Partial<BrainResponse> & {
+        error?: string;
+      };
+      if (!r.ok || typeof json.body !== "string") {
+        // Surface the upstream reason instead of crashing the typewriter
+        // on an undefined body. Common case: cognee-ask returns 503
+        // "Cognee not configured" when the env vars aren't set.
+        const reason =
+          json.error ??
+          (r.status === 503
+            ? "this agent isn't configured on this server"
+            : `HTTP ${r.status}`);
+        res = {
+          body: `(${reason})`,
+          cites: [],
+          matched: false,
+          thinkingMs: 0,
+        };
+      } else {
+        res = {
+          body: json.body,
+          cites: Array.isArray(json.cites) ? json.cites : [],
+          matched: Boolean(json.matched),
+          thinkingMs: typeof json.thinkingMs === "number" ? json.thinkingMs : 0,
+        };
+      }
     } catch {
       res = {
         body: "Brain is offline — try again.",
@@ -161,7 +200,6 @@ export default function BrainPage() {
       }
       return next;
     });
-    setBusy(false);
   }
 
   const submit = () => {
@@ -181,7 +219,7 @@ export default function BrainPage() {
   return (
     <main className="flex-1 flex flex-col min-h-screen">
       <SiteHeader />
-      <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_280px] flex-1 min-h-0">
+      <div className="grid grid-cols-1 md:grid-cols-[200px_minmax(0,1fr)] lg:grid-cols-[220px_minmax(0,1fr)_260px] xl:grid-cols-[240px_minmax(0,1fr)_280px] flex-1 min-h-0">
         <aside className="hidden lg:flex border-r border-border p-4 flex-col gap-1 overflow-y-auto">
           <RailHeading>Today</RailHeading>
           {HISTORY.today.map((h) => (
@@ -223,7 +261,7 @@ export default function BrainPage() {
                   Ask ETHesis&apos;s brain.
                 </h1>
                 <p className="text-ink-soft text-[15px] max-w-[480px] mb-7">
-                  Indexed across every funded venture&apos;s milestones,
+                  Indexed across every funded project&apos;s milestones,
                   attestations, and anchor literature. Cited from the source.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-5">
@@ -242,7 +280,7 @@ export default function BrainPage() {
                   ))}
                 </div>
                 <div className="font-mono text-[11.5px] text-ink-muted border-t border-dashed border-border pt-3">
-                  indexed: 412 outputs across 23 ventures · updated 4m ago
+                  indexed: 412 outputs across 23 projects · updated 4m ago
                 </div>
               </div>
             ) : (
@@ -308,7 +346,7 @@ export default function BrainPage() {
           </div>
         </div>
 
-        <aside className="hidden xl:flex flex-col border-l border-border p-5 sticky top-[var(--nav-h)] self-start h-[calc(100vh-var(--nav-h))] overflow-y-auto gap-5">
+        <aside className="hidden lg:flex flex-col border-l border-border p-5 sticky top-[var(--nav-h)] self-start h-[calc(100vh-var(--nav-h))] overflow-y-auto gap-5">
           <AgentPanel
             selected={selectedAgent}
             onSelect={selectAgent}
@@ -574,7 +612,7 @@ function CiteCard({ cite }: { cite: BrainResponseCite }) {
       </span>
     </>
   );
-  // Prefer the venture link when we have one (in-app), otherwise the paper.
+  // Prefer the research link when we have one (in-app), otherwise the paper.
   if (cite.ventureEnsName) {
     return (
       <Link
@@ -622,14 +660,15 @@ function wait(ms: number) {
 }
 
 async function typewriterFill(
-  text: string,
+  text: string | undefined | null,
   onUpdate: (partial: string) => void,
 ) {
+  const t = typeof text === "string" ? text : "";
   // Roughly 12 chars per frame; tune for ~60-80 wpm visual feel.
-  const step = Math.max(8, Math.round(text.length / 90));
-  for (let i = 0; i <= text.length; i += step) {
-    onUpdate(text.slice(0, i));
+  const step = Math.max(8, Math.round(t.length / 90));
+  for (let i = 0; i <= t.length; i += step) {
+    onUpdate(t.slice(0, i));
     await wait(18);
   }
-  onUpdate(text);
+  onUpdate(t);
 }

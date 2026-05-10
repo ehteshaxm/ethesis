@@ -141,7 +141,7 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
               </span>
             </h3>
             <p className="mt-1.5 text-xs text-ink-muted leading-relaxed max-w-prose">
-              Fires one Apify scrape against this venture&apos;s connected
+              Fires one Apify scrape against this research&apos;s connected
               sources. The agent&apos;s wallet — held in SpaceComputer&apos;s
               KMS — signs the EIP-3009 USDC authorization, the x402
               facilitator settles on Base, the resulting outputs go through
@@ -225,7 +225,7 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
           <p className="text-[11px] text-ink-soft">
             Common causes: dev server hasn&apos;t reloaded x402 envs (restart{" "}
             <code className="font-mono">pnpm dev</code>), KMS wallet has no USDC
-            on Base mainnet, or the venture isn&apos;t flagged{" "}
+            on Base mainnet, or the research isn&apos;t flagged{" "}
             <code className="font-mono">stage=live</code>.
           </p>
         </div>

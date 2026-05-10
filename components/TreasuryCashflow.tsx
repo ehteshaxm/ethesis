@@ -7,7 +7,7 @@ interface Props {
 
 /**
  * Live-stage treasury card.
- * Numbers are mocked relative to the venture's treasury balance.
+ * Numbers are mocked relative to the research's treasury balance.
  */
 export function TreasuryCashflow({ venture }: Props) {
   const treasury = venture.treasuryBalanceEth ?? 0;

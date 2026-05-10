@@ -184,7 +184,7 @@ export function AuctionBidPanel({ venture, initialBids, tokenSymbol }: Props) {
         <p className="text-xs text-ink-muted mt-1">
           Bid USDC for ${tokenSymbol}. When the treasury crosses{" "}
           <span className="font-mono">{formatEth(threshold)}</span>, the
-          venture goes live and its agent activates.
+          research goes live and its agent activates.
         </p>
       </div>
 

@@ -326,7 +326,7 @@ export default function ProposalDetailPage() {
             <p>
               Buy &ldquo;Fund&rdquo; tokens if you believe this research should be supported, or
               &ldquo;Reject&rdquo; tokens if not. When the market closes, the winning outcome is
-              determined by TWAP differential. If &ldquo;Fund&rdquo; wins, the venture enters a
+              determined by TWAP differential. If &ldquo;Fund&rdquo; wins, the research enters a
               token auction and the agent activates once the treasury threshold is met.
             </p>
           </div>

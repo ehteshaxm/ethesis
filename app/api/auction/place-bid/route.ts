@@ -1,6 +1,6 @@
 // POST /api/auction/place-bid
 //
-// Persists a bid into token_positions and updates the venture's
+// Persists a bid into token_positions and updates the research's
 // treasury balance and funder count. Returns a deterministic-looking
 // tx hash so the AuctionBidPanel UI feels real. No actual onchain call
 // (Umia integration lands later).

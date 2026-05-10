@@ -1,7 +1,7 @@
 // GET /api/agent/activity?ens=<venture-ens>&limit=20
 //
-// Returns recent agent_activity_log rows for a venture, in reverse-chronological
-// order. Used by <LiveScrapePanel /> on the venture page so the in-page Swarm
+// Returns recent agent_activity_log rows for a research project, in reverse-chronological
+// order. Used by <LiveScrapePanel /> on the research page so the in-page Swarm
 // log persists across reloads and reflects whatever cycles have actually run
 // (manual button clicks, the long-lived runtime, anything else writing to
 // agent_activity_log).

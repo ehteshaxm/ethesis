@@ -36,7 +36,7 @@ interface Scene {
 const SCENES: Scene[] = [
   {
     eyebrow: "Step 01 / Identity",
-    title: "Provisioning your venture's onchain identity",
+    title: "Provisioning your project's onchain identity",
     subtitle:
       "A subname under ethesis.eth gets created on Sepolia by the platform wallet — you don't pay gas.",
     bullets: [
@@ -78,7 +78,7 @@ const SCENES: Scene[] = [
     eyebrow: "Step 04 / Brain",
     title: "Indexing your prior work into Cognee",
     subtitle:
-      "Every PDF you uploaded is parsed, chunked, and embedded into the venture's brain so the agent (and future funders) can ask questions over it.",
+      "Every PDF you uploaded is parsed, chunked, and embedded into the research's brain so the agent (and future funders) can ask questions over it.",
     bullets: [
       "PDF text extracted",
       "Chunks pinned to Ethereum Swarm",
@@ -118,7 +118,7 @@ const SCENES: Scene[] = [
     eyebrow: "Step 07 / Anchoring",
     title: "Writing the attestation back to ENS",
     subtitle:
-      "Each attestation gets its own text record under your venture's ENS name — `org.ethesis.attestation.N`. Your venture's history is now resolvable from any ENS-aware client.",
+      "Each attestation gets its own text record under your project's ENS name — `org.ethesis.attestation.N`. Your project's history is now resolvable from any ENS-aware client.",
     bullets: [
       "Per-attestation text record",
       "Anchored on Sepolia (Mainnet ready)",
@@ -129,9 +129,9 @@ const SCENES: Scene[] = [
   },
   {
     eyebrow: "Almost there",
-    title: "Bringing your venture online",
+    title: "Bringing your research online",
     subtitle:
-      "Auction parameters set, agent rules locked in, treasury wallet ready. You'll land on the venture page in a moment.",
+      "Auction parameters set, agent rules locked in, treasury wallet ready. You'll land on the research page in a moment.",
     bullets: [
       "Stage: auction",
       "Treasury: 0 (waiting for bids)",
@@ -551,7 +551,7 @@ function LiveVisual() {
   return (
     <div className="flex flex-col items-center">
       <Sparkles className="h-10 w-10 text-verify reel-pulse" />
-      <p className="mt-4 font-medium text-ink">Your venture is online</p>
+      <p className="mt-4 font-medium text-ink">Your research is online</p>
       <p className="mt-1 font-mono text-[11px] text-ink-muted">
         agent standing by · auction open
       </p>

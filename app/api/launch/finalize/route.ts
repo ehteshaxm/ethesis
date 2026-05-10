@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * Promise score = how plausible/well-scoped this venture looks before
+ * Promise score = how plausible/well-scoped this research looks before
  * any cycles run. Bounded 0-100. Crude but transparent:
  *   • Milestones: each adds 8 (capped at 5 = 40)
  *   • Sources: each adds 5 (capped at 5 = 25)

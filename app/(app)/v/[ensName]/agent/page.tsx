@@ -49,7 +49,7 @@ export default async function AgentTab({ params }: Props) {
         <p className="mt-2 text-sm text-ink-muted leading-relaxed">
           Per-cycle Apify scrape calls, x402 settlements, and ENS attestation
           writes will appear here once the agent runtime fires its first cycle
-          for this venture.
+          for this research.
         </p>
       </div>
     );

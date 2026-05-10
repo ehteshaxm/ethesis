@@ -50,7 +50,7 @@ export default async function Home() {
             <div className="font-mono text-[11px] uppercase tracking-wider text-ink-muted flex flex-wrap items-center gap-2 mb-5">
               <span className="inline-flex items-center gap-1.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-verify animate-heartbeat" />
-                {liveCount} live ventures
+                {liveCount} live research
               </span>
               <span className="text-ink-subtle">·</span>
               <span>{ventures.length * 68} outputs indexed</span>
@@ -81,7 +81,7 @@ export default async function Home() {
               className="mt-6 text-ink-soft max-w-xl leading-relaxed"
               style={{ fontSize: "17px" }}
             >
-              Researchers launch ventures. Agents verify progress against
+              Researchers launch projects. Agents verify progress against
               declared plans. The brain learns from every claim — and every
               attestation lands in ENS, forever.
             </p>
@@ -90,7 +90,7 @@ export default async function Home() {
                 type="button"
                 className="rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-canvas transition-colors hover:bg-ink-soft"
               >
-                Launch a venture
+                Launch research
               </button>
               <button
                 type="button"
@@ -102,7 +102,7 @@ export default async function Home() {
             <dl className="mt-10 grid grid-cols-3 gap-x-8 gap-y-2 max-w-xl">
               <HeroStat
                 value={tvlDisplay}
-                label="treasury across ventures"
+                label="treasury across research"
               />
               <HeroStat
                 value={attestationsThisWeek}
@@ -128,7 +128,7 @@ export default async function Home() {
                 className="h-2 w-2 rounded-full bg-verify"
                 style={{ boxShadow: "0 0 0 4px var(--color-verify-soft)" }}
               />
-              Trending ventures
+              Trending research
             </span>
             <span className="text-xs text-ink-muted">
               by 7d promise momentum
@@ -152,7 +152,7 @@ export default async function Home() {
             <StageTab label="Wound down" count={stageCounts.wound_down} />
           </nav>
           <span className="text-xs text-ink-subtle font-mono">
-            {ventures.length} ventures · updated just now
+            {ventures.length} projects · updated just now
           </span>
         </div>
 

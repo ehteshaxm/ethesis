@@ -1,7 +1,7 @@
 import { LaunchWizard } from "@/components/LaunchWizard";
 
 export const metadata = {
-  title: "Launch a venture · ETHesis",
+  title: "Launch research · ETHesis",
 };
 
 export default function LaunchPage() {

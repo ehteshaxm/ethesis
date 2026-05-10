@@ -53,7 +53,7 @@ export function UmiaCliHandoff({ input }: Props) {
         <TabButton
           active={tab === "json"}
           onClick={() => setTab("json")}
-          label="venture.json"
+          label="research.json"
         />
       </div>
 
@@ -97,7 +97,7 @@ export function UmiaCliHandoff({ input }: Props) {
               <CopyButton text={configJson} tone="dark" />
               <DownloadButton
                 text={configJson}
-                filename={`${input.ensSubname.replace(".ethesis.eth", "")}-venture.json`}
+                filename={`${input.ensSubname.replace(".ethesis.eth", "")}-research.json`}
               />
             </div>
           </div>

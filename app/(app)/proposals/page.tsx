@@ -97,7 +97,7 @@ export default async function ProposalsPage() {
             <p className="mt-2 text-sm text-ink-muted max-w-2xl">
               Researchers submit ideas. The OpenClaw agent evaluates novelty,
               feasibility, and impact. You vote with conditional tokens to fund
-              or reject — passing proposals become live ventures.
+              or reject — passing proposals become live research.
             </p>
           </div>
           <Link

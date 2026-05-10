@@ -16,7 +16,7 @@ interface UploadBody {
   content: string;
   label: string;
   type: "proposal" | "proof" | "update" | "other";
-  /** Wallet address of the uploader (must match venture owner). */
+  /** Wallet address of the uploader (must match research owner). */
   posterAddress: string;
 }
 
@@ -61,12 +61,12 @@ export async function POST(
     return NextResponse.json({ error: "posterAddress must be a valid 0x address." }, { status: 400 });
   }
 
-  // Verify ownership: poster must be the venture owner.
+  // Verify ownership: poster must be the research owner.
   const owner = await db.query.users.findFirst({
     where: eq(schema.users.walletAddress, posterAddress.toLowerCase()),
   });
   if (!owner || owner.id !== venture.ownerUserId) {
-    return NextResponse.json({ error: "Only the venture owner can upload content." }, { status: 403 });
+    return NextResponse.json({ error: "Only the research owner can upload content." }, { status: 403 });
   }
 
   const contentHash = keccak256(toBytes(content));

@@ -85,14 +85,14 @@ export function FundLivePanel({ venture, tokenSymbol }: Props) {
     <aside className="sticky top-32 rounded-xl border border-border bg-surface p-5 space-y-4">
       <div>
         <div className="flex items-baseline justify-between">
-          <h3 className="text-sm font-medium text-ink">Fund this venture</h3>
+          <h3 className="text-sm font-medium text-ink">Fund this research</h3>
           <span className="font-mono text-[11px] text-ink-subtle">
             secondary
           </span>
         </div>
         <p className="mt-1 text-xs text-ink-muted leading-relaxed">
           Buy ${tokenSymbol} with USDC. Funders share treasury upside and get
-          pro-rata refund rights if a Decision Market liquidates the venture.
+          pro-rata refund rights if a Decision Market liquidates the research.
         </p>
       </div>
 

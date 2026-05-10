@@ -22,7 +22,7 @@ const instrumentSerif = Instrument_Serif({
 export const metadata: Metadata = {
   title: "ETHesis — Verifiable research, funded onchain",
   description:
-    "A platform for funding agentic research ventures. Researchers launch ventures. Agents verify progress. The brain learns from every claim.",
+    "A platform for funding agentic research onchain. Researchers launch projects. Agents verify progress. The brain learns from every claim.",
 };
 
 export default function RootLayout({

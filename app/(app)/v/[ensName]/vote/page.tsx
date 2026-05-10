@@ -27,7 +27,7 @@ export default async function VoteTab({ params }: Props) {
   if (venture.stage === "idea" || venture.stage === "auction") {
     return (
       <EmptyState
-        title="Voting opens after the venture goes live"
+        title="Voting opens after the research goes live"
         body="Once the auction settles and treasury crosses the activation threshold, funders can trigger Decision Markets here — including liquidation, budget extensions, and pivots."
       />
     );

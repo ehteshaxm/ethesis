@@ -1,10 +1,10 @@
 // POST /api/secondary/buy
 //
 // Records a secondary-market purchase against a live venture. Persists a
-// new token_positions row and bumps the venture's treasury + funder count.
+// new token_positions row and bumps the research's treasury + funder count.
 // Same persistence shape as /api/auction/place-bid; differs in that the
 // price comes from lib/mock-portfolio's TOKEN_PRICE_BY_VENTURE table
-// (auction uses the venture's impliedPriceEth) and the venture must be
+// (auction uses the research's impliedPriceEth) and the research must be
 // in `live` stage. Returns a deterministic-looking tx hash so the UI
 // has something to render — no real on-chain settlement runs (a real
 // AMM / Uniswap routing lands later).
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   if (venture.stage !== "live") {
     return NextResponse.json(
       {
-        error: `Secondary buys only allowed for live ventures (this one is "${venture.stage}").`,
+        error: `Secondary buys only allowed for live research (this one is "${venture.stage}").`,
       },
       { status: 400 },
     );
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   const price = getCurrentTokenPrice(body.ventureEnsName);
   if (price <= 0) {
     return NextResponse.json(
-      { error: "Trading paused — no quoted price for this venture" },
+      { error: "Trading paused — no quoted price for this research" },
       { status: 409 },
     );
   }
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     buyer = created;
   }
 
-  // First-time buyer for this venture? Bump funder count.
+  // First-time buyer for this research? Bump funder count.
   const prior = await db.query.tokenPositions.findFirst({
     where: (cols, { and, eq }) =>
       and(eq(cols.userId, buyer.id), eq(cols.ventureId, venture.id)),

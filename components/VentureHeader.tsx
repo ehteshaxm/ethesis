@@ -45,7 +45,7 @@ export function VentureHeader({ venture }: VentureHeaderProps) {
     >
       {isWoundDown && (
         <div className="bg-sepia/30 text-sepia-ink text-xs px-6 py-2 text-center">
-          This venture was wound down on{" "}
+          This research was wound down on{" "}
           <span className="font-mono">
             {venture.woundDownAt?.toLocaleDateString()}
           </span>

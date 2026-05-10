@@ -337,7 +337,7 @@ function IdeaWaitingPanel({
     <aside className="sticky top-32 rounded-xl border border-border bg-surface p-5 space-y-3">
       <h3 className="text-sm font-medium text-ink">Indexed idea</h3>
       <p className="text-xs text-ink-muted leading-relaxed">
-        This venture is indexed but its auction hasn&apos;t started yet. When
+        This research is indexed but its auction hasn&apos;t started yet. When
         it does, ${tokenSymbol} will be biddable here.
       </p>
       <div className="rounded-md bg-surface-2 px-3 py-2.5 text-xs">

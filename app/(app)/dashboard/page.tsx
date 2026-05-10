@@ -17,7 +17,7 @@ export default function DashboardPage() {
             Funder dashboard
           </p>
           <h1 className="mt-1 text-3xl font-medium text-ink leading-tight">
-            Your ventures, at a glance
+            Your research, at a glance
           </h1>
           <p className="mt-2 text-sm text-ink-muted max-w-2xl">
             Token positions, alerts surfaced from agent attestations, and

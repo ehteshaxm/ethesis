@@ -30,7 +30,7 @@ export function SiteHeader() {
         </div>
         <div className="flex items-center gap-3">
           <input
-            placeholder="Search ventures…"
+            placeholder="Search research…"
             className="hidden md:block w-56 rounded-md border border-border bg-surface px-3 py-1.5 text-sm placeholder:text-ink-subtle focus:outline-none focus:border-border-strong"
           />
           <NotificationBell />

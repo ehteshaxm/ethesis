@@ -34,7 +34,7 @@ export function PortfolioOverview() {
         </h2>
         <p className="mt-2 text-sm text-ink-muted leading-relaxed">
           Your token positions, active votes, and milestone alerts across
-          every venture you&apos;ve funded.
+          every research project you&apos;ve funded.
         </p>
         <button
           type="button"
@@ -88,7 +88,7 @@ function Summary({ snapshot }: { snapshot: PortfolioSnapshot }) {
             sub={`${positive ? "+" : ""}${snapshot.unrealizedPnlPct}%`}
           />
           <Stat
-            label="Ventures funded"
+            label="Research funded"
             value={snapshot.fundedCount.toString()}
           />
         </div>
@@ -139,7 +139,7 @@ function Alerts({ alerts }: { alerts: PortfolioAlert[] }) {
       <section>
         <SectionHeader eyebrow="Alerts" title="No alerts right now" />
         <p className="mt-2 text-sm text-ink-muted">
-          The agents on your funded ventures will surface things here as they
+          The agents on your funded research will surface things here as they
           happen.
         </p>
       </section>
@@ -246,7 +246,7 @@ function ActiveVotes({ markets }: { markets: PortfolioSnapshot["activeMarkets"] 
     <section className="space-y-4">
       <SectionHeader
         eyebrow="Active votes"
-        title={`${markets.length} decision${markets.length > 1 ? "s" : ""} in flight on your funded ventures`}
+        title={`${markets.length} decision${markets.length > 1 ? "s" : ""} in flight on your funded research`}
       />
       <div className="space-y-4">
         {markets.map((m) => (
@@ -262,7 +262,7 @@ function FundedVentures({ positions }: { positions: PortfolioPosition[] }) {
   return (
     <section className="space-y-4">
       <SectionHeader
-        eyebrow="Funded ventures"
+        eyebrow="Funded research"
         title="Your positions"
       />
       <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">

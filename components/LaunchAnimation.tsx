@@ -14,7 +14,7 @@ const STEPS = [
   { label: "Indexing prior work into the brain", durationMs: 1300 },
   { label: "Generating initial Promise score", durationMs: 1100 },
   { label: "Opening Tailored Auction on Umia", durationMs: 1500 },
-  { label: "Done. Your venture is live.", durationMs: 700 },
+  { label: "Done. Your research is live.", durationMs: 700 },
 ];
 
 /**

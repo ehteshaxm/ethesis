@@ -46,12 +46,12 @@ export function MarketCard({ market, variant = "active" }: Props) {
             <span className="inline-flex items-center gap-1.5 rounded-md bg-surface-2 border border-border px-2 py-0.5">
               <Bot className="h-3 w-3 text-accent" />
               <EnsPill name={market.triggeredByEns} size="sm" />
-              <span className="text-ink-muted">— the venture&apos;s agent</span>
+              <span className="text-ink-muted">— the research&apos;s agent</span>
             </span>
           )}
           {market.triggeredBy === "owner" && (
             <span className="inline-flex items-center gap-1.5 rounded-md bg-surface-2 border border-border px-2 py-0.5">
-              the venture owner
+              the research owner
             </span>
           )}
           {market.triggeredBy === "community" && (

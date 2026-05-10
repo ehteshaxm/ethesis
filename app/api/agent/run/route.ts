@@ -4,7 +4,7 @@
 // venture's progress/promise scores from the cycle outputs. Used by the
 // launch flow to populate Pulse + scores immediately after launch.
 //
-// Free fetchers run by default; x402 only fires if the venture has
+// Free fetchers run by default; x402 only fires if the research has
 // sources without free coverage AND X402_ENABLED=1.
 
 import { NextRequest, NextResponse } from "next/server";
