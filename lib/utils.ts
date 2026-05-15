@@ -30,17 +30,15 @@ export function identiconColors(seed: string): [string, string] {
   return [a, b];
 }
 
-/** Format a treasury / bid amount as USDC. The numeric value is treated as
- * a USDC amount directly. Kept under the `formatEth` name so legacy call
- * sites don't churn; the displayed unit is "USDC". */
-export function formatEth(usdc: number): string {
-  if (usdc === 0) return "0 USDC";
-  if (usdc < 1) return `${usdc.toFixed(2)} USDC`;
-  if (usdc < 1000) return `${Math.round(usdc).toLocaleString()} USDC`;
-  if (usdc < 1_000_000)
-    return `${(usdc / 1000).toFixed(usdc < 10_000 ? 1 : 0)}K USDC`;
-  return `${(usdc / 1_000_000).toFixed(2)}M USDC`;
+/** Format a funding-pool amount as plain USD. Kept under the `formatEth`
+ * name so legacy call sites don't churn. */
+export function formatEth(usd: number): string {
+  if (usd === 0) return "$0";
+  if (usd < 1) return `$${usd.toFixed(2)}`;
+  if (usd < 1000) return `$${Math.round(usd).toLocaleString()}`;
+  if (usd < 1_000_000)
+    return `$${(usd / 1000).toFixed(usd < 10_000 ? 1 : 0)}K`;
+  return `$${(usd / 1_000_000).toFixed(2)}M`;
 }
 
-/** Same as formatEth but exposes the USDC name explicitly for new call sites. */
 export const formatUsdc = formatEth;

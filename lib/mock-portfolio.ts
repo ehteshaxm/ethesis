@@ -63,7 +63,7 @@ const ENTRY_PRICE_BY_VENTURE: Record<string, number> = {
   "glp-tweaks": 3.8,
 };
 
-/** Current secondary-market price (USDC per token) for a venture. Returns
+/** Current secondary-market price (per token) for a venture. Returns
  * 0 if unknown — callers should treat that as "trading paused". */
 export function getCurrentTokenPrice(ensName: string): number {
   return TOKEN_PRICE_BY_VENTURE[ensName] ?? 0;
@@ -87,7 +87,7 @@ export function getPortfolioForAddress(address: string): PortfolioSnapshot {
   const positions: PortfolioPosition[] = Array.from(picks).map((i) => {
     const venture = eligible[i];
     s = (s * 1664525 + 1013904223) >>> 0;
-    const usdcBid = 5 + ((s % 100) / 100) * 180; // 5..185 USDC
+    const usdcBid = 5 + ((s % 100) / 100) * 180; // 5..185
     const entry = ENTRY_PRICE_BY_VENTURE[venture.ensName] || 5;
     const current = TOKEN_PRICE_BY_VENTURE[venture.ensName] || entry;
     const tokens = Math.round(usdcBid / entry);

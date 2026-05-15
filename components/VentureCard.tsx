@@ -141,7 +141,7 @@ function LiveStats({ venture }: { venture: MockVenture }) {
       <PulseRow days={venture.pulse} liveTip={venture.stage === "live"} />
 
       <div className="grid grid-cols-3 gap-3 pt-2 border-t border-border text-[12px]">
-        <Stat label="Treasury" value={formatEth(venture.treasuryBalanceEth ?? 0)} />
+        <Stat label="Funding pool" value={formatEth(venture.treasuryBalanceEth ?? 0)} />
         <Stat label="Funders" value={String(venture.totalFunders ?? 0)} />
         <Stat
           label={

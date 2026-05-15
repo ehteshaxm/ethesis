@@ -35,7 +35,7 @@ const OWNER_ACTIONS: ActionDef[] = [
     key: "budget_extension",
     Icon: TrendingUp,
     title: "Request budget extension",
-    description: "Propose an additional disbursement from treasury for runway.",
+    description: "Propose an additional disbursement from the funding pool for runway.",
     marketType: "budget_extension",
   },
   {
@@ -182,7 +182,7 @@ export function OwnerActionPanel({ ventureEns, ownerEns, agentEns }: Props) {
 
       <div className="mt-6">
         <p className="text-[11px] uppercase tracking-wider text-ink-subtle font-medium">
-          Token holder actions
+          Sponsor actions
         </p>
         <p className="mt-1 text-sm text-ink-muted">
           Available to anyone holding the research&apos;s token. Requires
@@ -347,7 +347,7 @@ function ActionForm({
       </p>
 
       {action.marketType === "budget_extension" && (
-        <Field label="Additional disbursement (USDC)">
+        <Field label="Additional disbursement (USD)">
           <div className="flex items-stretch overflow-hidden rounded-md border border-border-strong bg-surface focus-within:border-accent">
             <input
               type="text"
@@ -363,7 +363,7 @@ function ActionForm({
               className="flex-1 px-3 py-2 font-mono text-base text-ink bg-transparent focus:outline-none"
             />
             <span className="flex items-center px-3 bg-surface-2 text-sm font-medium text-ink-muted border-l border-border">
-              USDC
+             
             </span>
           </div>
         </Field>
@@ -480,7 +480,7 @@ function CommunityForm({
     >
       <p className="text-xs text-ink-muted leading-relaxed">
         Open a Decision Market for anything not covered by owner or agent
-        triggers. Token-holder threshold checks happen onchain at submission.
+        triggers. Sponsor threshold checks happen on the server at submission.
       </p>
       <Field label="Proposal title">
         <input
@@ -633,15 +633,15 @@ function SubmitRow({
 function phaseHint(type: MarketType): string {
   switch (type) {
     case "budget_extension":
-      return "Funders will price a YES/NO on releasing this amount from treasury. If TWAP differential exceeds 5% at close, the disbursement executes onchain.";
+      return "Funders will price a YES/NO on releasing this amount from the funding pool. If TWAP differential exceeds 5% at close, the disbursement is logged.";
     case "pivot":
       return "Funders price whether the research's plan should change as you describe. If approved, the new milestone replaces the current one.";
     case "liquidation":
-      return "Funders price whether to wind down this research. If approved, the treasury refunds holders pro-rata and the research moves to wound-down state.";
+      return "Funders price whether to wind down this research. If approved, the funding pool refunds holders pro-rata and the research moves to wound-down state.";
     case "spinoff":
       return "Funders price whether to carve out a new sub-project. If approved, a new ENS subname is provisioned and a portion of treasury seeds it.";
     default:
-      return "Funders price your proposal. The leading TWAP at close — if the differential clears the threshold — executes onchain.";
+      return "Funders price your proposal. The leading TWAP at close — if the differential clears the threshold — is logged.";
   }
 }
 
@@ -703,11 +703,11 @@ function buildMarket({
   const description = (() => {
     switch (action.marketType) {
       case "budget_extension":
-        return `Approve a ${form.amountEth} USDC disbursement from treasury. ${form.reason || ""}`.trim();
+        return `Approve a ${form.amountEth} disbursement from the funding pool. ${form.reason || ""}`.trim();
       case "pivot":
         return `${form.pivotTitle || "Milestone pivot"}. ${form.reason || ""}`.trim();
       case "liquidation":
-        return `Liquidate the treasury and refund holders pro-rata. Wind down the research. ${form.reason || ""}`.trim();
+        return `Liquidate the funding pool and refund holders pro-rata. Wind down the research. ${form.reason || ""}`.trim();
       case "spinoff":
         return `Carve out ${form.spinoffName || "a spinoff"} from this research. ${form.reason || ""}`.trim();
       default:

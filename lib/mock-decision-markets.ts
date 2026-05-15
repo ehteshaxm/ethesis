@@ -67,7 +67,7 @@ export const mockMarkets: MockMarket[] = [
     triggerReason:
       "Three disputed claims in the trailing 14 days against a Promise score that has dropped 3 points week-over-week.",
     proposalDescription:
-      "Liquidate the treasury and refund holders pro-rata. Wind down the venture and preserve all attestations on ENS.",
+      "Liquidate the funding pool and refund holders pro-rata. Wind down the venture and preserve all attestations on ENS.",
     closesAt: hoursFromNow(52),
     outcomes: [
       {
@@ -104,7 +104,7 @@ export const mockMarkets: MockMarket[] = [
     triggerReason:
       "Progress score below 30 for 32 consecutive days. Throughput target missed by >40%.",
     proposalDescription:
-      "Liquidate the treasury and refund holders pro-rata. Wind down the venture.",
+      "Liquidate the funding pool and refund holders pro-rata. Wind down the venture.",
     closesAt: daysFromNow(-31),
     outcomes: [
       {
@@ -138,9 +138,9 @@ export const mockMarkets: MockMarket[] = [
     status: "closed_no_op",
     triggeredBy: "owner",
     triggerReason:
-      "Owner requested 1,500 USDC additional runway to extend distillation experiments by 60 days.",
+      "Owner requested 1,500 additional runway to extend distillation experiments by 60 days.",
     proposalDescription:
-      "Approve a 1,500 USDC disbursement from treasury to extend research timeline by 60 days.",
+      "Approve a 1,500 disbursement from the funding pool to extend research timeline by 60 days.",
     closesAt: daysFromNow(-12),
     outcomes: [
       {
@@ -193,13 +193,13 @@ const CONDITIONS_BY_VENTURE: Record<string, MockCondition[]> = {
     {
       type: "compensation_unlock",
       label: "Compensation unlock",
-      detail: "Token price 4.2 USDC (threshold: 20 USDC)",
+      detail: "Funding momentum below threshold",
       status: "pending",
     },
     {
       type: "budget_runway",
       label: "Budget runway",
-      detail: "Treasury 4.2 · Burn 0.05/mo · 84mo runway",
+      detail: "Funding pool 4.2 · Burn 0.05/mo · 84mo runway",
       status: "clear",
     },
   ],
@@ -213,7 +213,7 @@ const CONDITIONS_BY_VENTURE: Record<string, MockCondition[]> = {
     {
       type: "budget_runway",
       label: "Budget runway",
-      detail: "Treasury 6.8 · Burn 0.05/mo · 136mo runway",
+      detail: "Funding pool 6.8 · Burn 0.05/mo · 136mo runway",
       status: "clear",
     },
   ],
@@ -227,7 +227,7 @@ const CONDITIONS_BY_VENTURE: Record<string, MockCondition[]> = {
     {
       type: "budget_runway",
       label: "Budget runway",
-      detail: "Treasury 1.4 · Burn 0.05/mo · 28mo runway",
+      detail: "Funding pool 1.4 · Burn 0.05/mo · 28mo runway",
       status: "clear",
     },
   ],

@@ -35,7 +35,7 @@ export function UmiaCliHandoff({ input }: Props) {
       </div>
       <p className="mt-1.5 text-xs text-ink-muted leading-relaxed">
         ETHesis collects the wizard answers; <code className="font-mono text-ink">umia venture init</code> handles
-        the SPC formation and onchain deployment. Run the CLI in a fresh
+        the SPC formation and server deployment. Run the CLI in a fresh
         terminal and paste these answers into each prompt.
       </p>
 

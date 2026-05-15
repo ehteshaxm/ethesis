@@ -230,7 +230,7 @@ export function MarketTradePanel({ market }: Props) {
                 className="flex-1 px-3 py-2.5 font-mono text-base text-ink bg-transparent focus:outline-none"
               />
               <span className="flex items-center px-3 bg-surface-2 text-sm font-medium text-ink-muted border-l border-border">
-                USDC
+               
               </span>
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -247,7 +247,7 @@ export function MarketTradePanel({ market }: Props) {
                       : "border-border bg-surface text-ink-muted hover:bg-surface-2",
                   )}
                 >
-                  {a} USDC
+                  {a}
                 </button>
               ))}
             </div>

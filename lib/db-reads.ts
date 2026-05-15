@@ -89,7 +89,7 @@ function placeholderVenture(
     pitch:
       "Newly launched research — agent will post its first attestation shortly.",
     description:
-      "This research was launched from the wizard during this session. The agent's first cycle will populate verified outputs, attestations, and the on-chain story.",
+      "This research was launched from the wizard during this session. The agent's first cycle will populate verified outputs, attestations, and the audit log.",
     category: "other",
     ownerEns: "you",
     stage: "auction",

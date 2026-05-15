@@ -234,14 +234,8 @@ export function LaunchWizard() {
     chain: "mainnet" | "sepolia";
   } | null>(null);
 
-  // Platform mode: subname lives under `ethesis.eth` (or whatever
-  // PLATFORM_ENS_NAME the server is configured for). The platform pays
-  // gas; the user just signs SIWE via wallet connect.
-  const platformParent =
-    process.env.NEXT_PUBLIC_PLATFORM_ENS_NAME ?? "ethesis.eth";
-  const ensSubname = useMemo(() => {
-    return `${slugify(draft.title)}.${platformParent}`;
-  }, [draft.title, platformParent]);
+  // Handles are plain slugs in the demo build.
+  const ensSubname = useMemo(() => slugify(draft.title), [draft.title]);
 
   const canAdvance = isStepValid(step, draft);
 
@@ -253,7 +247,7 @@ export function LaunchWizard() {
 
     const slug = slugify(draft.title);
     const symbol = draft.tokenSymbol || draft.title.slice(0, 4).toUpperCase();
-    const ventureUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/v/${slug}.${platformParent}`;
+    const ventureUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/v/${slug}`;
 
     // Optimistic step animation — the API takes ~30s on Sepolia for 4
     // sequential txns; we tick the visual indicator while we wait.
@@ -699,7 +693,7 @@ function Step1Identity({
       <StepHeader
         eyebrow="Step 1 of 7"
         title="Identity"
-        subtitle="Name and describe the research. We'll provision an ENS subname under ethesis.eth."
+        subtitle="Name and describe the research. We'll reserve a project handle for it."
       />
       <Field label="Research name" hint={`${draft.title.length} / 50`}>
         <input
@@ -745,11 +739,11 @@ function Step1Identity({
         <p className="text-[11px] uppercase tracking-wider text-ink-subtle font-medium">
           Your research will live at
         </p>
-        <p className="mt-1 font-mono text-base text-accent-ink">{ensSubname}</p>
+        <p className="mt-1 font-mono text-base text-accent-ink">
+          /v/{ensSubname}
+        </p>
         <p className="mt-1 text-[11px] text-ink-subtle">
-          Owned by{" "}
-          <span className="font-mono">{ownerEns}</span>. Subname provisioned
-          via NameStone on Sepolia at launch.
+          Owned by <span className="font-mono">{ownerEns}</span>.
         </p>
       </div>
     </div>
@@ -810,7 +804,7 @@ function Step2Description({
         {draft.uploads.some((u) => !u.ingested) && (
           <p className="mt-2 text-[11px] text-ink-muted">
             Indexing in progress — Continue unlocks once every PDF lands in
-            the brain corpus and on Swarm.
+            the brain corpus.
           </p>
         )}
       </Field>
@@ -1038,7 +1032,7 @@ function Step3Sources({
       <StepHeader
         eyebrow="Step 3 of 7"
         title="Connect sources"
-        subtitle="Your agent watches these once treasury crosses the activation threshold. Connect at least 3 — they redirect through each provider's OAuth flow."
+        subtitle="Your agent watches these once funding pool crosses the activation threshold. Connect at least 3 — they redirect through each provider's OAuth flow."
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -1279,7 +1273,7 @@ function Step4Milestones({
   );
 }
 
-// ─── Step 5: Token & treasury ──────────────────────────────────────
+// ─── Step 5: Funding Token & treasury ledger ──────────────────────────────────────
 
 function Step5Token({
   draft,
@@ -1387,7 +1381,7 @@ function Step6Agent({
 
       <Block
         label="Activation threshold"
-        body="Your agent activates when treasury crosses this amount. Below this, the research is an indexed idea — browseable but not operating."
+        body="Your agent activates when funding pool crosses this amount. Below this, the research is an indexed idea — browseable but not operating."
       >
         <SliderRow
           value={draft.activationThresholdEth}
@@ -1408,7 +1402,7 @@ function Step6Agent({
 
       <Block
         label="Monthly agent allowance"
-        body="Treasury sends this monthly to the agent's wallet for compute, Apify queries (via x402), and attestation gas."
+        body="The funding pool sends this monthly to cover the agent's compute, source-scrape calls, and attestation costs."
       >
         <SliderRow
           value={draft.monthlyAllowanceEth}
@@ -1421,7 +1415,7 @@ function Step6Agent({
           render={formatEth}
         />
         <p className="mt-1 text-[11px] text-ink-subtle">
-          Estimated burn: ~$80/mo Apify · ~$30/mo LLM · ~$10/mo gas.
+          Estimated burn: ~$80/mo scraping · ~$30/mo LLM · ~$10/mo infra.
         </p>
       </Block>
 
@@ -1579,12 +1573,12 @@ function Step7Review({
       <StepHeader
         eyebrow="Step 7 of 7"
         title="Review & launch"
-        subtitle="Once you launch, the auction opens on Umia and your agent stands by until the activation threshold."
+        subtitle="Once you launch, the funding window opens and your agent stands by until the activation threshold."
       />
 
       <ReviewCard title="Identity">
         <KV label="Name" value={draft.title} />
-        <KV label="ENS" value={ensSubname} mono />
+        <KV label="Handle" value={ensSubname} mono />
         <KV label="Owner" value={ownerEns} mono />
         <KV
           label="Category"
@@ -1592,9 +1586,9 @@ function Step7Review({
         />
       </ReviewCard>
 
-      <ReviewCard title="Token & auction">
-        <KV label="Symbol" value={`$${draft.tokenSymbol || "—"}`} mono />
-        <KV label="Supply" value={draft.tokenSupply.toLocaleString()} mono />
+      <ReviewCard title="Funding window">
+        <KV label="Code" value={`${draft.tokenSymbol || "—"}`} mono />
+        <KV label="Sponsor cap" value={draft.tokenSupply.toLocaleString()} mono />
         <KV
           label="Duration"
           value={
@@ -1607,7 +1601,7 @@ function Step7Review({
       <ReviewCard title="Agent rules">
         <KV
           label="Activates at"
-          value={`${formatEth(draft.activationThresholdEth)} treasury`}
+          value={`${formatEth(draft.activationThresholdEth)} pool`}
           mono
         />
         <KV
@@ -1677,7 +1671,7 @@ function PlatformProvisionProgress({
   return (
     <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-8">
       <p className="text-[11px] uppercase tracking-wider text-accent-ink font-medium">
-        {error ? "Provisioning failed" : "Provisioning on ENS"}
+        {error ? "Provisioning failed" : "Reserving handle"}
       </p>
       <p className="mt-1 font-mono text-base text-ink">{ensSubname}</p>
 
@@ -1753,8 +1747,7 @@ function PlatformProvisionProgress({
       )}
       {!error && (
         <p className="mt-4 text-[11px] text-ink-subtle text-center leading-relaxed">
-          The platform wallet is signing 4 transactions on Sepolia. This takes
-          ~30 seconds.
+          Spinning up the agent and warming the brain index.
         </p>
       )}
     </div>

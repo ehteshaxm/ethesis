@@ -49,7 +49,7 @@ export function VentureHeader({ venture }: VentureHeaderProps) {
           <span className="font-mono">
             {venture.woundDownAt?.toLocaleDateString()}
           </span>
-          . Treasury was refunded pro-rata to token holders. The full record
+          . Funding pool was refunded pro-rata to sponsors. The full record
           remains on ENS.
         </div>
       )}

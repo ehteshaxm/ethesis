@@ -34,7 +34,7 @@ const AGENTS: AgentDef[] = [
     id: "sourcify",
     label: "Sourcify",
     icon: "⛓",
-    description: "Verified smart contracts & on-chain data",
+    description: "Verified smart contracts & source data",
     accent: "#34e89e",
   },
   {
@@ -48,7 +48,7 @@ const AGENTS: AgentDef[] = [
     id: "aiml",
     label: "AI / ML",
     icon: "⬡",
-    description: "Model inference, on-chain ML & verification",
+    description: "Model inference, ML & verification",
     accent: "#6e70ff",
   },
   {

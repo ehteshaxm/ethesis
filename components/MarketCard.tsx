@@ -56,7 +56,7 @@ export function MarketCard({ market, variant = "active" }: Props) {
           )}
           {market.triggeredBy === "community" && (
             <span className="inline-flex items-center gap-1.5 rounded-md bg-surface-2 border border-border px-2 py-0.5">
-              {market.triggeredByCount ?? 0} token holders
+              {market.triggeredByCount ?? 0} sponsors
             </span>
           )}
         </div>

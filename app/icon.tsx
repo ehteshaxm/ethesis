@@ -1,5 +1,5 @@
 // Dynamic favicon — italic "e" in Instrument Serif (the same font used
-// for "funded onchain." in the hero), rendered in verify-green on the
+// for "with receipts." in the hero), rendered in verify-green on the
 // canvas dark background. Next.js picks this up automatically.
 
 import { ImageResponse } from "next/og";

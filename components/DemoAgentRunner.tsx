@@ -26,18 +26,18 @@ interface DepositPoint {
 }
 
 const SHARED_BIDDERS = [
-  "satoshin.eth",
-  "0xnomad.eth",
-  "ricmoo.eth",
-  "lefteris.eth",
-  "samczsun.eth",
-  "tarun.eth",
-  "haseeb.eth",
-  "pcaversaccio.eth",
-  "fede.eth",
-  "molly.eth",
-  "vitalik.eth",
-  "alice.eth",
+  "Open Research Fund",
+  "Cosmos Bio Trust",
+  "Loomis Lab Foundation",
+  "L Wright",
+  "Astra Group",
+  "S Karim",
+  "Cedrus Initiative",
+  "G Patel",
+  "Helio Foundation",
+  "Vera Trust",
+  "Vitalik B.",
+  "Alice M.",
 ];
 
 interface Props {
@@ -142,14 +142,14 @@ export function DemoAgentRunner({ venture }: Props) {
       bidder: string;
       amount: number;
     }> = [
-      { delay: 7000, outcome: "Liquidate", bidder: "satoshin.eth", amount: 320 },
-      { delay: 8800, outcome: "No-Op", bidder: "haseeb.eth", amount: 180 },
-      { delay: 10500, outcome: "Liquidate", bidder: "ricmoo.eth", amount: 480 },
-      { delay: 12300, outcome: "Liquidate", bidder: "0xnomad.eth", amount: 240 },
-      { delay: 14000, outcome: "No-Op", bidder: "alice.eth", amount: 120 },
-      { delay: 15800, outcome: "Liquidate", bidder: "samczsun.eth", amount: 410 },
-      { delay: 17400, outcome: "Liquidate", bidder: "lefteris.eth", amount: 220 },
-      { delay: 19000, outcome: "No-Op", bidder: "molly.eth", amount: 90 },
+      { delay: 7000, outcome: "Liquidate", bidder: "Open Research Fund", amount: 320 },
+      { delay: 8800, outcome: "No-Op", bidder: "Cedrus Initiative", amount: 180 },
+      { delay: 10500, outcome: "Liquidate", bidder: "Loomis Lab Foundation", amount: 480 },
+      { delay: 12300, outcome: "Liquidate", bidder: "Cosmos Bio Trust", amount: 240 },
+      { delay: 14000, outcome: "No-Op", bidder: "Alice M.", amount: 120 },
+      { delay: 15800, outcome: "Liquidate", bidder: "Astra Group", amount: 410 },
+      { delay: 17400, outcome: "Liquidate", bidder: "L Wright", amount: 220 },
+      { delay: 19000, outcome: "No-Op", bidder: "Vera Trust", amount: 90 },
     ];
     depositSchedule.forEach((d) => {
       after(d.delay, () => {
@@ -160,7 +160,7 @@ export function DemoAgentRunner({ venture }: Props) {
         ]);
         addEvent({
           kind: "deposit",
-          text: `${d.bidder} → ${d.outcome} (${d.amount} USDC)`,
+          text: `${d.bidder} → ${d.outcome} (${d.amount})`,
         });
       });
     });
@@ -185,7 +185,7 @@ export function DemoAgentRunner({ venture }: Props) {
     after(23000, () => {
       addEvent({
         kind: "resolve",
-        text: `Treasury liquidated: ${venture.treasuryBalanceEth ?? 1400} USDC distributed pro-rata to ${venture.totalFunders ?? 17} funders`,
+        text: `Funding pool wound down: $${venture.treasuryBalanceEth ?? 1400} refunded pro-rata to ${venture.totalFunders ?? 17} sponsors`,
       });
     });
 
@@ -293,7 +293,7 @@ export function DemoAgentRunner({ venture }: Props) {
           />
           <div className="flex items-center justify-between text-[11px] text-ink-muted font-mono">
             <span>
-              total deposits: {totals.total.toLocaleString()} USDC ·{" "}
+              total deposits: {totals.total.toLocaleString()} ·{" "}
               {deposits.length} bidders
             </span>
             <span>
@@ -365,7 +365,7 @@ function OutcomeBar({
       <div className="flex items-baseline justify-between text-[12px]">
         <span className="text-ink">{outcome}</span>
         <span className="font-mono tabular-nums text-ink-soft">
-          {pct}% · {deposits.toLocaleString()} USDC
+          {pct}% · {deposits.toLocaleString()}
         </span>
       </div>
       <div

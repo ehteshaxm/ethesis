@@ -7,7 +7,7 @@ interface Props {
 
 /**
  * Live-stage treasury card.
- * Numbers are mocked relative to the research's treasury balance.
+ * Numbers are mocked relative to the research's funding pool.
  */
 export function TreasuryCashflow({ venture }: Props) {
   const treasury = venture.treasuryBalanceEth ?? 0;
@@ -28,7 +28,7 @@ export function TreasuryCashflow({ venture }: Props) {
     <div className="rounded-lg border border-border bg-surface p-5 space-y-4">
       <div className="flex items-baseline justify-between">
         <span className="text-[11px] uppercase tracking-wider text-ink-subtle">
-          Treasury
+          Funding pool
         </span>
         <span className="font-mono text-2xl text-ink">
           {formatEth(treasury)}
@@ -55,7 +55,7 @@ export function TreasuryCashflow({ venture }: Props) {
       </div>
 
       <div className="border-t border-border pt-3 grid grid-cols-3 gap-3 text-xs">
-        <Stat label="Held in reserve" value={formatEth(treasury)} />
+        <Stat label="Reserve" value={formatEth(treasury)} />
         <Stat label="Pending markets" value="0" />
         <Stat
           label="Runway"

@@ -72,7 +72,7 @@ function VotePanel({ proposal }: { proposal: Proposal }) {
         <p className="text-lg">✓</p>
         <p className="mt-2 text-sm font-medium text-ink">Vote submitted</p>
         <p className="text-xs text-ink-muted mt-1">
-          Your conditional tokens have been placed. Results will resolve when the
+          Your support has been recorded. Results resolve when the
           market closes.
         </p>
       </div>
@@ -116,8 +116,8 @@ function VotePanel({ proposal }: { proposal: Proposal }) {
       <div>
         <p className="text-sm font-medium text-ink">Cast your vote</p>
         <p className="text-xs text-ink-muted mt-0.5">
-          Buy conditional tokens on the outcome you believe in. Tokens settle
-          at 1 ETH if the outcome wins, 0 otherwise.
+          Sponsor the side you believe in. If your side wins, the research
+          enters the funding window with your support recorded.
         </p>
       </div>
 
@@ -140,7 +140,7 @@ function VotePanel({ proposal }: { proposal: Proposal }) {
       </div>
 
       <div>
-        <label className="block text-xs text-ink-muted mb-1">Amount (ETH)</label>
+        <label className="block text-xs text-ink-muted mb-1">Amount (USD)</label>
         <input
           type="number"
           min="0.001"
@@ -244,7 +244,7 @@ export default function ProposalDetailPage() {
           </div>
           <div className="mt-3 flex gap-4 text-xs text-ink-subtle">
             {proposal.fundingGoalEth && (
-              <span>Goal: <strong className="text-ink">{proposal.fundingGoalEth} ETH</strong></span>
+              <span>Goal: <strong className="text-ink">${proposal.fundingGoalEth}</strong></span>
             )}
             {proposal.fundingLengthDays && (
               <span>Duration: <strong className="text-ink">{proposal.fundingLengthDays} days</strong></span>
@@ -317,7 +317,7 @@ export default function ProposalDetailPage() {
               Buy &ldquo;Fund&rdquo; tokens if you believe this research should be supported, or
               &ldquo;Reject&rdquo; tokens if not. When the market closes, the winning outcome is
               determined by TWAP differential. If &ldquo;Fund&rdquo; wins, the research enters a
-              token auction and the agent activates once the treasury threshold is met.
+              funding window and the agent activates once the funding pool threshold is met.
             </p>
           </div>
         </div>

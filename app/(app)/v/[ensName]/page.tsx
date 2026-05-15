@@ -71,27 +71,8 @@ export default async function StoryTab({ params }: Props) {
         )}
 
         {isLive && (
-          <Section title="Token & treasury">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <TokenSummary
-                symbol={tokenSymbol}
-                supply="1,000,000"
-                tokenAddress={detail.tokenAddress}
-                treasuryAddress={detail.treasuryAddress}
-              />
-              <TreasuryCashflow venture={venture} />
-            </div>
-          </Section>
-        )}
-
-        {isAuction && (
-          <Section title="Token">
-            <TokenSummary
-              symbol={tokenSymbol}
-              supply="1,000,000"
-              tokenAddress={detail.tokenAddress}
-              treasuryAddress={detail.treasuryAddress}
-            />
+          <Section title="Funding pool">
+            <TreasuryCashflow venture={venture} />
           </Section>
         )}
 
@@ -233,7 +214,7 @@ function TokenSummary({
       <KV label="Supply" value={supply} />
       <KV label="Token contract" value={shortAddress(tokenAddress, 6)} mono />
       <KV
-        label="Treasury contract"
+        label="Project ledger"
         value={shortAddress(treasuryAddress, 6)}
         mono
       />
@@ -260,7 +241,6 @@ function KV({
 
 function AgentMiniCard({
   agentEns,
-  agentWallet,
   isWoundDown,
 }: {
   agentEns: string;
@@ -271,16 +251,10 @@ function AgentMiniCard({
     <div className="rounded-lg border border-border bg-surface p-5 flex items-start justify-between gap-4">
       <div>
         <EnsPill name={agentEns} showCopy />
-        <p className="mt-2 text-xs text-ink-muted">
-          Wallet:{" "}
-          <span className="font-mono text-ink">
-            {shortAddress(agentWallet, 6)}
-          </span>
-        </p>
         <p className="mt-2 text-[11px] text-ink-subtle">
           {isWoundDown
-            ? "Stopped after wind-down. ENS records preserved."
-            : "Running in sandboxed equivalent · TEE upgrade pending"}
+            ? "Stopped after wind-down. Audit log preserved."
+            : "Watching connected sources · signing receipts"}
         </p>
       </div>
       <span
@@ -306,9 +280,9 @@ function AgentRules({
     <div className="rounded-lg border border-border bg-surface p-5 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
       <Rule
         label="Activates at"
-        value={`${formatEth(venture.activationThresholdEth ?? 500)} treasury`}
+        value={`${formatEth(venture.activationThresholdEth ?? 500)} pool`}
       />
-      <Rule label="Monthly allowance" value="50 USDC" />
+      <Rule label="Monthly allowance" value="$50" />
       <Rule label="Auto-liquidate" value="Progress < 30 for 30d" />
       <Rule label="Auto-pivot on disputes" value="ON" />
     </div>
@@ -327,7 +301,6 @@ function Rule({ label, value }: { label: string; value: string }) {
 
 function IdeaWaitingPanel({
   venture,
-  tokenSymbol,
 }: {
   venture: import("@/lib/mock-data").MockVenture;
   tokenSymbol: string;
@@ -336,11 +309,11 @@ function IdeaWaitingPanel({
     <aside className="sticky top-32 rounded-xl border border-border bg-surface p-5 space-y-3">
       <h3 className="text-sm font-medium text-ink">Indexed idea</h3>
       <p className="text-xs text-ink-muted leading-relaxed">
-        This research is indexed but its auction hasn&apos;t started yet. When
-        it does, ${tokenSymbol} will be biddable here.
+        This research is indexed but its funding window hasn&apos;t started
+        yet. When it does, sponsors can contribute here.
       </p>
       <div className="rounded-md bg-surface-2 px-3 py-2.5 text-xs">
-        <span className="text-ink-muted">Auction starts</span>
+        <span className="text-ink-muted">Funding opens</span>
         <p className="font-mono text-ink mt-0.5">
           {venture.auctionStartsAt
             ? venture.auctionStartsAt.toLocaleString()
@@ -359,7 +332,6 @@ function IdeaWaitingPanel({
 
 function WoundDownPanel({
   venture,
-  tokenSymbol,
   agentEns,
 }: {
   venture: import("@/lib/mock-data").MockVenture;
@@ -370,9 +342,9 @@ function WoundDownPanel({
     <aside className="sticky top-32 rounded-xl border border-sepia/40 bg-sepia/10 p-5 space-y-3">
       <h3 className="text-sm font-medium text-sepia-ink">Wound down</h3>
       <p className="text-xs text-sepia-ink/85 leading-relaxed">
-        ${tokenSymbol} holders received pro-rata refunds. The full record —
+        Sponsors received pro-rata refunds. The full record —
         attestations, knowledge-base contributions, agent activity — is
-        preserved on ENS.
+        preserved in the audit log.
       </p>
       {agentEns && (
         <div className="rounded-md bg-sepia/20 px-3 py-2.5 text-xs">

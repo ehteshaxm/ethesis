@@ -28,7 +28,7 @@ export default async function VoteTab({ params }: Props) {
     return (
       <EmptyState
         title="Voting opens after the research goes live"
-        body="Once the auction settles and treasury crosses the activation threshold, funders can trigger Decision Markets here — including liquidation, budget extensions, and pivots."
+        body="Once the funding window settles and the pool crosses the activation threshold, sponsors can trigger decision votes here — including liquidation, budget extensions, and pivots."
       />
     );
   }
@@ -51,7 +51,7 @@ export default async function VoteTab({ params }: Props) {
           subtitle={
             activeMarkets.length === 0
               ? "The agent is monitoring the conditions below and will trigger a market when warranted. Anyone can also raise one manually."
-              : "Trade outcomes to express your view. The leading TWAP at close — if the differential clears the threshold — executes onchain."
+              : "Pick an outcome to express your view. The leading position at close — if it clears the support threshold — is logged."
           }
         />
 
@@ -67,7 +67,7 @@ export default async function VoteTab({ params }: Props) {
             <SectionHeader
               eyebrow="Trigger a market"
               title="Owner & community actions"
-              subtitle="Owner buttons mint a Decision Market for funders to price. Community proposals require support from N token holders before going live."
+              subtitle="Owner buttons mint a Decision Market for funders to price. Community proposals require support from N sponsors before going live."
             />
             <OwnerActionPanel
               ventureEns={venture.ensName}

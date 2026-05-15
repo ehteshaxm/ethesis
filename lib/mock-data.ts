@@ -71,9 +71,9 @@ export const mockVentures: MockVenture[] = [
     title:
       "Peptide-AMR: latent-diffusion AMP design against ESKAPE pathogens",
     pitch:
-      "Extending AMP-Diffusion + AMPSphere mining to a pre-registered ESKAPE wet-lab panel, with all generated peptides and assay data attested on-chain.",
+      "Extending AMP-Diffusion + AMPSphere mining to a pre-registered ESKAPE wet-lab panel, with all generated peptides and assay data signed with receipts.",
     description:
-      "Antimicrobial resistance kills ~1.3M/yr globally. The Machine Biology Group at UPenn (de la Fuente Lab) has shown that latent-diffusion over ESM-2 embeddings (AMP-Diffusion, Chen et al. 2024) and global-microbiome mining (Santos-Júnior et al. 2024, Cell) both yield in-vitro hits at ≥40% rates. This venture extends that pipeline: we re-train AMP-Diffusion on a refreshed peptidomic library, generate 50K candidates, screen down to a 50-peptide panel, then run MIC + resistance profiling against six ESKAPE pathogens. Wet-lab partner: BSL-2 CRO. Generated peptides, top hits, and raw assay data are uploaded to Swarm and anchored to ENS as the agent verifies each milestone.",
+      "Antimicrobial resistance kills ~1.3M/yr globally. The Machine Biology Group at UPenn (de la Fuente Lab) has shown that latent-diffusion over ESM-2 embeddings (AMP-Diffusion, Chen et al. 2024) and global-microbiome mining (Santos-Júnior et al. 2024, Cell) both yield in-vitro hits at ≥40% rates. This venture extends that pipeline: we re-train AMP-Diffusion on a refreshed peptidomic library, generate 50K candidates, screen down to a 50-peptide panel, then run MIC + resistance profiling against six ESKAPE pathogens. Wet-lab partner: BSL-2 CRO. Generated peptides, top hits, and raw assay data are logged with receipts as the agent verifies each milestone.",
     category: "bio",
     ownerEns: "delafuente.peptide-amr",
     stage: "live",
@@ -115,9 +115,9 @@ export const mockVentures: MockVenture[] = [
     pitch:
       "Synthesize a 6-analogue panel substituting non-canonical amino acids at GLP-1 position 2; assay plasma stability + receptor binding.",
     description:
-      "GLP-1 analogues lose potency to DPP-4 cleavage at the N-terminal His-Ala bond. We're testing whether NCAA substitution at position 2 gives a better serum-half-life-to-binding-penalty trade-off than the standard lipid-conjugation route. Pre-registered milestones, third-party assay vendor, all attestations on-chain.",
+      "GLP-1 analogues lose potency to DPP-4 cleavage at the N-terminal His-Ala bond. We're testing whether NCAA substitution at position 2 gives a better serum-half-life-to-binding-penalty trade-off than the standard lipid-conjugation route. Pre-registered milestones, third-party assay vendor, all attestations signed.",
     category: "bio",
-    ownerEns: "amelia.eth",
+    ownerEns: "amelia",
     stage: "auction",
     status: "new",
     promiseScore: 79,
@@ -141,7 +141,7 @@ export const mockVentures: MockVenture[] = [
     description:
       "Distilling protein structure prediction into mobile-class models without compromising accuracy on common targets.",
     category: "ml",
-    ownerEns: "vitalik.eth",
+    ownerEns: "vitalik",
     stage: "live",
     status: "healthy",
     progressScore: 87,
@@ -175,7 +175,7 @@ export const mockVentures: MockVenture[] = [
     description:
       "Constant-time Plonk-on-mobile, with a focus on side-channel resistance and battery cost benchmarks.",
     category: "crypto",
-    ownerEns: "jane.eth",
+    ownerEns: "jane",
     stage: "live",
     status: "disputed",
     progressScore: 62,
@@ -211,7 +211,7 @@ export const mockVentures: MockVenture[] = [
     description:
       "A systematic study of circuits and features in sub-1B parameter LMs, looking for transferable interpretability primitives.",
     category: "ml",
-    ownerEns: "alice.eth",
+    ownerEns: "alice",
     stage: "auction",
     status: "new",
     promiseScore: 81,
@@ -232,7 +232,7 @@ export const mockVentures: MockVenture[] = [
     description:
       "Threshold encryption for tx pools, evaluating MEV-resistance under realistic adversaries.",
     category: "crypto",
-    ownerEns: "bob.eth",
+    ownerEns: "bob",
     stage: "idea",
     status: "new",
     promiseScore: 68,
@@ -248,7 +248,7 @@ export const mockVentures: MockVenture[] = [
     description:
       "Reproducing pipelines from three 2024 climate-attribution papers and publishing reproduction reports + datasets.",
     category: "climate",
-    ownerEns: "carol.eth",
+    ownerEns: "carol",
     stage: "live",
     status: "stagnant",
     progressScore: 28,
@@ -280,9 +280,9 @@ export const mockVentures: MockVenture[] = [
     title: "Plonk Mobile Prover (Wound Down)",
     pitch: "First-generation Plonk mobile prover. Wound down after pivot vote.",
     description:
-      "Funders voted to wind down after preprocessing benchmarks failed to hit target performance. Treasury refunded pro-rata.",
+      "Funders voted to wind down after preprocessing benchmarks failed to hit target performance. Funding pool refunded pro-rata.",
     category: "crypto",
-    ownerEns: "dave.eth",
+    ownerEns: "dave",
     stage: "wound_down",
     status: "healthy",
     progressScore: 44,

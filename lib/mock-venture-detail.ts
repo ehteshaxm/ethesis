@@ -72,54 +72,53 @@ const fakeTxHash = (seed: string) => {
 };
 
 const RESEARCHERS: Record<string, MockResearcher> = {
-  "vitalik.eth": {
-    ens: "vitalik.eth",
-    bio: "Working on accessible biocompute. Previously at DeepFold. Three live ETHesis ventures.",
+  "vitalik": {
+    ens: "Vitalik B.",
+    bio: "Working on accessible biocompute. Previously at DeepFold. Three live ETHesis projects.",
     priorVentures: 3,
     isVerified: true,
     offPlatformLinks: [
       { label: "GitHub", url: "https://github.com/vitalik" },
-      { label: "X", url: "https://x.com/vitalik" },
     ],
   },
-  "jane.eth": {
-    ens: "jane.eth",
+  "jane": {
+    ens: "Jane W.",
     bio: "ZK research engineer. Co-author on three Plonk-family papers.",
     priorVentures: 2,
     isVerified: true,
     offPlatformLinks: [{ label: "Scholar", url: "https://scholar.google.com" }],
   },
-  "alice.eth": {
-    ens: "alice.eth",
+  "alice": {
+    ens: "Alice M.",
     bio: "Mech-interp researcher, formerly Anthropic interpretability team.",
     priorVentures: 1,
     isVerified: false,
-    offPlatformLinks: [{ label: "X", url: "https://x.com/alice" }],
+    offPlatformLinks: [],
   },
-  "bob.eth": {
-    ens: "bob.eth",
+  "bob": {
+    ens: "Bob R.",
     bio: "Cryptographer. Threshold encryption, MPC, mempool privacy.",
     priorVentures: 0,
     isVerified: false,
     offPlatformLinks: [],
   },
-  "carol.eth": {
-    ens: "carol.eth",
+  "carol": {
+    ens: "Carol L.",
     bio: "Climate scientist. Replication studies and pipeline auditing.",
     priorVentures: 1,
     isVerified: false,
     offPlatformLinks: [],
   },
-  "dave.eth": {
-    ens: "dave.eth",
+  "dave": {
+    ens: "Dave K.",
     bio: "ZK + mobile compute. Previously hardware-accelerated provers.",
     priorVentures: 1,
     isVerified: false,
     offPlatformLinks: [],
   },
   "delafuente.peptide-amr": {
-    ens: "delafuente.peptide-amr",
-    bio: "César de la Fuente-Nunez · Presidential Associate Professor at UPenn (Bioengineering, Chemical & Biomolecular Engineering, Microbiology, Psychiatry). Leads the Machine Biology Group, applying ML to antibiotic discovery — published work spans AMP-Diffusion, AMPSphere, and ancient-proteome AMP de-extinction.",
+    ens: "César de la Fuente-Nunez",
+    bio: "Presidential Associate Professor at UPenn (Bioengineering, Chemical & Biomolecular Engineering, Microbiology, Psychiatry). Leads the Machine Biology Group, applying ML to antibiotic discovery — published work spans AMP-Diffusion, AMPSphere, and ancient-proteome AMP de-extinction.",
     priorVentures: 0,
     isVerified: true,
     offPlatformLinks: [
@@ -128,30 +127,32 @@ const RESEARCHERS: Record<string, MockResearcher> = {
         url: "https://scholar.google.com/citations?user=N2OdcFYAAAAJ",
       },
       { label: "Lab", url: "https://delafuentelab.seas.upenn.edu/" },
-      { label: "UPenn", url: "https://www.bioeng.upenn.edu/people/cesar-de-la-fuente-nunez" },
+      {
+        label: "UPenn",
+        url: "https://www.bioeng.upenn.edu/people/cesar-de-la-fuente-nunez",
+      },
     ],
   },
-  "amelia.eth": {
-    ens: "amelia.eth",
+  "amelia": {
+    ens: "Amelia W.",
     bio: "Med-chem researcher focused on stabilized peptide therapeutics. Five years at a GLP-1-adjacent pharma program.",
     priorVentures: 0,
     isVerified: true,
     offPlatformLinks: [
       { label: "Scholar", url: "https://scholar.google.com" },
-      { label: "X", url: "https://x.com" },
     ],
   },
 };
 
 const SHARED_BIDDERS = [
-  "satoshin.eth",
-  "0xnomad.eth",
-  "ricmoo.eth",
-  "lefteris.eth",
-  "samczsun.eth",
-  "tarun.eth",
-  "haseeb.eth",
-  "pcaversaccio.eth",
+  "Open Research Fund",
+  "Cosmos Bio Trust",
+  "Loomis Lab Foundation",
+  "L Wright",
+  "Astra Group",
+  "S Karim",
+  "Cedrus Initiative",
+  "G Patel",
 ];
 
 function generateAuctionBids(venture: MockVenture, count: number): MockBid[] {
