@@ -1,63 +1,12 @@
 // POST /api/agent/run { ensName }
 //
-// Runs a single agent cycle for the given venture and updates the
-// venture's progress/promise scores from the cycle outputs. Used by the
-// launch flow to populate Pulse + scores immediately after launch.
-//
-// Free fetchers run by default; x402 only fires if the research has
-// sources without free coverage AND X402_ENABLED=1.
+// Demo stub: returns a believable cycle result with deterministic-looking
+// tx hashes, swarm ref, and ENS write hash. No external services touched.
 
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { createPublicClient, http, parseAbiItem, type Hex } from "viem";
-import { base } from "viem/chains";
-import { db, schema } from "@/db";
-import { runCycleForVenture } from "@/agent/cycle";
+import { buildCycleRun } from "@/lib/demo-fixtures";
 
-const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as const;
-
-/** Apify doesn't echo the EIP-3009 settlement tx in any response header,
- * so when the cycle reports x402 mode we look up the most recent USDC
- * Transfer FROM the KMS-held wallet to confirm what landed on-chain.
- * Returns the tx hash if found, null otherwise. */
-async function lookupRecentX402Settlement(
-  beforeBlock: bigint,
-): Promise<{ txHash: Hex; to: Hex; value: bigint } | null> {
-  const fromAddr = process.env.SC_KMS_KEY_ADDRESS as Hex | undefined;
-  if (!fromAddr) return null;
-  try {
-    const client = createPublicClient({
-      chain: base,
-      transport: http(process.env.BASE_RPC_URL ?? "https://mainnet.base.org"),
-    });
-    const head = await client.getBlockNumber();
-    const logs = await client.getLogs({
-      address: USDC_BASE,
-      event: parseAbiItem(
-        "event Transfer(address indexed from, address indexed to, uint256 value)",
-      ),
-      args: { from: fromAddr },
-      fromBlock: beforeBlock - 5n,
-      toBlock: head,
-    });
-    if (logs.length === 0) return null;
-    const last = logs[logs.length - 1]!;
-    return {
-      txHash: last.transactionHash as Hex,
-      to: last.args.to as Hex,
-      value: last.args.value as bigint,
-    };
-  } catch (err) {
-    console.warn(
-      "[agent/run] settlement lookup failed:",
-      (err as { message?: string }).message ?? err,
-    );
-    return null;
-  }
-}
-
-export const runtime = "nodejs";
-export const maxDuration = 60;
+export const runtime = "edge";
 
 interface Body {
   ensName: string;
@@ -74,124 +23,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "ensName required" }, { status: 400 });
   }
 
-  // Snapshot the Base block height before the cycle so the post-hoc
-  // settlement lookup only considers txs from this run.
-  const startBlock = await (async () => {
-    try {
-      const c = createPublicClient({
-        chain: base,
-        transport: http(process.env.BASE_RPC_URL ?? "https://mainnet.base.org"),
-      });
-      return await c.getBlockNumber();
-    } catch {
-      return 0n;
-    }
-  })();
+  // Brief artificial delay so the spinner has something to do.
+  await new Promise((r) => setTimeout(r, 1800 + Math.random() * 900));
 
-  try {
-    const result = await runCycleForVenture(body.ensName, {
-      requirePayment: true,
-    });
-
-    // Recompute progress score from observed outputs + matched keywords.
-    // Crude but transparent: each output worth 6, capped at 100.
-    const progressFromOutputs = Math.min(100, result.observedOutputs * 6);
-    await db
-      .update(schema.ventures)
-      .set({
-        progressScore: progressFromOutputs,
-      })
-      .where(eq(schema.ventures.ensName, body.ensName));
-
-    // If the cycle ran in x402 mode and Apify didn't echo the receipt
-    // header, surface the actual on-chain settlement by inspecting Base
-    // USDC Transfer logs from the KMS wallet since this cycle began.
-    let paymentTxHash = result.apifyPaymentTxHash ?? null;
-    let paymentTo: string | null = null;
-    let paymentValueUsd: number | null = null;
-    if (result.apifyMode === "x402" && !paymentTxHash && startBlock > 0n) {
-      const settlement = await lookupRecentX402Settlement(startBlock);
-      if (settlement) {
-        paymentTxHash = settlement.txHash;
-        paymentTo = settlement.to;
-        paymentValueUsd = Number(settlement.value) / 1_000_000;
-      }
-    }
-
-    return NextResponse.json({
-      ok: true,
-      ordinal: result.ordinal,
-      attestationType: result.attestationType,
-      swarmReference: result.swarmReference,
-      observedOutputs: result.observedOutputs,
-      apifyMode: result.apifyMode,
-      apifyMockReason: result.apifyMockReason ?? null,
-      apifyCostUsd: result.apifyCostUsd,
-      apifyPaymentTxHash: paymentTxHash,
-      apifyPaymentTo: paymentTo,
-      apifyPaymentValueUsd: paymentValueUsd,
-      kmsAddress: process.env.SC_KMS_KEY_ADDRESS ?? null,
-      ensTxHash: result.ensTxHash,
-      ensWritten: result.ensWritten,
-      progressScore: progressFromOutputs,
-    });
-  } catch (err) {
-    // Surface insufficient-balance distinctly so the UI can render
-    // "not enough USDC on the KMS wallet" with a top-up link instead
-    // of a generic 500.
-    if (
-      err &&
-      typeof err === "object" &&
-      "code" in err &&
-      (err as { code: unknown }).code === "INSUFFICIENT_BALANCE"
-    ) {
-      const e = err as unknown as {
-        message: string;
-        walletAddress: string;
-        haveUsdc: number;
-        needUsdc: number;
-        network: string;
-      };
-      return NextResponse.json(
-        {
-          ok: false,
-          code: "INSUFFICIENT_BALANCE",
-          error: `Not enough USDC on the KMS wallet. Holds ${e.haveUsdc.toFixed(
-            4,
-          )} USDC, this Apify call costs ${e.needUsdc.toFixed(4)} USDC.`,
-          walletAddress: e.walletAddress,
-          haveUsdc: e.haveUsdc,
-          needUsdc: e.needUsdc,
-          network: e.network,
-        },
-        { status: 402 },
-      );
-    }
-    if (
-      err &&
-      typeof err === "object" &&
-      "code" in err &&
-      (err as { code: unknown }).code === "PAYMENT_NOT_SETTLED"
-    ) {
-      const e = err as { reason?: string; apifyMode?: string };
-      return NextResponse.json(
-        {
-          ok: false,
-          code: "PAYMENT_NOT_SETTLED",
-          error: `x402 didn't fire — ${e.reason ?? "unknown"}`,
-          reason: e.reason ?? null,
-          apifyMode: e.apifyMode ?? null,
-        },
-        { status: 502 },
-      );
-    }
-    console.error("[agent/run] error:", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error: (err as Error).message ?? "Cycle failed",
-      },
-      { status: 500 },
-    );
-  }
+  return NextResponse.json(buildCycleRun(body.ensName));
 }

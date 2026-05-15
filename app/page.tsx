@@ -5,13 +5,9 @@ import { EnsPill } from "@/components/EnsPill";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { BgParticles } from "@/components/BgParticles";
-import { getLiveVenturesFromDb } from "@/lib/db-reads";
 
-export default async function Home() {
-  // Merge user-launched ventures (from Neon) with the seeded demo set.
-  // DB ventures take precedence on ensName collisions and sort to the top.
-  const dbVentures = await getLiveVenturesFromDb();
-  const ventures: MockVenture[] = mergeVentures(dbVentures, mockVentures);
+export default function Home() {
+  const ventures: MockVenture[] = mockVentures;
 
   const stageCounts = countByStageOf(ventures);
   const liveCount = ventures.filter((v) => v.stage === "live").length;
@@ -389,73 +385,4 @@ function countByStageOf(ventures: MockVenture[]) {
     },
     { idea: 0, auction: 0, live: 0, wound_down: 0 } as Record<string, number>,
   );
-}
-
-/**
- * Merge user-launched ventures (DB) with the seeded mock set. DB rows
- * win on ensName collisions and sort to the top of the list.
- */
-function mergeVentures(
-  dbVentures: Array<{
-    ensName: string;
-    title: string;
-    pitch: string;
-    description: string;
-    category: string;
-    stage: string;
-    status: string;
-    progressScore: number | null;
-    promiseScore: number | null;
-    treasuryBalanceEth: number;
-    totalFundersCount: number;
-    activationThresholdEth: number;
-    auctionEndAt: Date | null;
-    createdAt: Date;
-  }>,
-  mocks: MockVenture[],
-): MockVenture[] {
-  const seen = new Set<string>();
-  const out: MockVenture[] = [];
-  for (const r of dbVentures) {
-    seen.add(r.ensName);
-    const stage = (
-      ["idea", "auction", "live", "wound_down"].includes(r.stage)
-        ? r.stage
-        : "auction"
-    ) as MockVenture["stage"];
-    out.push({
-      ensName: r.ensName,
-      title: r.title,
-      pitch: r.pitch,
-      description: r.description,
-      category: (
-        ["ml", "crypto", "climate", "math", "oss", "security", "bio", "other"]
-          .includes(r.category)
-          ? r.category
-          : "other"
-      ) as MockVenture["category"],
-      ownerEns: "you",
-      stage,
-      status: (
-        ["healthy", "disputed", "stagnant", "new"].includes(r.status)
-          ? r.status
-          : "new"
-      ) as MockVenture["status"],
-      progressScore: r.progressScore ?? undefined,
-      promiseScore: r.promiseScore ?? undefined,
-      treasuryBalanceEth: r.treasuryBalanceEth,
-      treasuryProgressEth: stage === "auction" ? r.treasuryBalanceEth : undefined,
-      totalFunders: r.totalFundersCount,
-      bidderCount: r.totalFundersCount,
-      impliedPriceEth: 0.005,
-      activationThresholdEth: r.activationThresholdEth,
-      auctionEndsAt: r.auctionEndAt ?? undefined,
-      pulse: ["none", "none", "none", "none", "none", "none", "verified"],
-      isNew: true,
-    });
-  }
-  for (const m of mocks) {
-    if (!seen.has(m.ensName)) out.push(m);
-  }
-  return out;
 }

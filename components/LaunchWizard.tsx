@@ -22,6 +22,7 @@ import { cn, formatEth, identiconColors } from "@/lib/utils";
 import { LaunchReel } from "./LaunchReel";
 import { UmiaCliHandoff } from "./UmiaCliHandoff";
 import { ensAppUrl } from "@/lib/ens-app-url";
+import { appendSessionVenture } from "@/lib/demo-session";
 
 // ─── Draft model ────────────────────────────────────────────────────
 
@@ -402,11 +403,22 @@ export function LaunchWizard() {
       };
     }
 
+    // Persist the venture into localStorage so the homepage and venture
+    // detail page can render it as the user navigates around.
+    appendSessionVenture({
+      ensName: result.ventureEnsName,
+      title: draft.title,
+      pitch: draft.pitch,
+      description: draft.description,
+      category: draft.category,
+      tokenSymbol: symbol,
+      ownerEns: ownerEns ?? null,
+      ownerAddress: address,
+      createdAt: Date.now(),
+    });
+
     // Fire-and-forget: trigger the first agent cycle. Don't await — the
-    // user gets to the Success card immediately, attestations land while
-    // they read it. The cycle hits the research's free fetchers
-    // (GitHub/arXiv/HF) and Anthropic; no x402 spend unless explicitly
-    // configured for sources without free coverage.
+    // user gets to the Success card immediately.
     void fetch("/api/agent/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

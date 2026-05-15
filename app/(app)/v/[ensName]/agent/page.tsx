@@ -6,7 +6,7 @@ import {
   resolveVenture,
   type DbActivityRow,
 } from "@/lib/db-reads";
-import { getOrCreatePlatformKey, isKmsEnabled } from "@/lib/sc-kms";
+import { DEMO_KMS_WALLET } from "@/lib/demo-fixtures";
 
 interface Props {
   params: Promise<{ ensName: string }>;
@@ -20,20 +20,8 @@ export default async function AgentTab({ params }: Props) {
 
   const activity = (await getAgentActivityFromDb(decoded, 50)) ?? [];
 
-  // Resolve the KMS-held platform key for the wallet panel. Best-effort —
-  // if KMS is disabled or the gateway is unreachable, we just hide the panel.
-  let walletAddress: string | null = null;
-  if (isKmsEnabled()) {
-    try {
-      const key = await getOrCreatePlatformKey();
-      walletAddress = key.address;
-    } catch (err) {
-      console.warn(
-        "[agent page] KMS resolve failed:",
-        (err as { message?: string })?.message ?? err,
-      );
-    }
-  }
+  // KMS wallet is a static demo address — no live key resolution.
+  const walletAddress: string = DEMO_KMS_WALLET;
   const lastX402 = activity.find(
     (r) =>
       r.activityType === "apify_query" &&

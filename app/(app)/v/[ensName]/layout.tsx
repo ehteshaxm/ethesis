@@ -1,12 +1,6 @@
-import { notFound } from "next/navigation";
 import { getVentureByEns } from "@/lib/mock-venture-detail";
 import { activeMarketCount } from "@/lib/mock-decision-markets";
-import { resolveVentureFromEns } from "@/lib/ens-resolve";
-import {
-  ventureFromEnsRecords,
-  type MockVenture,
-} from "@/lib/mock-data";
-import { ventureFromDb } from "@/lib/db-reads";
+import type { MockVenture } from "@/lib/mock-data";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { VentureHeader } from "@/components/VentureHeader";
@@ -21,20 +15,13 @@ export default async function VentureLayout({ children, params }: Props) {
   const { ensName } = await params;
   const decoded = decodeURIComponent(ensName);
 
-  // Resolve order:
-  //   1. Seeded mock (fastest, fully-detailed for demo ventures)
-  //   2. DB row (user-launched ventures from /api/launch/finalize)
-  //   3. On-chain ENS text records (legacy / external launches)
+  // Seeded mocks are the source of truth. Newly-launched ventures (from
+  // the wizard, persisted to localStorage) get a placeholder shell here
+  // and the page's client-side hydrator fills in the real title/pitch.
   let venture: MockVenture | undefined = getVentureByEns(decoded);
   if (!venture) {
-    const dbVenture = await ventureFromDb(decoded);
-    if (dbVenture) venture = dbVenture;
+    venture = placeholderVenture(decoded);
   }
-  if (!venture) {
-    const onchain = await resolveVentureFromEns(decoded);
-    if (onchain) venture = ventureFromEnsRecords(onchain);
-  }
-  if (!venture) notFound();
 
   const voteAlerts = activeMarketCount(venture);
 
@@ -47,4 +34,32 @@ export default async function VentureLayout({ children, params }: Props) {
       <SiteFooter />
     </main>
   );
+}
+
+function placeholderVenture(ensName: string): MockVenture {
+  const slug = ensName.split(".")[0] ?? ensName;
+  const title = slug
+    .split("-")
+    .map((p) => (p[0]?.toUpperCase() ?? "") + p.slice(1))
+    .join(" ");
+  return {
+    ensName,
+    title: title || "New research",
+    pitch: "Newly launched research — agent will post its first attestation shortly.",
+    description:
+      "This research was launched from the wizard during this session. The agent's first cycle will populate verified outputs, attestations, and the on-chain story.",
+    category: "other",
+    ownerEns: "you",
+    stage: "auction",
+    status: "new",
+    progressScore: undefined,
+    promiseScore: undefined,
+    activationThresholdEth: 500,
+    treasuryProgressEth: 0,
+    bidderCount: 0,
+    impliedPriceEth: 0.005,
+    auctionEndsAt: new Date(Date.now() + 48 * 3600 * 1000),
+    pulse: Array(14).fill("none") as MockVenture["pulse"],
+    isNew: true,
+  };
 }

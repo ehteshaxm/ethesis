@@ -23,7 +23,6 @@ export default async function StoryTab({ params }: Props) {
   const venture = await resolveVenture(decoded);
   if (!venture) notFound();
   const detail = getVentureDetail(venture);
-  if (!detail) notFound();
 
   const isAuction = venture.stage === "auction";
   const isLive = venture.stage === "live";

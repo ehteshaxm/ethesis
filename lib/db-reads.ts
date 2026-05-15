@@ -1,20 +1,10 @@
-// Server-side Neon reads used by the venture page (Pulse tab + activity).
-// Separate from `db/index.ts` so we can lazy-init the connection like the
-// agent does — avoids Next.js build trying to connect at module load.
+// Frontend-demo shim: matches the original db-reads.ts surface so page
+// components don't have to change, but returns data from the seeded
+// mocks + demo fixtures instead of Postgres.
 
-import { neon } from "@neondatabase/serverless";
-import { drizzle, type NeonHttpDatabase } from "drizzle-orm/neon-http";
-import { eq, desc } from "drizzle-orm";
-import * as schema from "../db/schema";
-
-type Db = NeonHttpDatabase<typeof schema>;
-let _db: Db | null = null;
-function getDb(): Db | null {
-  if (_db) return _db;
-  if (!process.env.DATABASE_URL) return null;
-  _db = drizzle(neon(process.env.DATABASE_URL), { schema });
-  return _db;
-}
+import { mockVentures } from "./mock-data";
+import { mockAttestations } from "./mock-attestations";
+import { listActivityForVenture } from "./demo-fixtures";
 
 export interface DbAttestation {
   ordinal: number;
@@ -31,54 +21,6 @@ export interface DbAttestation {
   createdAt: Date;
 }
 
-/**
- * Read attestations for a venture (by ENS name) from Neon. Returns null
- * if the venture isn't in DB or DB isn't configured — caller can then
- * fall back to mock data.
- */
-export async function getAttestationsForVentureFromDb(
-  ventureEnsName: string,
-): Promise<DbAttestation[] | null> {
-  const db = getDb();
-  if (!db) return null;
-
-  try {
-    const venture = await db.query.ventures.findFirst({
-      where: eq(schema.ventures.ensName, ventureEnsName),
-      columns: { id: true },
-    });
-    if (!venture) return null;
-
-    const rows = await db.query.attestations.findMany({
-      where: eq(schema.attestations.ventureId, venture.id),
-      orderBy: desc(schema.attestations.createdAt),
-      limit: 50,
-    });
-
-    return rows.map((r) => ({
-      ordinal: r.ordinal,
-      type: r.type as DbAttestation["type"],
-      milestoneOrdinal: r.milestoneOrdinal,
-      summary: r.summary,
-      evidence: (r.evidence as DbAttestation["evidence"]) ?? [],
-      knowledgeBaseCheck:
-        (r.knowledgeBaseCheck as DbAttestation["knowledgeBaseCheck"]) ?? null,
-      confidence: r.confidence,
-      signedBy: r.signedBy,
-      signature: r.signature,
-      ipfsHash: r.ipfsHash,
-      ensTextRecordKey: r.ensTextRecordKey,
-      createdAt: r.createdAt,
-    }));
-  } catch (err) {
-    console.warn(
-      "[db-reads] getAttestationsForVentureFromDb failed:",
-      (err as { message?: string })?.message ?? err,
-    );
-    return null;
-  }
-}
-
 export interface DbActivityRow {
   activityType: string;
   details: Record<string, unknown>;
@@ -86,101 +28,6 @@ export interface DbActivityRow {
   costEth: number | null;
   txHash: string | null;
   createdAt: Date;
-}
-
-/**
- * Resolve a venture by ENS name across all sources in this priority order:
- *   1. Seeded mock (lib/mock-data.ts)
- *   2. DB row (user-launched via /api/launch/finalize)
- * Returns null only if the venture truly doesn't exist anywhere.
- *
- * Use this from any tab page that previously called the sync
- * getVentureByEns directly — it works for both demo and launched
- * ventures.
- */
-export async function resolveVenture(
-  ensName: string,
-): Promise<import("./mock-data").MockVenture | null> {
-  // Avoid circular import at build time.
-  const { getVentureByEns } = await import("./mock-venture-detail");
-  const fromMock = getVentureByEns(ensName);
-  if (fromMock) return fromMock;
-  return ventureFromDb(ensName);
-}
-
-/**
- * Look up a single venture by ENS name and return it shaped as a
- * MockVenture so the existing detail layout can consume it without
- * branching. Returns null if not found or DB unavailable.
- */
-export async function ventureFromDb(
-  ensName: string,
-): Promise<import("./mock-data").MockVenture | null> {
-  const db = getDb();
-  if (!db) return null;
-  try {
-    const r = await db.query.ventures.findFirst({
-      where: eq(schema.ventures.ensName, ensName),
-    });
-    if (!r) return null;
-    const allowedCategories = [
-      "ml",
-      "crypto",
-      "climate",
-      "math",
-      "oss",
-      "security",
-      "bio",
-      "other",
-    ] as const;
-    const allowedStages = ["idea", "auction", "live", "wound_down"] as const;
-    const allowedStatuses = [
-      "healthy",
-      "disputed",
-      "stagnant",
-      "new",
-    ] as const;
-    const stage = (allowedStages as readonly string[]).includes(r.stage)
-      ? (r.stage as (typeof allowedStages)[number])
-      : "auction";
-    return {
-      ensName: r.ensName,
-      title: r.title,
-      pitch: r.pitch,
-      description: r.description,
-      category: (allowedCategories as readonly string[]).includes(r.category)
-        ? (r.category as (typeof allowedCategories)[number])
-        : "other",
-      ownerEns: "you",
-      stage,
-      status: (allowedStatuses as readonly string[]).includes(r.status)
-        ? (r.status as (typeof allowedStatuses)[number])
-        : "new",
-      progressScore: r.progressScore ?? undefined,
-      promiseScore: r.promiseScore ?? undefined,
-      // Treasury balance is canonical — it's where bids accumulate
-      // during auction and where withdrawals happen post-activation.
-      // Auction-stage UI labels it `treasuryProgressEth`; live-stage
-      // labels it `treasuryBalanceEth`. Same number, different name.
-      treasuryBalanceEth: r.treasuryBalanceEth,
-      treasuryProgressEth: stage === "auction" ? r.treasuryBalanceEth : undefined,
-      totalFunders: r.totalFundersCount,
-      bidderCount: r.totalFundersCount,
-      auctionEndsAt: r.auctionEndAt ?? undefined,
-      activationThresholdEth: r.activationThresholdEth,
-      // Implied price: 1 USDC bid → 1/0.005 = 200 tokens at 0.005 USDC/token.
-      // Crude but matches the seeded mocks.
-      impliedPriceEth: 0.005,
-      pulse: ["none", "none", "none", "none", "none", "none", "verified"],
-      isNew: true,
-    };
-  } catch (err) {
-    console.warn(
-      "[db-reads] ventureFromDb failed:",
-      (err as { message?: string })?.message ?? err,
-    );
-    return null;
-  }
 }
 
 export interface DbVentureSummary {
@@ -200,70 +47,85 @@ export interface DbVentureSummary {
   createdAt: Date;
 }
 
-/** All ventures persisted in Neon — used to merge user-launched with mocks. */
+/**
+ * Pulse-tab attestations. The demo always falls through to seeded
+ * mockAttestations, so returning null here keeps the original behavior:
+ * "no DB → use seeded mocks".
+ */
+export async function getAttestationsForVentureFromDb(
+  _ventureEnsName: string,
+): Promise<DbAttestation[] | null> {
+  return null;
+}
+
+/**
+ * Resolve a venture by ENS name. Seeded mocks first; if the name looks
+ * like a valid ENS subname but isn't seeded, return a placeholder so
+ * session-launched ventures still get a working page.
+ */
+export async function resolveVenture(
+  ensName: string,
+): Promise<import("./mock-data").MockVenture | null> {
+  const { getVentureByEns } = await import("./mock-venture-detail");
+  const seeded = getVentureByEns(ensName);
+  if (seeded) return seeded;
+  // Accept anything that vaguely looks like an ENS subname so the
+  // wizard's freshly-coined venture renders a page.
+  if (!/^[a-z0-9-]+\.[a-z0-9-]+(\.[a-z0-9-]+)*$/i.test(ensName)) return null;
+  return placeholderVenture(ensName);
+}
+
+function placeholderVenture(
+  ensName: string,
+): import("./mock-data").MockVenture {
+  const slug = ensName.split(".")[0] ?? ensName;
+  const title = slug
+    .split("-")
+    .map((p) => (p[0]?.toUpperCase() ?? "") + p.slice(1))
+    .join(" ");
+  return {
+    ensName,
+    title: title || "New research",
+    pitch:
+      "Newly launched research — agent will post its first attestation shortly.",
+    description:
+      "This research was launched from the wizard during this session. The agent's first cycle will populate verified outputs, attestations, and the on-chain story.",
+    category: "other",
+    ownerEns: "you",
+    stage: "auction",
+    status: "new",
+    activationThresholdEth: 500,
+    treasuryProgressEth: 0,
+    bidderCount: 0,
+    impliedPriceEth: 0.005,
+    auctionEndsAt: new Date(Date.now() + 48 * 3600 * 1000),
+    pulse: Array(14).fill("none") as import("./mock-data").MockVenture["pulse"],
+    isNew: true,
+  };
+}
+
+export async function ventureFromDb(
+  _ensName: string,
+): Promise<import("./mock-data").MockVenture | null> {
+  return null;
+}
+
+/**
+ * Homepage feed merges seeded ventures with DB-launched ones. In the
+ * demo build there's no DB, so this returns an empty list — page.tsx
+ * still renders the full seeded set.
+ */
 export async function getLiveVenturesFromDb(): Promise<DbVentureSummary[]> {
-  const db = getDb();
-  if (!db) return [];
-  try {
-    const rows = await db.query.ventures.findMany({
-      orderBy: desc(schema.ventures.createdAt),
-      limit: 200,
-    });
-    return rows.map((r) => ({
-      ensName: r.ensName,
-      title: r.title,
-      pitch: r.pitch,
-      description: r.description,
-      category: r.category,
-      stage: r.stage,
-      status: r.status,
-      progressScore: r.progressScore,
-      promiseScore: r.promiseScore,
-      treasuryBalanceEth: r.treasuryBalanceEth,
-      totalFundersCount: r.totalFundersCount,
-      activationThresholdEth: r.activationThresholdEth,
-      auctionEndAt: r.auctionEndAt,
-      createdAt: r.createdAt,
-    }));
-  } catch (err) {
-    console.warn(
-      "[db-reads] getLiveVenturesFromDb failed:",
-      (err as { message?: string })?.message ?? err,
-    );
-    return [];
-  }
+  void mockVentures;
+  return [];
 }
 
 export async function getAgentActivityFromDb(
   ventureEnsName: string,
   limit = 20,
 ): Promise<DbActivityRow[] | null> {
-  const db = getDb();
-  if (!db) return null;
-  try {
-    const venture = await db.query.ventures.findFirst({
-      where: eq(schema.ventures.ensName, ventureEnsName),
-      columns: { id: true },
-    });
-    if (!venture) return null;
-    const rows = await db.query.agentActivityLog.findMany({
-      where: eq(schema.agentActivityLog.ventureId, venture.id),
-      orderBy: desc(schema.agentActivityLog.createdAt),
-      limit,
-    });
-    return rows.map((r) => ({
-      activityType: r.activityType,
-      details: (r.details as Record<string, unknown>) ?? {},
-      costUsd: r.costUsd,
-      costEth: r.costEth,
-      txHash: r.txHash,
-      createdAt: r.createdAt,
-    }));
-  } catch (err) {
-    console.warn(
-      "[db-reads] getAgentActivityFromDb failed:",
-      (err as { message?: string })?.message ?? err,
-    );
-    return null;
-  }
+  // Use fixture activity for live ventures; seeded attestations for the
+  // rest get auto-derived elsewhere (Pulse tab). Returning [] is fine.
+  void mockAttestations;
+  return listActivityForVenture(ventureEnsName, limit);
 }

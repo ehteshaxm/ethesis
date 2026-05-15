@@ -601,11 +601,12 @@ const SOURCE_TEMPLATES: Record<string, MockSource[]> = {
 
 export function getVentureDetail(
   venture: MockVenture,
-): MockVentureDetail | null {
-  const milestones = MILESTONE_TEMPLATES[venture.ensName];
-  const sources = SOURCE_TEMPLATES[venture.ensName];
-  const researcher = RESEARCHERS[venture.ownerEns];
-  if (!milestones || !sources || !researcher) return null;
+): MockVentureDetail {
+  const milestones =
+    MILESTONE_TEMPLATES[venture.ensName] ?? placeholderMilestones();
+  const sources = SOURCE_TEMPLATES[venture.ensName] ?? placeholderSources();
+  const researcher =
+    RESEARCHERS[venture.ownerEns] ?? placeholderResearcher(venture.ownerEns);
 
   const recentBids =
     venture.stage === "auction"
@@ -627,6 +628,59 @@ export function getVentureDetail(
       venture.stage === "live" || venture.stage === "wound_down"
         ? fakeAddr(`agent-${venture.ensName}`)
         : undefined,
+  };
+}
+
+function placeholderMilestones(): MockMilestone[] {
+  return [
+    {
+      ordinal: 1,
+      title: "Reproduce baseline",
+      successCriteria: "Reproduce a published baseline within tolerance.",
+      expectedOutputs: ["GitHub repo", "Reproduction notebook"],
+      deadlineInDays: 14,
+      status: "pending",
+      trancheReleaseEth: 1.0,
+    },
+    {
+      ordinal: 2,
+      title: "Headline experiment",
+      successCriteria: "Beat the baseline on the primary metric.",
+      expectedOutputs: ["Results dataset", "Eval notebook"],
+      deadlineInDays: 45,
+      status: "pending",
+      trancheReleaseEth: 1.0,
+    },
+    {
+      ordinal: 3,
+      title: "Public artifact",
+      successCriteria: "Publish artifact + paper.",
+      expectedOutputs: ["arXiv preprint", "Public dataset"],
+      deadlineInDays: 90,
+      status: "pending",
+      trancheReleaseEth: 1.0,
+    },
+  ];
+}
+
+function placeholderSources(): MockSource[] {
+  return [
+    {
+      type: "github",
+      identifier: "owner/repo",
+      url: "https://github.com",
+      watchingSinceDays: 0,
+    },
+  ];
+}
+
+function placeholderResearcher(ens: string): MockResearcher {
+  return {
+    ens: ens || "you",
+    bio: "Newly launched researcher on ETHesis. Bio will populate once the agent ingests the first connected sources.",
+    priorVentures: 0,
+    isVerified: false,
+    offPlatformLinks: [],
   };
 }
 

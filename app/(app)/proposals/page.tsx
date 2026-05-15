@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { mockVentures } from "@/lib/mock-data";
 
 export const metadata = { title: "Research Proposals · ETHesis" };
 
@@ -21,15 +22,23 @@ interface Proposal {
 }
 
 async function getProposals(): Promise<Proposal[]> {
-  try {
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    const res = await fetch(`${base}/api/proposals`, { next: { revalidate: 30 } });
-    if (!res.ok) return [];
-    const data = (await res.json()) as { proposals: Proposal[] };
-    return data.proposals;
-  } catch {
-    return [];
-  }
+  return mockVentures
+    .filter((v) => v.stage === "idea" || v.stage === "auction")
+    .map((v, i) => ({
+      id: `p-${i + 1}`,
+      ensName: v.ensName,
+      title: v.title,
+      pitch: v.pitch,
+      category: v.category,
+      stage: v.stage,
+      proposalNoveltyScore: 70 + ((i * 7) % 25),
+      proposalFeasibilityScore: 65 + ((i * 11) % 30),
+      proposalImpactScore: 70 + ((i * 13) % 25),
+      fundingLengthDays: 14,
+      fundingGoalEth: v.activationThresholdEth ?? 500,
+      avatarUrl: null,
+      createdAt: new Date(Date.now() - i * 86400 * 1000).toISOString(),
+    }));
 }
 
 function ScoreBar({ label, value }: { label: string; value: number | null }) {
