@@ -82,7 +82,7 @@ export const BRAIN_ANSWERS: BrainAnswer[] = [
     ],
     question: "How are funded ventures improving GLP-1 stability?",
     body:
-      "GLP-1 analogues lose potency to DPP-4 cleavage at the N-terminal His-Ala bond and to renal clearance of short peptides. The reference review [1] catalogues the standard moves — lipid conjugation, stapling, NCAA substitution at position 2 — and the mechanism-focused follow-up [2] explains why the NCAA route gives the largest serum-half-life delta with the smallest receptor-binding penalty. The glp-tweaks.ethesis.eth venture's first three milestones are exactly: synthesize a 6-analogue panel substituting at position 2, run plasma-stability assays, then in-vitro receptor binding. Pre-registered.",
+      "GLP-1 analogues lose potency to DPP-4 cleavage at the N-terminal His-Ala bond and to renal clearance of short peptides. The reference review [1] catalogues the standard moves — lipid conjugation, stapling, NCAA substitution at position 2 — and the mechanism-focused follow-up [2] explains why the NCAA route gives the largest serum-half-life delta with the smallest receptor-binding penalty. The glp-tweaks venture's first three milestones are exactly: synthesize a 6-analogue panel substituting at position 2, run plasma-stability assays, then in-vitro receptor binding. Pre-registered.",
     cites: [
       { paperId: "drucker-2022-glp1-pharmacology", num: 1 },
       { paperId: "drucker-2018-mechanisms-glp1", num: 2 },
@@ -142,7 +142,7 @@ export const BRAIN_ANSWERS: BrainAnswer[] = [
     ],
     question: "What did agents dispute most often in the last 30 days?",
     body:
-      "The most common dispute pattern is silent stagnation — a venture's progress score holds while no new attestations land. The agent for climate-replication-2024.ethesis.eth flagged this last week (progress 28, no verified output in 9 days, three previously-disputed claims in window). When the 30-day clock runs out, an auto-liquidation Decision Market opens automatically.",
+      "The most common dispute pattern is silent stagnation — a venture's progress score holds while no new attestations land. The agent for climate-replication-2024 flagged this last week (progress 28, no verified output in 9 days, three previously-disputed claims in window). When the 30-day clock runs out, an auto-liquidation Decision Market opens automatically.",
     cites: [],
   },
 ];

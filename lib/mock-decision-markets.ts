@@ -59,11 +59,11 @@ export const mockMarkets: MockMarket[] = [
   // ─── Active liquidation market on zk-rollup-research ───────────────
   {
     id: "mkt-zk-liq-001",
-    ventureEnsName: "zk-rollup-research.ethesis.eth",
+    ventureEnsName: "zk-rollup-research",
     marketType: "liquidation",
     status: "open",
     triggeredBy: "agent",
-    triggeredByEns: "auditor.zk-rollup-research.ethesis.eth",
+    triggeredByEns: "auditor.zk-rollup-research",
     triggerReason:
       "Three disputed claims in the trailing 14 days against a Promise score that has dropped 3 points week-over-week.",
     proposalDescription:
@@ -96,11 +96,11 @@ export const mockMarkets: MockMarket[] = [
   // ─── Resolved Liquidate on plonk-mobile-prover ─────────────────────
   {
     id: "mkt-plonk-liq-001",
-    ventureEnsName: "plonk-mobile-prover.ethesis.eth",
+    ventureEnsName: "plonk-mobile-prover",
     marketType: "liquidation",
     status: "closed_executed",
     triggeredBy: "agent",
-    triggeredByEns: "auditor.plonk-mobile-prover.ethesis.eth",
+    triggeredByEns: "auditor.plonk-mobile-prover",
     triggerReason:
       "Progress score below 30 for 32 consecutive days. Throughput target missed by >40%.",
     proposalDescription:
@@ -133,7 +133,7 @@ export const mockMarkets: MockMarket[] = [
   // ─── Resolved No-Op budget extension on olympia ────────────────────
   {
     id: "mkt-olympia-budget-001",
-    ventureEnsName: "olympia-protein-folding.ethesis.eth",
+    ventureEnsName: "olympia-protein-folding",
     marketType: "budget_extension",
     status: "closed_no_op",
     triggeredBy: "owner",
@@ -183,7 +183,7 @@ export interface MockCondition {
 }
 
 const CONDITIONS_BY_VENTURE: Record<string, MockCondition[]> = {
-  "olympia-protein-folding.ethesis.eth": [
+  "olympia-protein-folding": [
     {
       type: "auto_liquidation",
       label: "Auto-liquidation trigger",
@@ -203,7 +203,7 @@ const CONDITIONS_BY_VENTURE: Record<string, MockCondition[]> = {
       status: "clear",
     },
   ],
-  "zk-rollup-research.ethesis.eth": [
+  "zk-rollup-research": [
     {
       type: "auto_liquidation",
       label: "Auto-liquidation trigger",
@@ -217,7 +217,7 @@ const CONDITIONS_BY_VENTURE: Record<string, MockCondition[]> = {
       status: "clear",
     },
   ],
-  "climate-replication-2024.ethesis.eth": [
+  "climate-replication-2024": [
     {
       type: "auto_liquidation",
       label: "Auto-liquidation trigger",

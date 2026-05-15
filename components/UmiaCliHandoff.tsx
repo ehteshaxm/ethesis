@@ -97,7 +97,7 @@ export function UmiaCliHandoff({ input }: Props) {
               <CopyButton text={configJson} tone="dark" />
               <DownloadButton
                 text={configJson}
-                filename={`${input.ensSubname.replace(".ethesis.eth", "")}-research.json`}
+                filename={`${input.ensSubname.replace("", "")}-research.json`}
               />
             </div>
           </div>

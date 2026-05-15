@@ -36,26 +36,26 @@ interface Scene {
 const SCENES: Scene[] = [
   {
     eyebrow: "Step 01 / Identity",
-    title: "Provisioning your project's onchain identity",
+    title: "Reserving your project handle",
     subtitle:
-      "A subname under ethesis.eth gets created on Sepolia by the platform wallet — you don't pay gas.",
+      "We register your handle on the platform, attach the pitch, mandate, and sources, and wire up a discovery page.",
     bullets: [
-      "ENS subname registered",
-      "Text records: pitch, mandate, sources, agent address",
-      "4 transactions signed by the platform wallet",
+      "Handle reserved",
+      "Pitch, mandate, sources stored",
+      "Public page created",
     ],
     visual: "ens",
     durationMs: 4500,
   },
   {
-    eyebrow: "Step 02 / Agent wallet",
-    title: "Deriving your agent's signing key in SpaceComputer KMS",
+    eyebrow: "Step 02 / Agent",
+    title: "Provisioning a verification agent for the project",
     subtitle:
-      "The agent's Ethereum wallet lives inside an HSM-backed gateway. We never see the private key — we just send EIP-712 typed data digests in and get signatures out.",
+      "A long-running agent is spun up specifically for this research. It gets its own signing key so funders can replay any attestation it produces.",
     bullets: [
-      "Key derived from platform alias",
-      "Signing happens off-host in Orbitport KMS",
-      "Wallet address surfaced for x402 settlement",
+      "Agent ID assigned",
+      "Signing key generated",
+      "Receipt ledger initialised",
     ],
     visual: "kms",
     durationMs: 4000,
@@ -64,24 +64,24 @@ const SCENES: Scene[] = [
     eyebrow: "Step 03 / Sources",
     title: "Connecting to your research sources",
     subtitle:
-      "GitHub, arXiv and Hugging Face have free public APIs — the agent pulls those directly. Anything else (X, Substack, generic web) goes through Apify, paid per call in USDC on Base.",
+      "The agent will watch GitHub, arXiv, Hugging Face, and any other source you wire up — pulling new commits, papers, and models on a schedule.",
     bullets: [
-      "GitHub commits — free",
-      "arXiv papers — free",
-      "Hugging Face models — free",
-      "Generic web → Apify Google Search via x402",
+      "GitHub commits",
+      "arXiv papers",
+      "Hugging Face models",
+      "Generic web via scraper",
     ],
     visual: "sources",
     durationMs: 4500,
   },
   {
     eyebrow: "Step 04 / Brain",
-    title: "Indexing your prior work into Cognee",
+    title: "Indexing your prior work",
     subtitle:
       "Every PDF you uploaded is parsed, chunked, and embedded into the research's brain so the agent (and future funders) can ask questions over it.",
     bullets: [
       "PDF text extracted",
-      "Chunks pinned to Ethereum Swarm",
+      "Chunks stored",
       "Embeddings indexed for retrieval",
     ],
     visual: "brain",
@@ -95,34 +95,34 @@ const SCENES: Scene[] = [
     bullets: [
       "Sources scanned",
       "Milestone keywords matched",
-      "Cosmic-random nonce drawn from SpaceComputer cTRNG",
-      "Attestation drafted by Claude",
+      "Knowledge base checked",
+      "Attestation drafted",
     ],
     visual: "agent",
     durationMs: 4500,
   },
   {
     eyebrow: "Step 06 / Storage",
-    title: "Pinning the signed payload to Ethereum Swarm",
+    title: "Signing and logging the attestation",
     subtitle:
-      "The full attestation JSON — evidence, signature, cosmic nonce, TEE quote — is uploaded to a Bee node. Bzz.limo gives you a permanent public read URL.",
+      "The full attestation JSON — evidence, signature, knowledge-base check — is signed by the agent and written to the audit log with a receipt ID.",
     bullets: [
-      "AES-256-GCM encryption client-side",
-      "Reference is a 32-byte content hash",
-      "Resolves on any Bee gateway",
+      "JSON envelope signed",
+      "Receipt ID issued",
+      "Audit log row appended",
     ],
     visual: "swarm",
     durationMs: 4000,
   },
   {
-    eyebrow: "Step 07 / Anchoring",
-    title: "Writing the attestation back to ENS",
+    eyebrow: "Step 07 / Audit",
+    title: "Publishing the receipt",
     subtitle:
-      "Each attestation gets its own text record under your project's ENS name — `org.ethesis.attestation.N`. Your project's history is now resolvable from any ENS-aware client.",
+      "Every attestation gets its own page so funders can replay how the agent reached the conclusion — same JSON, same signature, anytime.",
     bullets: [
-      "Per-attestation text record",
-      "Anchored on Sepolia (Mainnet ready)",
-      "Resolvable via viem, ethers, ENS app",
+      "Per-attestation viewer page",
+      "Receipt replays signed JSON",
+      "Linked from the audit log",
     ],
     visual: "anchor",
     durationMs: 4000,
@@ -131,10 +131,10 @@ const SCENES: Scene[] = [
     eyebrow: "Almost there",
     title: "Bringing your research online",
     subtitle:
-      "Auction parameters set, agent rules locked in, treasury wallet ready. You'll land on the research page in a moment.",
+      "Funding window set, agent rules locked in, sponsor list ready. You'll land on the research page in a moment.",
     bullets: [
-      "Stage: auction",
-      "Treasury: 0 (waiting for bids)",
+      "Stage: funding",
+      "Funding pool: $0 (open)",
       "Agent: standing by",
     ],
     visual: "live",
@@ -309,7 +309,7 @@ export function LaunchReel({
       {!done && scene >= SCENES.length - 1 && (
         <p className="mt-3 text-center text-[11px] text-ink-muted inline-flex items-center justify-center gap-2 w-full">
           <span className="h-1.5 w-1.5 rounded-full bg-accent animate-heartbeat" />
-          Waiting for chain confirmations — Sepolia takes ~30s for 4 sequential txns…
+          Spinning up the agent and warming the brain…
         </p>
       )}
 
@@ -358,25 +358,25 @@ function EnsVisual() {
       <Network className="h-10 w-10 text-accent reel-pulse" />
       <div className="mt-5 rounded-lg border border-accent/40 bg-accent/5 px-5 py-3">
         <p className="text-[10px] uppercase tracking-wider text-accent-ink font-medium font-mono">
-          Sepolia · ENS Registry
+          Project handle
         </p>
         <p className="mt-1 font-mono text-sm text-ink reel-typewriter">
-          your-venture.ethesis.eth
+          your-research
         </p>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-1.5 font-mono text-[10px]">
         {[
-          "setSubnodeRecord",
-          "setText × 8",
-          "setAddr",
-          "setText × 6 (agent)",
+          "handle reserved",
+          "pitch stored",
+          "sources registered",
+          "agent allocated",
         ].map((t, i) => (
           <span
             key={t}
             className="rounded bg-surface-2 px-2 py-0.5 text-ink-muted reel-fade-in"
             style={{ animationDelay: `${i * 280}ms` }}
           >
-            tx {i + 1}: {t}
+            step {i + 1}: {t}
           </span>
         ))}
       </div>
@@ -393,22 +393,22 @@ function KmsVisual() {
           <p className="text-[9px] uppercase tracking-wider text-ink-subtle">
             Agent
           </p>
-          <p className="mt-0.5 font-mono text-[11px] text-ink">eip-712 digest</p>
+          <p className="mt-0.5 font-mono text-[11px] text-ink">attestation</p>
         </div>
         <div className="flex flex-col items-center text-ink-subtle font-mono text-[10px]">
           <span className="reel-arrow">→</span>
-          <span>HTTPS</span>
+          <span>signed</span>
           <span className="reel-arrow">←</span>
         </div>
         <div className="rounded-lg border border-verify/40 bg-verify-soft px-4 py-2.5 text-center">
           <p className="text-[9px] uppercase tracking-wider text-verify-ink">
-            SpaceComputer KMS
+            Receipt ledger
           </p>
-          <p className="mt-0.5 font-mono text-[11px] text-ink">HSM-backed</p>
+          <p className="mt-0.5 font-mono text-[11px] text-ink">append-only</p>
         </div>
       </div>
       <p className="mt-4 font-mono text-[10px] text-ink-muted">
-        signature: <span className="text-ink">0x94dc…737b00</span>
+        receipt: <span className="text-ink">r-94dc…737b00</span>
       </p>
     </div>
   );
@@ -439,20 +439,14 @@ function SourcesVisual() {
               {s.icon}
             </span>
             <span className="font-mono text-[11px] text-ink">{s.name}</span>
-            {i < 3 ? (
-              <span className="ml-auto text-[9px] uppercase tracking-wider text-verify-ink">
-                free
-              </span>
-            ) : (
-              <span className="ml-auto text-[9px] uppercase tracking-wider text-accent-ink">
-                x402
-              </span>
-            )}
+            <span className="ml-auto text-[9px] uppercase tracking-wider text-verify-ink">
+              watching
+            </span>
           </div>
         ))}
       </div>
       <p className="mt-4 font-mono text-[10px] text-ink-muted">
-        $0.05–$1 USDC per Apify call · settled on Base
+        Pulled on a schedule · diffed against the milestone plan
       </p>
     </div>
   );
@@ -481,7 +475,7 @@ function BrainVisual() {
       </div>
       <p className="mt-4 font-mono text-[10px] text-ink-muted">
         <FileText className="inline h-3 w-3 mr-1" />
-        N pages → chunks → embeddings → Cognee
+        N pages → chunks → embeddings → brain index
       </p>
     </div>
   );
@@ -491,8 +485,8 @@ function AgentVisual() {
   const lines = [
     "[agent] sources scanned: github, arxiv, hf",
     "[agent] new outputs observed: 14",
-    "[agent] cTRNG nonce: 0x7e1a…",
-    "[agent] claude attestation: verified",
+    "[agent] knowledge-base check: passed",
+    "[agent] attestation: verified",
   ];
   return (
     <div className="flex flex-col items-center w-full px-8">
@@ -521,10 +515,10 @@ function SwarmVisual() {
         <div className="absolute inset-4 rounded-full bg-dispute" />
       </div>
       <p className="mt-5 font-mono text-[10px] text-ink-subtle uppercase tracking-wider">
-        bzz.limo
+        receipt issued
       </p>
       <p className="mt-1 font-mono text-[11px] text-ink break-all max-w-md text-center">
-        13c5db077883493cea47c82120f1ecf906cb27678b1b21ac8e1ff1ba9685d6ed
+        r-13c5db077883493cea47c82120f1ecf906cb2767
       </p>
     </div>
   );
@@ -535,13 +529,13 @@ function AnchorVisual() {
     <div className="flex flex-col items-center">
       <Coins className="h-10 w-10 text-accent reel-pulse" />
       <div className="mt-5 rounded-lg border border-border bg-surface px-5 py-3 font-mono text-[11px] text-ink">
-        <div className="text-ink-muted">org.ethesis.attestation.1</div>
+        <div className="text-ink-muted">attestation.1</div>
         <div className="text-accent-ink reel-typewriter">
-          bzz://13c5db07…85d6ed
+          att://13c5db07…85d6ed
         </div>
       </div>
       <p className="mt-3 font-mono text-[10px] text-ink-muted">
-        text record set · viewable on app.ens.domains
+        Receipt published · viewable from the audit log
       </p>
     </div>
   );
@@ -553,7 +547,7 @@ function LiveVisual() {
       <Sparkles className="h-10 w-10 text-verify reel-pulse" />
       <p className="mt-4 font-medium text-ink">Your research is online</p>
       <p className="mt-1 font-mono text-[11px] text-ink-muted">
-        agent standing by · auction open
+        agent standing by · funding open
       </p>
     </div>
   );

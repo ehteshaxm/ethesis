@@ -9,12 +9,7 @@ interface EnsPillProps {
   showCopy?: boolean;
   size?: "sm" | "md";
   className?: string;
-  /**
-   * If true, the name links out to the ENS app for the configured chain
-   * (Sepolia or mainnet). Default true — anywhere we render an ENS name
-   * in product chrome, the click should resolve to the real on-chain
-   * record so reviewers can verify it themselves.
-   */
+  /** Whether to wrap the name in a link to the venture page. */
   linkToEnsApp?: boolean;
 }
 
@@ -89,10 +84,8 @@ export function EnsPill({
       {dot}
       <a
         href={ensAppUrl(name)}
-        target="_blank"
-        rel="noreferrer noopener"
         className="text-ink hover:text-accent inline-flex items-center gap-1 transition-colors"
-        title={`View ${name} on ENS app`}
+        title={`View ${name}`}
       >
         {text}
         <ExternalLink className="h-3 w-3 opacity-60 group-hover:opacity-100" />

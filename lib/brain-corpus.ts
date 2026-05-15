@@ -49,7 +49,7 @@ export const BRAIN_CORPUS: Paper[] = [
       "ampsphere",
       "amr",
     ],
-    ventureEnsName: "peptide-amr.ethesis.eth",
+    ventureEnsName: "peptide-amr",
   },
   {
     id: "chen-2024-amp-diffusion",
@@ -68,7 +68,7 @@ export const BRAIN_CORPUS: Paper[] = [
       "latent-diffusion",
       "amr",
     ],
-    ventureEnsName: "peptide-amr.ethesis.eth",
+    ventureEnsName: "peptide-amr",
   },
   {
     id: "torres-2025-generative-latent-diffusion",
@@ -88,7 +88,7 @@ export const BRAIN_CORPUS: Paper[] = [
       "diffusion",
       "amr",
     ],
-    ventureEnsName: "peptide-amr.ethesis.eth",
+    ventureEnsName: "peptide-amr",
   },
   {
     id: "wong-2023-explainable-amp",
@@ -100,7 +100,7 @@ export const BRAIN_CORPUS: Paper[] = [
     blurb:
       "Graph-neural-network screen of ~12M compounds, narrowed to a structural class active against MRSA in mice. The pipeline blueprint behind ML-led antibiotic search.",
     tags: ["amp", "antimicrobial", "deep-learning", "gnn", "mrsa", "amr"],
-    ventureEnsName: "peptide-amr.ethesis.eth",
+    ventureEnsName: "peptide-amr",
   },
   {
     id: "maasch-2023-de-extinction",
@@ -112,7 +112,7 @@ export const BRAIN_CORPUS: Paper[] = [
     blurb:
       "Used a sequence-based encoder over extinct hominin proteomes to surface novel AMPs, several validated in vitro against ESKAPE pathogens.",
     tags: ["amp", "antimicrobial", "machine-learning", "de-extinction", "amr"],
-    ventureEnsName: "peptide-amr.ethesis.eth",
+    ventureEnsName: "peptide-amr",
   },
   {
     id: "torres-2022-encrypted-amp",
@@ -124,7 +124,7 @@ export const BRAIN_CORPUS: Paper[] = [
     blurb:
       "Computational mining of cryptic AMP regions inside human proteins; multiple hits tested in mouse skin-infection models.",
     tags: ["amp", "antimicrobial", "human-proteome", "encrypted-peptide", "amr"],
-    ventureEnsName: "peptide-amr.ethesis.eth",
+    ventureEnsName: "peptide-amr",
   },
   {
     id: "stokes-2020-halicin",
@@ -135,7 +135,7 @@ export const BRAIN_CORPUS: Paper[] = [
     blurb:
       "Original GNN screen that surfaced halicin from the Drug Repurposing Hub. The paper most replication efforts in this space anchor to.",
     tags: ["antibiotic", "deep-learning", "gnn", "halicin", "amr"],
-    ventureEnsName: "peptide-amr.ethesis.eth",
+    ventureEnsName: "peptide-amr",
   },
   {
     id: "drucker-2022-glp1-pharmacology",
@@ -147,7 +147,7 @@ export const BRAIN_CORPUS: Paper[] = [
     blurb:
       "Reference review of GLP-1 receptor agonists — mechanism, half-life engineering via lipid conjugation and stapling, clinical landscape.",
     tags: ["glp-1", "peptide", "metabolic", "stability", "incretin"],
-    ventureEnsName: "glp-tweaks.ethesis.eth",
+    ventureEnsName: "glp-tweaks",
   },
   {
     id: "drucker-2018-mechanisms-glp1",
@@ -158,7 +158,7 @@ export const BRAIN_CORPUS: Paper[] = [
     blurb:
       "Earlier mechanism-focused review used as the introductory scaffold for most GLP-1 analogue design papers.",
     tags: ["glp-1", "peptide", "metabolic", "review"],
-    ventureEnsName: "glp-tweaks.ethesis.eth",
+    ventureEnsName: "glp-tweaks",
   },
   {
     id: "bricken-2023-monosemanticity",
@@ -171,7 +171,7 @@ export const BRAIN_CORPUS: Paper[] = [
     blurb:
       "Sparse autoencoders extract monosemantic features from a 1-layer transformer. The reference for SAE-based interpretability.",
     tags: ["mech-interp", "interpretability", "sae", "monosemantic"],
-    ventureEnsName: "mech-interp-tiny.ethesis.eth",
+    ventureEnsName: "mech-interp-tiny",
   },
   {
     id: "cunningham-2023-saes",
@@ -183,7 +183,7 @@ export const BRAIN_CORPUS: Paper[] = [
     blurb:
       "Companion result on residual-stream SAEs in larger models; widely cited as the bridge between toy SAEs and production-scale features.",
     tags: ["mech-interp", "interpretability", "sae", "residual-stream"],
-    ventureEnsName: "mech-interp-tiny.ethesis.eth",
+    ventureEnsName: "mech-interp-tiny",
   },
   {
     id: "gabizon-2019-plonk",
@@ -195,7 +195,7 @@ export const BRAIN_CORPUS: Paper[] = [
     blurb:
       "The PLONK proving system. Mobile-prover ventures benchmark against this paper's witness-generation profile.",
     tags: ["zk", "plonk", "snark", "prover"],
-    ventureEnsName: "zk-rollup-research.ethesis.eth",
+    ventureEnsName: "zk-rollup-research",
   },
 ];
 

@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import { ConnectWallet } from "@/components/ConnectWallet";
+import { DEMO_USER } from "@/lib/demo-user";
 
 export default function ProposePage() {
   const router = useRouter();
-  const { address } = useAccount();
+  const address = DEMO_USER.id;
 
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
@@ -92,7 +91,7 @@ export default function ProposePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           label,
-          ownerAddress: address,
+          ownerAddress: "0x0000000000000000000000000000000000000001",
           title,
           pitch,
           description,
@@ -161,14 +160,7 @@ export default function ProposePage() {
       </header>
 
       <div className="mx-auto max-w-2xl px-6 py-10">
-        {!address ? (
-          <div className="rounded-xl border border-border bg-surface p-8 text-center">
-            <p className="text-sm text-ink-muted mb-4">
-              Connect your wallet to submit a proposal
-            </p>
-            <ConnectWallet />
-          </div>
-        ) : (
+        {(
           <div className="space-y-8">
 
             {/* ─── Step 1: Idea ─────────────────────────────── */}
@@ -354,7 +346,7 @@ export default function ProposePage() {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-ink-subtle">ENS slug</p>
-                  <p className="text-sm font-mono text-ink mt-0.5">{label}.ethesis.eth</p>
+                  <p className="text-sm font-mono text-ink mt-0.5">{label}</p>
                 </div>
 
                 {error && (

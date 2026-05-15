@@ -1,10 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useAccount } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
 import {
-  Wallet,
   ArrowUpRight,
   ArrowDownRight,
   AlertTriangle,
@@ -20,34 +17,10 @@ import {
 } from "@/lib/mock-portfolio";
 import { cn, formatEth, identiconColors } from "@/lib/utils";
 import { MarketCard } from "./MarketCard";
+import { DEMO_USER } from "@/lib/demo-user";
 
 export function PortfolioOverview() {
-  const { address, isConnected } = useAccount();
-  const { openConnectModal } = useConnectModal();
-
-  if (!isConnected || !address) {
-    return (
-      <div className="rounded-xl border border-dashed border-border bg-surface-2/50 p-10 text-center max-w-2xl mx-auto">
-        <Wallet className="mx-auto h-6 w-6 text-ink-subtle" />
-        <h2 className="mt-3 text-lg font-medium text-ink">
-          Connect to view your dashboard
-        </h2>
-        <p className="mt-2 text-sm text-ink-muted leading-relaxed">
-          Your token positions, active votes, and milestone alerts across
-          every research project you&apos;ve funded.
-        </p>
-        <button
-          type="button"
-          onClick={openConnectModal}
-          className="mt-5 rounded-md bg-accent px-5 py-2 text-sm font-medium text-white hover:bg-accent-ink transition-colors"
-        >
-          Connect wallet
-        </button>
-      </div>
-    );
-  }
-
-  const snapshot = getPortfolioForAddress(address);
+  const snapshot = getPortfolioForAddress(DEMO_USER.id);
 
   return (
     <div className="space-y-12">

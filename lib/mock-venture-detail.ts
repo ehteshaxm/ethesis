@@ -117,8 +117,8 @@ const RESEARCHERS: Record<string, MockResearcher> = {
     isVerified: false,
     offPlatformLinks: [],
   },
-  "delafuente.peptide-amr.ethesis.eth": {
-    ens: "delafuente.peptide-amr.ethesis.eth",
+  "delafuente.peptide-amr": {
+    ens: "delafuente.peptide-amr",
     bio: "César de la Fuente-Nunez · Presidential Associate Professor at UPenn (Bioengineering, Chemical & Biomolecular Engineering, Microbiology, Psychiatry). Leads the Machine Biology Group, applying ML to antibiotic discovery — published work spans AMP-Diffusion, AMPSphere, and ancient-proteome AMP de-extinction.",
     priorVentures: 0,
     isVerified: true,
@@ -190,7 +190,7 @@ function generateAuctionBids(venture: MockVenture, count: number): MockBid[] {
 }
 
 const MILESTONE_TEMPLATES: Record<string, MockMilestone[]> = {
-  "olympia-protein-folding.ethesis.eth": [
+  "olympia-protein-folding": [
     {
       ordinal: 1,
       title: "Reference distillation pipeline",
@@ -221,7 +221,7 @@ const MILESTONE_TEMPLATES: Record<string, MockMilestone[]> = {
       trancheReleaseEth: 1.4,
     },
   ],
-  "zk-rollup-research.ethesis.eth": [
+  "zk-rollup-research": [
     {
       ordinal: 1,
       title: "Constant-time prover scaffold",
@@ -253,7 +253,7 @@ const MILESTONE_TEMPLATES: Record<string, MockMilestone[]> = {
       trancheReleaseEth: 2.0,
     },
   ],
-  "mech-interp-tiny.ethesis.eth": [
+  "mech-interp-tiny": [
     {
       ordinal: 1,
       title: "Sub-1B model selection + circuit map",
@@ -284,7 +284,7 @@ const MILESTONE_TEMPLATES: Record<string, MockMilestone[]> = {
       trancheReleaseEth: 0.6,
     },
   ],
-  "encrypted-mempool.ethesis.eth": [
+  "encrypted-mempool": [
     {
       ordinal: 1,
       title: "Threat model & adversarial setting",
@@ -314,7 +314,7 @@ const MILESTONE_TEMPLATES: Record<string, MockMilestone[]> = {
       trancheReleaseEth: 0.5,
     },
   ],
-  "climate-replication-2024.ethesis.eth": [
+  "climate-replication-2024": [
     {
       ordinal: 1,
       title: "Replicate paper #1",
@@ -344,7 +344,7 @@ const MILESTONE_TEMPLATES: Record<string, MockMilestone[]> = {
       trancheReleaseEth: 0.5,
     },
   ],
-  "plonk-mobile-prover.ethesis.eth": [
+  "plonk-mobile-prover": [
     {
       ordinal: 1,
       title: "Prover prototype",
@@ -364,7 +364,7 @@ const MILESTONE_TEMPLATES: Record<string, MockMilestone[]> = {
       trancheReleaseEth: 0.5,
     },
   ],
-  "peptide-amr.ethesis.eth": [
+  "peptide-amr": [
     {
       ordinal: 1,
       title: "AMP-Diffusion fork + AMPSphere data ingest",
@@ -422,7 +422,7 @@ const MILESTONE_TEMPLATES: Record<string, MockMilestone[]> = {
       trancheReleaseEth: 2400,
     },
   ],
-  "glp-tweaks.ethesis.eth": [
+  "glp-tweaks": [
     {
       ordinal: 1,
       title: "Synthesize 6-analogue NCAA panel",
@@ -467,7 +467,7 @@ const MILESTONE_TEMPLATES: Record<string, MockMilestone[]> = {
 };
 
 const SOURCE_TEMPLATES: Record<string, MockSource[]> = {
-  "olympia-protein-folding.ethesis.eth": [
+  "olympia-protein-folding": [
     {
       type: "github",
       identifier: "olympia/edge-fold",
@@ -487,7 +487,7 @@ const SOURCE_TEMPLATES: Record<string, MockSource[]> = {
       watchingSinceDays: 38,
     },
   ],
-  "zk-rollup-research.ethesis.eth": [
+  "zk-rollup-research": [
     {
       type: "github",
       identifier: "jane-eth/plonk-mobile",
@@ -507,7 +507,7 @@ const SOURCE_TEMPLATES: Record<string, MockSource[]> = {
       watchingSinceDays: 51,
     },
   ],
-  "mech-interp-tiny.ethesis.eth": [
+  "mech-interp-tiny": [
     {
       type: "github",
       identifier: "alice-eth/mech-interp-tiny",
@@ -527,7 +527,7 @@ const SOURCE_TEMPLATES: Record<string, MockSource[]> = {
       watchingSinceDays: 0,
     },
   ],
-  "encrypted-mempool.ethesis.eth": [
+  "encrypted-mempool": [
     {
       type: "github",
       identifier: "bob-eth/threshold-mempool",
@@ -541,7 +541,7 @@ const SOURCE_TEMPLATES: Record<string, MockSource[]> = {
       watchingSinceDays: 0,
     },
   ],
-  "climate-replication-2024.ethesis.eth": [
+  "climate-replication-2024": [
     {
       type: "github",
       identifier: "carol-eth/climate-rep-2024",
@@ -555,7 +555,7 @@ const SOURCE_TEMPLATES: Record<string, MockSource[]> = {
       watchingSinceDays: 60,
     },
   ],
-  "plonk-mobile-prover.ethesis.eth": [
+  "plonk-mobile-prover": [
     {
       type: "github",
       identifier: "dave-eth/plonk-mobile-v1",
@@ -563,7 +563,7 @@ const SOURCE_TEMPLATES: Record<string, MockSource[]> = {
       watchingSinceDays: 90,
     },
   ],
-  "peptide-amr.ethesis.eth": [
+  "peptide-amr": [
     {
       type: "github",
       identifier: "programmablebio/amp-diffusion",
@@ -583,7 +583,7 @@ const SOURCE_TEMPLATES: Record<string, MockSource[]> = {
       watchingSinceDays: 41,
     },
   ],
-  "glp-tweaks.ethesis.eth": [
+  "glp-tweaks": [
     {
       type: "github",
       identifier: "amelia-eth/glp-tweaks",

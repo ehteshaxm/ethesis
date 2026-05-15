@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { ArrowDown, ArrowUp, Check, Loader2, Wallet } from "lucide-react";
+import { DEMO_USER } from "@/lib/demo-user";
 import type { MockMarket, MarketOutcome } from "@/lib/mock-decision-markets";
 import { umia } from "@/lib/umia";
 import { cn, formatEth } from "@/lib/utils";
@@ -74,8 +73,9 @@ interface Props {
 const QUICK_AMOUNTS = ["10", "50", "100"];
 
 export function MarketTradePanel({ market }: Props) {
-  const { address, isConnected } = useAccount();
-  const { openConnectModal } = useConnectModal();
+  const address = DEMO_USER.id;
+  const isConnected = true;
+  const openConnectModal = () => {};
 
   // Hydrate from localStorage in lazy useState initializers so we get
   // the right value on first paint without a redundant cascading render

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   await new Promise((r) => setTimeout(r, 1500));
 
-  const ventureEnsName = `${body.label}.ethesis.eth`;
+  const ventureEnsName = `${body.label}`;
   const agentEnsName = `auditor.${ventureEnsName}`;
   const agentWalletAddress = fakeAddress(`agent|${body.label}`);
 

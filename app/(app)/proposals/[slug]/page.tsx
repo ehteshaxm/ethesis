@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useAccount } from "wagmi";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import { ConnectWallet } from "@/components/ConnectWallet";
 import { umia } from "@/lib/umia";
+import { DEMO_USER } from "@/lib/demo-user";
 
 interface Proposal {
   id: string;
@@ -48,21 +47,12 @@ function ScoreGauge({ label, value, description }: { label: string; value: numbe
 }
 
 function VotePanel({ proposal }: { proposal: Proposal }) {
-  const { address } = useAccount();
+  const address = DEMO_USER.id;
   const [voteSide, setVoteSide] = useState<"Fund" | "Reject" | null>(null);
   const [amount, setAmount] = useState("0.01");
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (!address) {
-    return (
-      <div className="rounded-xl border border-border bg-surface p-6 text-center">
-        <p className="text-sm text-ink-muted mb-4">Connect your wallet to vote</p>
-        <ConnectWallet />
-      </div>
-    );
-  }
 
   if (proposal.stage === "proposal") {
     return (

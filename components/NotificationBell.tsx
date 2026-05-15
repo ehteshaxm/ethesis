@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useAccount } from "wagmi";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,16 +25,14 @@ const TYPE_ICON: Record<string, string> = {
 };
 
 export function NotificationBell() {
-  const { address } = useAccount();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
 
   async function load() {
-    if (!address) return;
     try {
-      const res = await fetch(`/api/notifications?wallet=${address}`);
+      const res = await fetch(`/api/notifications`);
       if (!res.ok) return;
       const data = (await res.json()) as {
         notifications: Notification[];
@@ -53,8 +50,7 @@ export function NotificationBell() {
     load();
     const interval = setInterval(load, 30_000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address]);
+  }, []);
 
   // Close on outside click
   useEffect(() => {
@@ -72,8 +68,6 @@ export function NotificationBell() {
     );
     setUnread((c) => Math.max(0, c - 1));
   }
-
-  if (!address) return null;
 
   return (
     <div className="relative" ref={ref}>

@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   await new Promise((r) => setTimeout(r, 800));
 
-  const ventureEnsName = `${body.label}.ethesis.eth`;
+  const ventureEnsName = `${body.label}`;
   const agentEnsName = `auditor.${ventureEnsName}`;
 
   return NextResponse.json({

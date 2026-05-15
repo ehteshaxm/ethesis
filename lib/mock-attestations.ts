@@ -46,7 +46,7 @@ function fakeCid(seed: string): string {
 export const mockAttestations: MockAttestation[] = [
   // ─── olympia-protein-folding (live, healthy) ──────────────────────
   ...((): MockAttestation[] => {
-    const ens = "olympia-protein-folding.ethesis.eth";
+    const ens = "olympia-protein-folding";
     const agent = `auditor.${ens}`;
     return [
       {
@@ -126,7 +126,7 @@ export const mockAttestations: MockAttestation[] = [
 
   // ─── zk-rollup-research (live, disputed — the demo Beat 2) ─────────
   ...((): MockAttestation[] => {
-    const ens = "zk-rollup-research.ethesis.eth";
+    const ens = "zk-rollup-research";
     const agent = `auditor.${ens}`;
     return [
       {
@@ -187,7 +187,7 @@ export const mockAttestations: MockAttestation[] = [
 
   // ─── climate-replication-2024 (live, stagnant) ────────────────────
   ...((): MockAttestation[] => {
-    const ens = "climate-replication-2024.ethesis.eth";
+    const ens = "climate-replication-2024";
     const agent = `auditor.${ens}`;
     return [
       {
@@ -242,7 +242,7 @@ export const mockAttestations: MockAttestation[] = [
 
   // ─── plonk-mobile-prover (wound down) ─────────────────────────────
   ...((): MockAttestation[] => {
-    const ens = "plonk-mobile-prover.ethesis.eth";
+    const ens = "plonk-mobile-prover";
     const agent = `auditor.${ens}`;
     return [
       {

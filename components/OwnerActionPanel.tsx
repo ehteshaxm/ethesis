@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { DEMO_USER } from "@/lib/demo-user";
 import {
   TrendingUp,
   GitBranch,
@@ -89,8 +88,9 @@ interface Props {
 }
 
 export function OwnerActionPanel({ ventureEns, ownerEns, agentEns }: Props) {
-  const { address, isConnected } = useAccount();
-  const { openConnectModal } = useConnectModal();
+  const address = DEMO_USER.id;
+  const isConnected = true;
+  const openConnectModal = () => {};
 
   const [activeAction, setActiveAction] = useState<ActionKey | null>(null);
   const [community, setCommunityOpen] = useState(false);

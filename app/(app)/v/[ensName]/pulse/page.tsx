@@ -11,7 +11,6 @@ import {
   resolveVenture,
 } from "@/lib/db-reads";
 import { AttestationCard } from "@/components/AttestationCard";
-import { ensAppUrl } from "@/lib/ens-app-url";
 
 interface Props {
   params: Promise<{ ensName: string }>;
@@ -40,15 +39,11 @@ export default async function PulseTab({ params }: Props) {
   const venture = await resolveVenture(decoded);
   if (!venture) notFound();
 
-  // Real DB attestations posted by the agent runtime, prepended.
   const dbRows = await getAttestationsForVentureFromDb(decoded);
   const activity = await getAgentActivityFromDb(decoded, 10);
-  const latestX402 = activity?.find(
+  const latestScrape = activity?.find(
     (r) =>
-      r.activityType === "apify_query" &&
-      (r.details.mode === "x402" || r.details?.mode === "x402") &&
-      typeof r.txHash === "string" &&
-      r.txHash.startsWith("0x"),
+      r.activityType === "source_scrape" || r.activityType === "apify_query",
   );
   const renderedAt = new Date().getTime();
   const real: UnifiedAttestation[] = (dbRows ?? []).map((r) => {
@@ -171,35 +166,26 @@ export default async function PulseTab({ params }: Props) {
           <Sparkles className="h-3.5 w-3.5" />
           <span>
             <span className="font-mono font-medium">{real.length}</span>{" "}
-            attestation{real.length === 1 ? "" : "s"} posted live by the agent
-            runtime — signed with cosmic-random nonces from SpaceComputer cTRNG,
-            uploaded to Swarm, anchored to ENS.
+            attestation{real.length === 1 ? "" : "s"} posted live by the
+            agent — signed, logged, and replayable from receipt.
           </span>
         </div>
       )}
 
-      {latestX402 && (
+      {latestScrape && (
         <div className="rounded-md border border-verify/30 bg-verify/5 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-verify-ink">
           <Coins className="h-3.5 w-3.5 shrink-0" />
           <span className="flex-1">
-            Latest source scrape paid via{" "}
-            <span className="font-medium">x402</span>: $
-            {(latestX402.costUsd ?? 0).toFixed(4)} USDC settled on{" "}
-            {String(latestX402.details.paymentNetwork ?? "base")} —{" "}
-            <Link
-              href={`https://basescan.org/tx/${latestX402.txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono underline decoration-dotted underline-offset-2 hover:decoration-solid"
-            >
-              {String(latestX402.txHash).slice(0, 10)}…
-              {String(latestX402.txHash).slice(-6)}
-            </Link>
+            Latest source scrape — receipt{" "}
+            <span className="font-mono underline decoration-dotted underline-offset-2">
+              {String(latestScrape.txHash ?? "").slice(0, 10)}…
+              {String(latestScrape.txHash ?? "").slice(-6)}
+            </span>
           </span>
           <span className="text-ink-muted shrink-0">
-            actor:{" "}
+            agent:{" "}
             <span className="font-mono">
-              {String(latestX402.details.actorId ?? "unknown")}
+              {String(latestScrape.details.actorId ?? "unknown")}
             </span>
           </span>
         </div>
@@ -222,15 +208,8 @@ export default async function PulseTab({ params }: Props) {
               knowledgeBaseNotes={a.knowledgeBaseNotes}
               footerLinks={[
                 {
-                  label: `view payload on Swarm`,
+                  label: `view signed attestation`,
                   href: `/swarm/${a.swarmReference}`,
-                },
-                {
-                  label: `view ENS record`,
-                  href: ensAppUrl(
-                    `auditor.${venture.ensName}`,
-                    "records",
-                  ),
                 },
               ]}
             />

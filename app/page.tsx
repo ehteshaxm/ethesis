@@ -70,7 +70,7 @@ export default function Home() {
                 className="font-serif italic font-normal text-verify"
                 style={{ letterSpacing: "-0.01em" }}
               >
-                funded onchain.
+                with receipts.
               </span>
             </h1>
             <p
@@ -79,7 +79,7 @@ export default function Home() {
             >
               Researchers launch projects. Agents verify progress against
               declared plans. The brain learns from every claim — and every
-              attestation lands in ENS, forever.
+              attestation gets a receipt funders can replay.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <button
@@ -98,7 +98,7 @@ export default function Home() {
             <dl className="mt-10 grid grid-cols-3 gap-x-8 gap-y-2 max-w-xl">
               <HeroStat
                 value={tvlDisplay}
-                label="treasury across research"
+                label="funding pool across research"
               />
               <HeroStat
                 value={attestationsThisWeek}
@@ -143,7 +143,7 @@ export default function Home() {
           <nav className="flex items-center gap-1 text-sm">
             <StageTab label="All stages" count={ventures.length} active />
             <StageTab label="Idea" count={stageCounts.idea} />
-            <StageTab label="Auction" count={stageCounts.auction} />
+            <StageTab label="Funding" count={stageCounts.auction} />
             <StageTab label="Live" count={stageCounts.live} />
             <StageTab label="Wound down" count={stageCounts.wound_down} />
           </nav>

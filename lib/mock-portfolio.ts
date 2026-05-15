@@ -42,25 +42,25 @@ export interface PortfolioSnapshot {
 }
 
 const TOKEN_PRICE_BY_VENTURE: Record<string, number> = {
-  "olympia-protein-folding.ethesis.eth": 6.1,
-  "zk-rollup-research.ethesis.eth": 3.4,
-  "mech-interp-tiny.ethesis.eth": 4.2,
-  "encrypted-mempool.ethesis.eth": 0,
-  "climate-replication-2024.ethesis.eth": 1.5,
-  "plonk-mobile-prover.ethesis.eth": 2.2,
-  "peptide-amr.ethesis.eth": 7.4,
-  "glp-tweaks.ethesis.eth": 3.8,
+  "olympia-protein-folding": 6.1,
+  "zk-rollup-research": 3.4,
+  "mech-interp-tiny": 4.2,
+  "encrypted-mempool": 0,
+  "climate-replication-2024": 1.5,
+  "plonk-mobile-prover": 2.2,
+  "peptide-amr": 7.4,
+  "glp-tweaks": 3.8,
 };
 
 const ENTRY_PRICE_BY_VENTURE: Record<string, number> = {
-  "olympia-protein-folding.ethesis.eth": 4.2,
-  "zk-rollup-research.ethesis.eth": 4.8,
-  "mech-interp-tiny.ethesis.eth": 4.2,
-  "encrypted-mempool.ethesis.eth": 0,
-  "climate-replication-2024.ethesis.eth": 2.8,
-  "plonk-mobile-prover.ethesis.eth": 5.0,
-  "peptide-amr.ethesis.eth": 5.5,
-  "glp-tweaks.ethesis.eth": 3.8,
+  "olympia-protein-folding": 4.2,
+  "zk-rollup-research": 4.8,
+  "mech-interp-tiny": 4.2,
+  "encrypted-mempool": 0,
+  "climate-replication-2024": 2.8,
+  "plonk-mobile-prover": 5.0,
+  "peptide-amr": 5.5,
+  "glp-tweaks": 3.8,
 };
 
 /** Current secondary-market price (USDC per token) for a venture. Returns

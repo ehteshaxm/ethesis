@@ -9,8 +9,9 @@ interface CycleRunResult {
   ordinal?: number;
   attestationType?: "verified" | "disputed" | "silence";
   swarmReference?: string;
+  attestationId?: string;
   observedOutputs?: number;
-  apifyMode?: "x402" | "token" | "direct" | "mock";
+  apifyMode?: "verified" | "mock";
   apifyMockReason?: string | null;
   apifyCostUsd?: number;
   apifyPaymentTxHash?: string | null;
@@ -19,15 +20,10 @@ interface CycleRunResult {
   kmsAddress?: string | null;
   ensTxHash?: string | null;
   ensWritten?: boolean;
+  receiptId?: string | null;
   error?: string;
-  /** Set to "INSUFFICIENT_BALANCE" when the KMS wallet doesn't hold
-   * enough USDC, or "PAYMENT_NOT_SETTLED" when x402 was skipped or
-   * threw and the route refused to fall back to mock. */
   code?: string;
   reason?: string | null;
-  walletAddress?: string;
-  haveUsdc?: number;
-  needUsdc?: number;
 }
 
 interface PersistedRow {
@@ -60,15 +56,12 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
       const json = (await res.json()) as { rows: PersistedRow[] };
       setRows(json.rows ?? []);
     } catch {
-      // best-effort — the in-memory lastRun still renders even if the DB
-      // read fails
+      // best-effort
     } finally {
       setLoaded(true);
     }
   }, [ventureEnsName]);
 
-  // Hydrate on mount so the audit log is populated even before the user
-  // clicks anything.
   useEffect(() => {
     void refreshRows();
   }, [refreshRows]);
@@ -89,7 +82,6 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
         setError(json.error ?? `HTTP ${r.status}`);
       } else {
         setLastRun(json);
-        // Optimistically prepend the new rows so the audit log feels live.
         const now = new Date().toISOString();
         setRows((prev) => [
           {
@@ -98,27 +90,25 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
               ordinal: json.ordinal,
               type: json.attestationType,
               summary:
-                "Cycle complete: outputs observed, attestation signed, swarm reference written to ENS.",
+                "Cycle complete: outputs observed, attestation signed and logged.",
               evidence: [
                 `${json.observedOutputs ?? 0} new outputs observed`,
                 "Knowledge-base check passed",
               ],
               confidence: 88,
-              ensTxHash: json.ensTxHash,
-              swarmReference: json.swarmReference,
+              attestationId: json.attestationId ?? json.swarmReference,
             },
             costUsd: null,
-            txHash: json.ensTxHash ?? null,
+            txHash: json.receiptId ?? json.ensTxHash ?? null,
             createdAt: now,
           },
           {
-            activityType: "apify_query",
+            activityType: "source_scrape",
             details: {
-              mode: "x402",
-              actorId: "apify/google-search-scraper",
+              mode: "verified",
+              actorId: "agent/source-watcher",
               sources: ["github", "arxiv", "huggingface"],
               outputCount: json.observedOutputs ?? 0,
-              paymentNetwork: "base",
             },
             costUsd: json.apifyCostUsd ?? null,
             txHash: json.apifyPaymentTxHash ?? null,
@@ -144,19 +134,16 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
           <ShieldCheck className="h-5 w-5 text-accent shrink-0 mt-0.5" />
           <div className="min-w-0">
             <h3 className="text-sm font-medium text-ink inline-flex items-center gap-2 flex-wrap">
-              Live agent scrape
+              Live agent verification
               <span className="font-mono text-[10px] uppercase tracking-wider text-accent-ink bg-accent/15 rounded px-1.5 py-0.5">
-                paid via SpaceComputer KMS
+                signed by agent
               </span>
             </h3>
             <p className="mt-1.5 text-xs text-ink-muted leading-relaxed max-w-prose">
-              Fires one Apify scrape against this research&apos;s connected
-              sources. The agent&apos;s wallet — held in SpaceComputer&apos;s
-              KMS — signs the EIP-3009 USDC authorization, the x402
-              facilitator settles on Base, the resulting outputs go through
-              Claude into a signed attestation, the JSON lands on Swarm, and
-              the bzz reference is written to ENS. Each click appends a new
-              row to the audit log below.
+              Runs one scrape against this research&apos;s connected sources,
+              compares outputs to the milestone plan, signs a structured
+              attestation, and writes it to the audit log. Each click appends
+              a new row below.
             </p>
           </div>
         </div>
@@ -172,7 +159,7 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
               running…
             </>
           ) : (
-            <>▶ Pay &amp; scrape now</>
+            <>▶ Run verification now</>
           )}
         </button>
       </header>
@@ -195,73 +182,35 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
           </span>
         </div>
 
-        {/* Highlight the most-recent run while we still have its full
-         * details (settlement tx + swarm ref together). The persisted
-         * rows below are split into apify_query + attestation_generated
-         * by the cycle, so the inline summary is more readable for the
-         * fresh run. */}
-        {lastRun?.ok && lastRun.apifyMode === "x402" && (
+        {lastRun?.ok && lastRun.attestationType === "verified" && (
           <div className="mb-3 rounded-lg border border-verify/30 bg-verify-soft px-4 py-3 space-y-1.5">
             <div className="flex items-center justify-between gap-3 text-[12px] flex-wrap">
               <span className="font-mono text-[10px] uppercase tracking-wider text-verify-ink bg-verify/15 rounded px-1.5 py-0.5">
                 just now · cycle #{lastRun.ordinal} · {lastRun.attestationType}
               </span>
               <span className="font-mono text-[10px] uppercase tracking-wider text-accent-ink bg-accent/15 rounded px-1.5 py-0.5">
-                signed by SpaceComputer KMS · settled on Base
+                signed by agent · logged
               </span>
             </div>
-            {lastRun.kmsAddress && (
+            {lastRun.receiptId && (
               <Row
-                label="KMS payer"
+                label="receipt"
                 value={
-                  <Link
-                    href={`https://basescan.org/address/${lastRun.kmsAddress}`}
-                  >
-                    {short(lastRun.kmsAddress)}
-                  </Link>
+                  <span className="font-mono text-accent">
+                    {short(lastRun.receiptId)}
+                  </span>
                 }
               />
             )}
-            <Row
-              label="x402 settlement"
-              value={
-                lastRun.apifyPaymentTxHash ? (
-                  <Link
-                    href={`https://basescan.org/tx/${lastRun.apifyPaymentTxHash}`}
-                  >
-                    {short(lastRun.apifyPaymentTxHash)}
-                  </Link>
-                ) : (
-                  <span className="text-ink-muted text-[11px]">
-                    (facilitator didn&apos;t echo receipt — check Basescan)
-                  </span>
-                )
-              }
-              extra={
-                lastRun.apifyPaymentValueUsd
-                  ? `${lastRun.apifyPaymentValueUsd.toFixed(4)} USDC`
-                  : undefined
-              }
-            />
-            {lastRun.swarmReference && (
+            {lastRun.attestationId && (
               <Row
                 label="signed attestation"
                 value={
-                  <Link href={`/swarm/${lastRun.swarmReference}`}>
-                    bzz://{short(lastRun.swarmReference, 14, 6)}
-                  </Link>
-                }
-              />
-            )}
-            {lastRun.ensTxHash && (
-              <Row
-                label="ENS write"
-                value={
-                  <Link
-                    href={`https://sepolia.etherscan.io/tx/${lastRun.ensTxHash}`}
+                  <InternalLink
+                    href={`/swarm/${lastRun.attestationId}`}
                   >
-                    {short(lastRun.ensTxHash)}
-                  </Link>
+                    att://{short(lastRun.attestationId, 14, 6)}
+                  </InternalLink>
                 }
               />
             )}
@@ -271,22 +220,13 @@ export function LiveScrapePanel({ ventureEnsName }: Props) {
         {rows.length === 0 ? (
           <p className="text-[12px] text-ink-muted py-3">
             No audit log entries yet. Hit the button above — every cycle
-            writes one row per Apify call and one per attestation generated.
+            writes one row per scrape and one per attestation.
           </p>
         ) : (
           <ul className="divide-y divide-border-soft border border-border bg-surface rounded-lg overflow-hidden">
-            {rows
-              // Hide apify_query rows that didn't produce a real settlement —
-              // they're noise in an audit log meant to show paid scrapes.
-              .filter(
-                (r) =>
-                  r.activityType !== "apify_query" ||
-                  ((r.details as { mode?: string } | null)?.mode === "x402" &&
-                    Boolean(r.txHash)),
-              )
-              .map((r, i) => (
-                <PersistedLogRow key={i} row={r} />
-              ))}
+            {rows.map((r, i) => (
+              <PersistedLogRow key={i} row={r} />
+            ))}
           </ul>
         )}
       </div>
@@ -301,9 +241,16 @@ function PersistedLogRow({ row }: { row: PersistedRow }) {
     second: "2-digit",
     hour12: false,
   });
-  const isApify = row.activityType === "apify_query";
+  const isScrape =
+    row.activityType === "source_scrape" || row.activityType === "apify_query";
   const isAttestation = row.activityType === "attestation_generated";
   const d = row.details ?? {};
+  const attestationId =
+    typeof d.attestationId === "string"
+      ? d.attestationId
+      : typeof d.swarmReference === "string"
+        ? d.swarmReference
+        : null;
 
   return (
     <li className="px-4 py-3 flex flex-col gap-1.5 text-[12px]">
@@ -314,34 +261,41 @@ function PersistedLogRow({ row }: { row: PersistedRow }) {
         <span
           className={
             "font-mono text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 " +
-            (isApify
+            (isScrape
               ? "text-accent-ink bg-accent/15"
               : isAttestation
                 ? "text-verify-ink bg-verify-soft"
                 : "text-ink-muted bg-surface-2")
           }
         >
-          {row.activityType.replace(/_/g, " ")}
+          {isScrape
+            ? "source scrape"
+            : row.activityType.replace(/_/g, " ")}
         </span>
-        {typeof row.costUsd === "number" && row.costUsd > 0 && (
-          <span className="font-mono text-[10px] text-ink-muted">
-            ${row.costUsd.toFixed(4)}
-          </span>
-        )}
       </div>
 
-      {isApify && (
+      {isScrape && (
         <>
           {typeof d.actorId === "string" && (
-            <Row label="actor" value={<span className="font-mono">{d.actorId}</span>} />
+            <Row label="agent" value={<span className="font-mono">{d.actorId}</span>} />
+          )}
+          {Array.isArray(d.sources) && d.sources.length > 0 && (
+            <Row
+              label="sources"
+              value={
+                <span className="font-mono text-[11px]">
+                  {(d.sources as string[]).join(", ")}
+                </span>
+              }
+            />
           )}
           {row.txHash && (
             <Row
-              label="x402 settlement"
+              label="receipt"
               value={
-                <Link href={`https://basescan.org/tx/${row.txHash}`}>
+                <span className="font-mono text-accent">
                   {short(row.txHash)}
-                </Link>
+                </span>
               }
             />
           )}
@@ -360,7 +314,7 @@ function PersistedLogRow({ row }: { row: PersistedRow }) {
             <div className="mt-1 rounded-md bg-surface-2/60 border border-border-soft px-3 py-2 text-[12px] text-ink leading-relaxed">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-                  Claude says
+                  Agent says
                 </span>
                 {typeof d.confidence === "number" && (
                   <span className="font-mono text-[10px] text-ink-muted">
@@ -386,15 +340,13 @@ function PersistedLogRow({ row }: { row: PersistedRow }) {
               )}
             </div>
           )}
-          {typeof d.ensTxHash === "string" && d.ensTxHash && (
+          {attestationId && (
             <Row
-              label="ENS write"
+              label="attestation"
               value={
-                <Link
-                  href={`https://sepolia.etherscan.io/tx/${d.ensTxHash}`}
-                >
-                  {short(d.ensTxHash)}
-                </Link>
+                <InternalLink href={`/swarm/${attestationId}`}>
+                  att://{short(attestationId, 14, 6)}
+                </InternalLink>
               }
             />
           )}
@@ -424,7 +376,7 @@ function Row({
   );
 }
 
-function Link({
+function InternalLink({
   href,
   children,
 }: {
@@ -434,8 +386,6 @@ function Link({
   return (
     <a
       href={href}
-      target="_blank"
-      rel="noreferrer noopener"
       className="font-mono text-accent hover:text-accent-ink inline-flex items-center gap-1"
     >
       {children}

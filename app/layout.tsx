@@ -20,9 +20,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "ETHesis — Verifiable research, funded onchain",
+  title: "ETHesis — Verifiable research, with receipts",
   description:
-    "A platform for funding agentic research onchain. Researchers launch projects. Agents verify progress. The brain learns from every claim.",
+    "A platform for funding agent-verified research. Researchers launch projects. Agents verify progress. The brain learns from every claim — and every attestation has a receipt funders can replay.",
 };
 
 export default function RootLayout({

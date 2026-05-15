@@ -67,7 +67,7 @@ const hoursFromNow = (h: number) => new Date(now.getTime() + h * 3600 * 1000);
 
 export const mockVentures: MockVenture[] = [
   {
-    ensName: "peptide-amr.ethesis.eth",
+    ensName: "peptide-amr",
     title:
       "Peptide-AMR: latent-diffusion AMP design against ESKAPE pathogens",
     pitch:
@@ -75,7 +75,7 @@ export const mockVentures: MockVenture[] = [
     description:
       "Antimicrobial resistance kills ~1.3M/yr globally. The Machine Biology Group at UPenn (de la Fuente Lab) has shown that latent-diffusion over ESM-2 embeddings (AMP-Diffusion, Chen et al. 2024) and global-microbiome mining (Santos-Júnior et al. 2024, Cell) both yield in-vitro hits at ≥40% rates. This venture extends that pipeline: we re-train AMP-Diffusion on a refreshed peptidomic library, generate 50K candidates, screen down to a 50-peptide panel, then run MIC + resistance profiling against six ESKAPE pathogens. Wet-lab partner: BSL-2 CRO. Generated peptides, top hits, and raw assay data are uploaded to Swarm and anchored to ENS as the agent verifies each milestone.",
     category: "bio",
-    ownerEns: "delafuente.peptide-amr.ethesis.eth",
+    ownerEns: "delafuente.peptide-amr",
     stage: "live",
     status: "healthy",
     progressScore: 74,
@@ -110,7 +110,7 @@ export const mockVentures: MockVenture[] = [
     ],
   },
   {
-    ensName: "glp-tweaks.ethesis.eth",
+    ensName: "glp-tweaks",
     title: "GLP-Tweaks: stabilized GLP-1 analogues via NCAA backbone substitution",
     pitch:
       "Synthesize a 6-analogue panel substituting non-canonical amino acids at GLP-1 position 2; assay plasma stability + receptor binding.",
@@ -134,7 +134,7 @@ export const mockVentures: MockVenture[] = [
     isNew: true,
   },
   {
-    ensName: "olympia-protein-folding.ethesis.eth",
+    ensName: "olympia-protein-folding",
     title: "Olympia: Open Protein Folding at the Edge",
     pitch:
       "Compressing AlphaFold-class models for on-device inference under 200MB.",
@@ -169,7 +169,7 @@ export const mockVentures: MockVenture[] = [
     ],
   },
   {
-    ensName: "zk-rollup-research.ethesis.eth",
+    ensName: "zk-rollup-research",
     title: "Optimizing Plonk Provers for Mobile",
     pitch: "Building a constant-time Plonk prover that runs on commodity phones.",
     description:
@@ -204,7 +204,7 @@ export const mockVentures: MockVenture[] = [
     ],
   },
   {
-    ensName: "mech-interp-tiny.ethesis.eth",
+    ensName: "mech-interp-tiny",
     title: "Mech Interp on Tiny Models",
     pitch:
       "Studying interpretability of <1B-parameter language models in the wild.",
@@ -225,7 +225,7 @@ export const mockVentures: MockVenture[] = [
     isNew: true,
   },
   {
-    ensName: "encrypted-mempool.ethesis.eth",
+    ensName: "encrypted-mempool",
     title: "Encrypted Mempool Research",
     pitch:
       "Investigating leakage-resistant transaction pools for L1 block proposers.",
@@ -241,7 +241,7 @@ export const mockVentures: MockVenture[] = [
     isNew: true,
   },
   {
-    ensName: "climate-replication-2024.ethesis.eth",
+    ensName: "climate-replication-2024",
     title: "Climate Model Replication 2024",
     pitch:
       "Independent replication of three high-impact climate-attribution papers.",
@@ -276,7 +276,7 @@ export const mockVentures: MockVenture[] = [
     ],
   },
   {
-    ensName: "plonk-mobile-prover.ethesis.eth",
+    ensName: "plonk-mobile-prover",
     title: "Plonk Mobile Prover (Wound Down)",
     pitch: "First-generation Plonk mobile prover. Wound down after pivot vote.",
     description:
@@ -386,17 +386,17 @@ function humanizeSlug(slug: string): string {
 /** Live attestation ticker (right-side of homepage hero). */
 export const mockTickerItems = [
   {
-    agentEns: "auditor.olympia-protein-folding.ethesis.eth",
+    agentEns: "auditor.olympia-protein-folding",
     summary: "Verified milestone 3 progress",
     minutesAgo: 14,
   },
   {
-    agentEns: "auditor.zk-rollup-research.ethesis.eth",
+    agentEns: "auditor.zk-rollup-research",
     summary: "Disputed claim — prior art on arXiv",
     minutesAgo: 41,
   },
   {
-    agentEns: "auditor.olympia-protein-folding.ethesis.eth",
+    agentEns: "auditor.olympia-protein-folding",
     summary: "Verified commit a4f9c2",
     minutesAgo: 78,
   },

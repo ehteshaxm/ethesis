@@ -2,9 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { useAccount, useEnsName } from "wagmi";
-import { mainnet } from "wagmi/chains";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { DEMO_USER } from "@/lib/demo-user";
 import {
   ArrowLeft,
   ArrowRight,
@@ -20,7 +18,6 @@ import {
 import { umia } from "@/lib/umia";
 import { cn, formatEth, identiconColors } from "@/lib/utils";
 import { LaunchReel } from "./LaunchReel";
-import { UmiaCliHandoff } from "./UmiaCliHandoff";
 import { ensAppUrl } from "@/lib/ens-app-url";
 import { appendSessionVenture } from "@/lib/demo-session";
 
@@ -209,14 +206,11 @@ const TOTAL_STEPS = 7;
 type Phase = "form" | "submitting" | "done";
 
 export function LaunchWizard() {
-  const { address, isConnected } = useAccount();
-  const { openConnectModal } = useConnectModal();
-  const ensQuery = useEnsName({ address, chainId: mainnet.id });
-  const ownerEns = ensQuery.data;
-  // Display label: prefer primary ENS, fall back to short address. We
-  // don't gate on having a primary ENS — the platform-signed flow
-  // creates a subname regardless of what the user owns on mainnet.
-  const ownerLabel = ownerEns ?? (address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "—");
+  const address = DEMO_USER.id;
+  const isConnected = true;
+  const openConnectModal = () => {};
+  const ownerEns = DEMO_USER.handle;
+  const ownerLabel = DEMO_USER.handle;
 
   const [step, setStep] = useState<number>(1);
   const [draft, setDraft] = useState<Draft>(INITIAL_DRAFT);
@@ -673,14 +667,14 @@ function lockReasonForStep(step: number, draft: Draft): string {
         return "Each milestone: title + ≥ 8-char criteria + future deadline.";
       return "";
     case 5:
-      if (draft.tokenSymbol.length < 3) return "Token symbol: 3–5 letters.";
-      if (draft.tokenSupply < 1) return "Token supply must be > 0.";
+      if (draft.tokenSymbol.length < 3) return "Research code: 3–5 letters.";
+      if (draft.tokenSupply < 1) return "Sponsor cap must be > 0.";
       return "";
     case 6:
       if (draft.activationThresholdEth < 100)
-        return "Activation threshold ≥ 100 USDC.";
+        return "Activation threshold ≥ $100.";
       if (draft.monthlyAllowanceEth < 10)
-        return "Monthly allowance ≥ 10 USDC.";
+        return "Monthly allowance ≥ $10.";
       return "";
     default:
       return "";
@@ -1298,11 +1292,11 @@ function Step5Token({
     <div className="space-y-5">
       <StepHeader
         eyebrow="Step 5 of 7"
-        title="Token & auction"
-        subtitle="Umia opens a Tailored Auction at launch. Funders bid USDC; tokens distribute pro-rata when it settles."
+        title="Funding window"
+        subtitle="Sponsors contribute to the funding pool during this window. The agent activates once the pool crosses the activation threshold."
       />
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Token symbol" hint="3–5 letters">
+        <Field label="Research code" hint="3–5 letters">
           <input
             type="text"
             value={draft.tokenSymbol}
@@ -1316,7 +1310,7 @@ function Step5Token({
             className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 font-mono text-base uppercase focus:outline-none focus:border-accent"
           />
         </Field>
-        <Field label="Initial supply">
+        <Field label="Sponsor cap (count)">
           <input
             type="number"
             value={draft.tokenSupply}
@@ -1330,7 +1324,7 @@ function Step5Token({
           />
         </Field>
       </div>
-      <Field label="Auction duration">
+      <Field label="Funding window">
         <div className="grid grid-cols-3 gap-2">
           {AUCTION_DURATIONS.map((d) => (
             <button
@@ -1354,10 +1348,10 @@ function Step5Token({
 
       <div className="rounded-md border border-dashed border-border bg-surface-2/50 p-4 space-y-2">
         <p className="text-[11px] uppercase tracking-wider text-ink-subtle font-medium">
-          Auction preview (Umia primitives)
+          Funding window preview
         </p>
-        <KV label="Token" value={`$${draft.tokenSymbol || "—"}`} />
-        <KV label="Supply" value={draft.tokenSupply.toLocaleString()} />
+        <KV label="Code" value={`${draft.tokenSymbol || "—"}`} />
+        <KV label="Sponsor cap" value={draft.tokenSupply.toLocaleString()} />
         <KV
           label="Duration"
           value={
@@ -1365,7 +1359,6 @@ function Step5Token({
               ?.label ?? "—"
           }
         />
-        <KV label="Mechanism" value="Continuous Clearing Auction" mono />
       </div>
     </div>
   );
@@ -1810,7 +1803,7 @@ function SuccessCard({
         />
         <div>
           <p className="text-[11px] uppercase tracking-wider text-verify-ink font-medium">
-            Auction live
+            Funding window open
           </p>
           <p className="mt-0.5 font-mono text-sm text-ink">
             {result.ensSubname}
@@ -1822,8 +1815,7 @@ function SuccessCard({
         Your research is live.
       </h2>
       <p className="mt-2 text-sm text-ink-muted leading-relaxed">
-        The Tailored Auction is open on Umia. ${symbol} is biddable now. When
-        the treasury crosses{" "}
+        Sponsors can contribute to {symbol} now. When the funding pool crosses{" "}
         <span className="font-mono text-ink">
           {formatEth(draft.activationThresholdEth)}
         </span>
@@ -1831,109 +1823,18 @@ function SuccessCard({
       </p>
 
       <div className="mt-6 space-y-1.5 rounded-md border border-border bg-surface-2/50 p-3 text-xs">
-        <KV label="Research ENS" value={result.ensSubname} mono />
-        <KV label="Agent ENS" value={result.agentEnsName} mono />
-        <KV
-          label="Agent wallet"
-          value={shorten(result.agentWalletAddress, 6)}
-          mono
-        />
-        <KV label="Auction ID" value={result.auctionId} mono />
-        <KV label="Token contract" value={shorten(result.tokenAddress)} mono />
-        <KV
-          label="Treasury contract"
-          value={shorten(result.treasuryAddress)}
-          mono
-        />
+        <KV label="Project handle" value={result.ensSubname} mono />
+        <KV label="Agent ID" value={result.agentEnsName} mono />
+        <KV label="Funding window ID" value={result.auctionId} mono />
       </div>
-
-      {result.txHashes && (
-        <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-          <a
-            href={etherscanTxUrl(result.txHashes.ventureCreate, result.chain)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md border border-border bg-surface px-3 py-1.5 font-mono text-ink-muted hover:bg-surface-2 transition-colors truncate"
-          >
-            tx1 research · {shorten(result.txHashes.ventureCreate, 4)}
-          </a>
-          <a
-            href={etherscanTxUrl(result.txHashes.ventureRecords, result.chain)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md border border-border bg-surface px-3 py-1.5 font-mono text-ink-muted hover:bg-surface-2 transition-colors truncate"
-          >
-            tx2 records · {shorten(result.txHashes.ventureRecords, 4)}
-          </a>
-          <a
-            href={etherscanTxUrl(result.txHashes.agentCreate, result.chain)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md border border-border bg-surface px-3 py-1.5 font-mono text-ink-muted hover:bg-surface-2 transition-colors truncate"
-          >
-            tx3 agent · {shorten(result.txHashes.agentCreate, 4)}
-          </a>
-          <a
-            href={etherscanTxUrl(result.txHashes.agentRecords, result.chain)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-md border border-border bg-surface px-3 py-1.5 font-mono text-ink-muted hover:bg-surface-2 transition-colors truncate"
-          >
-            tx4 agent records · {shorten(result.txHashes.agentRecords, 4)}
-          </a>
-        </div>
-      )}
 
       <div className="mt-3 flex items-center gap-2 text-xs">
         <a
-          href={ensAppUrl(result.ensSubname, "records")}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={`/v/${encodeURIComponent(result.ensSubname)}`}
           className="rounded-md border border-border-strong bg-surface px-3 py-1.5 font-medium text-ink hover:bg-surface-2 transition-colors"
         >
           Research records →
         </a>
-        <a
-          href={ensAppUrl(result.agentEnsName, "records")}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded-md border border-border-strong bg-surface px-3 py-1.5 font-medium text-ink hover:bg-surface-2 transition-colors"
-        >
-          Agent records →
-        </a>
-      </div>
-
-      <div className="mt-5">
-        <UmiaCliHandoff
-          input={{
-            title: draft.title,
-            description: draft.description,
-            category: draft.category,
-            tokenSymbol: draft.tokenSymbol || symbol,
-            tokenSupply: draft.tokenSupply,
-            auctionDurationHours: draft.auctionDurationHours,
-            activationThresholdEth: draft.activationThresholdEth,
-            monthlyAllowanceEth: draft.monthlyAllowanceEth,
-            autoLiquidateEnabled: draft.autoLiquidateEnabled,
-            autoLiquidateProgressThreshold:
-              draft.autoLiquidateProgressThreshold,
-            autoLiquidateDays: draft.autoLiquidateDays,
-            autoPivotEnabled: draft.autoPivotEnabled,
-            sources: draft.sources.map((s) => ({
-              type: s.type,
-              identifier: s.identifier,
-            })),
-            milestones: draft.milestones.map((m) => ({
-              title: m.title,
-              successCriteria: m.successCriteria,
-              expectedOutputs: m.expectedOutputs,
-              deadlineDays: m.deadlineDays,
-            })),
-            ownerEns,
-            ownerAddress,
-            ensSubname: result.ensSubname,
-          }}
-        />
       </div>
 
       <div className="mt-6 flex items-center gap-3">
@@ -1941,7 +1842,7 @@ function SuccessCard({
           href="/"
           className="flex-1 text-center rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-ink transition-colors"
         >
-          Browse all ventures
+          Browse all research
         </Link>
         <Link
           href="/dashboard"
@@ -1950,11 +1851,6 @@ function SuccessCard({
           Dashboard
         </Link>
       </div>
-
-      <p className="mt-4 text-[10px] text-ink-subtle text-center">
-        Wizard inputs are mocked through lib/umia.ts. Drop them into the Umia
-        CLI above to formalise the SPC and deploy contracts onchain.
-      </p>
     </div>
   );
 }
@@ -2068,13 +1964,6 @@ function slugify(s: string): string {
     .replace(/^-+|-+$/g, "")
     .replace(/-{2,}/g, "-")
     .slice(0, 32) || "venture";
-}
-
-function etherscanTxUrl(
-  txHash: string,
-  chain: "mainnet" | "sepolia",
-): string {
-  return `https://${chain === "sepolia" ? "sepolia." : ""}etherscan.io/tx/${txHash}`;
 }
 
 // ─── Validation ────────────────────────────────────────────────────
