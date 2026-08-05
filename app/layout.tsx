@@ -20,9 +20,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "ETHesis — Verifiable research, with receipts",
+  title: "Adaptive Portfolio Optimization — Master's Thesis · Tomáš Procházka",
   description:
-    "A platform for funding agent-verified research. Researchers launch projects. Agents verify progress. The brain learns from every claim — and every attestation has a receipt funders can replay.",
+    "Master's thesis by Bc. Tomáš Procházka (FNSPE, Czech Technical University in Prague). A fully probabilistic, adaptive framework for portfolio optimization uniting Bayesian learning, structure estimation, and uncertainty-aware control design.",
 };
 
 export default function RootLayout({

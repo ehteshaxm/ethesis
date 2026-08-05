@@ -1,51 +1,69 @@
-import Link from "next/link";
-import { ConnectWallet } from "./ConnectWallet";
-import { NotificationBell } from "./NotificationBell";
+"use client";
+
+import { useI18n } from "@/lib/i18n";
+import { LanguageToggle } from "./LanguageToggle";
+import { PDF_PATH, CODE_URL } from "@/lib/content";
 
 export function SiteHeader() {
+  const { t } = useI18n();
+
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-canvas/85 backdrop-blur-md">
-      <div className="mx-auto max-w-6xl px-6 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <Link
-            href="/"
-            className="font-mono font-semibold tracking-tight text-ink"
+      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-6">
+        <a
+          href="#top"
+          className="flex min-w-0 items-center gap-2 text-ink"
+        >
+          <span className="font-serif text-xl italic leading-none text-verify">
+            e
+          </span>
+          <span className="truncate font-mono text-sm font-semibold tracking-tight">
+            {t.header.home}
+          </span>
+        </a>
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          <LanguageToggle />
+          <a
+            href={CODE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink sm:inline-flex"
           >
-            ethesis<span className="text-accent">.</span>
-          </Link>
-          <nav className="hidden md:flex items-center gap-5 text-sm text-ink-muted">
-            <Link href="/" className="hover:text-ink transition-colors">
-              Discover
-            </Link>
-            <Link href="/dashboard" className="hover:text-ink transition-colors">
-              Dashboard
-            </Link>
-            <Link href="/launch" className="hover:text-ink transition-colors">
-              Launch
-            </Link>
-            <Link href="/proposals" className="hover:text-ink transition-colors">
-              Proposals
-            </Link>
-          </nav>
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            placeholder="Search research…"
-            className="hidden md:block w-56 rounded-md border border-border bg-surface px-3 py-1.5 text-sm placeholder:text-ink-subtle focus:outline-none focus:border-border-strong"
-          />
-          <NotificationBell />
-          <Link
-            href="/brain"
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface text-sm text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors"
+            {t.header.viewCode}
+          </a>
+          <a
+            href={PDF_PATH}
+            download
+            className="inline-flex items-center gap-1.5 rounded-md bg-ink px-3 py-1.5 text-sm font-medium text-canvas transition-colors hover:bg-ink-soft"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
-              <path d="M7 1C3.686 1 1 3.358 1 6.25c0 1.52.688 2.885 1.79 3.844L2.5 12.5l2.32-1.09A6.27 6.27 0 0 0 7 11.5c3.314 0 6-2.358 6-5.25S10.314 1 7 1Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-            </svg>
-            Brain
-          </Link>
-          <ConnectWallet />
+            <DownloadIcon />
+            <span className="hidden sm:inline">{t.header.downloadPdf}</span>
+            <span className="sm:hidden">PDF</span>
+          </a>
         </div>
       </div>
     </header>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 14 14"
+      fill="none"
+      aria-hidden="true"
+      className="shrink-0"
+    >
+      <path
+        d="M7 1v8m0 0 3-3m-3 3L4 6M2 11h10"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

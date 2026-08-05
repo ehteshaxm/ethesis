@@ -1,388 +1,289 @@
-import { mockTickerItems, mockVentures, type MockVenture } from "@/lib/mock-data";
-import { formatUsdc } from "@/lib/utils";
-import { VentureCard } from "@/components/VentureCard";
-import { EnsPill } from "@/components/EnsPill";
+"use client";
+
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
-import { BgParticles } from "@/components/BgParticles";
+import { PipelineDiagram } from "@/components/PipelineDiagram";
+import { useI18n } from "@/lib/i18n";
+import { PDF_PATH, CODE_URL } from "@/lib/content";
 
 export default function Home() {
-  const ventures: MockVenture[] = mockVentures;
+  const { t } = useI18n();
 
-  const stageCounts = countByStageOf(ventures);
-  const liveCount = ventures.filter((v) => v.stage === "live").length;
-  const tvlEth = ventures.reduce(
-    (sum, v) => sum + (v.treasuryBalanceEth ?? 0),
-    0,
-  );
-  const tvlDisplay = formatUsdc(tvlEth);
-  const attestationsThisWeek = ventures.length * 7;
-  const verifiedLast24h = ventures.reduce(
-    (n, v) =>
-      n +
-      v.pulse
-        .slice(-2)
-        .filter((p) => p === "verified").length,
-    0,
-  );
+  const navItems = [
+    { id: "abstract", label: t.nav.abstract },
+    { id: "pipeline", label: t.nav.pipeline },
+    { id: "contributions", label: t.nav.contributions },
+    { id: "chapters", label: t.nav.chapters },
+    { id: "findings", label: t.nav.findings },
+    { id: "future", label: t.nav.future },
+    { id: "references", label: t.nav.references },
+  ];
 
   return (
-    <main className="flex-1">
+    <main id="top" className="flex-1">
       <SiteHeader />
 
-      <section className="relative overflow-hidden">
-        <BgParticles />
-        <div
-          className="pointer-events-none absolute inset-0 z-[1]"
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section className="mx-auto max-w-5xl px-6 pt-16 pb-12">
+        <p className="font-mono text-[11px] uppercase tracking-wider text-verify-ink">
+          {t.hero.kicker}
+        </p>
+        <h1
+          className="mt-4 text-ink"
           style={{
-            background:
-              "radial-gradient(ellipse at center, transparent 0%, var(--color-canvas) 85%)",
+            fontSize: "clamp(38px, 5.4vw, 68px)",
+            fontWeight: 500,
+            letterSpacing: "-0.035em",
+            lineHeight: 1.03,
+            maxWidth: "18ch",
           }}
-          aria-hidden="true"
-        />
-        <div className="relative z-[2] mx-auto max-w-6xl px-6 pt-16 pb-12">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12 items-start">
-          <div>
-            <div className="font-mono text-[11px] uppercase tracking-wider text-ink-muted flex flex-wrap items-center gap-2 mb-5">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-verify animate-heartbeat" />
-                {liveCount} live research
-              </span>
-              <span className="text-ink-subtle">·</span>
-              <span>{ventures.length * 68} outputs indexed</span>
-              <span className="text-ink-subtle">·</span>
-              <span>99.94% agent uptime</span>
-            </div>
-            <h1
-              className="text-ink"
-              style={{
-                fontSize: "clamp(44px, 5.6vw, 76px)",
-                fontWeight: 500,
-                letterSpacing: "-0.035em",
-                lineHeight: 1.02,
-                margin: "0 0 24px 0",
-                maxWidth: "16ch",
-              }}
-            >
-              Verifiable research,
-              <br />
-              <span
-                className="font-serif italic font-normal text-verify"
-                style={{ letterSpacing: "-0.01em" }}
-              >
-                with receipts.
-              </span>
-            </h1>
-            <p
-              className="mt-6 text-ink-soft max-w-xl leading-relaxed"
-              style={{ fontSize: "17px" }}
-            >
-              Researchers launch projects. Agents verify progress against
-              declared plans. The brain learns from every claim — and every
-              attestation gets a receipt funders can replay.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                className="rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-canvas transition-colors hover:bg-ink-soft"
-              >
-                Launch research
-              </button>
-              <button
-                type="button"
-                className="rounded-md border border-border-strong bg-surface px-5 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-surface-2"
-              >
-                Ask the brain →
-              </button>
-            </div>
-            <dl className="mt-10 grid grid-cols-3 gap-x-8 gap-y-2 max-w-xl">
-              <HeroStat
-                value={tvlDisplay}
-                label="funding pool across research"
-              />
-              <HeroStat
-                value={attestationsThisWeek}
-                label="attestations this week"
-              />
-              <HeroStat
-                value={verifiedLast24h}
-                label="claims verified · 48h"
-              />
-            </dl>
-          </div>
+        >
+          {t.hero.title}
+        </h1>
+        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-soft">
+          {t.hero.lead}
+        </p>
 
-          <Ticker />
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <a
+            href={PDF_PATH}
+            download
+            className="rounded-md bg-ink px-5 py-2.5 text-sm font-medium text-canvas transition-colors hover:bg-ink-soft"
+          >
+            {t.hero.downloadPdf}
+          </a>
+          <a
+            href={CODE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md border border-border-strong bg-surface px-5 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-surface-2"
+          >
+            {t.hero.viewCode} →
+          </a>
         </div>
-        </div>
+
+        {/* Metadata card */}
+        <dl className="mt-12 grid grid-cols-1 gap-x-10 gap-y-6 rounded-xl border border-border bg-surface p-6 sm:grid-cols-2 lg:grid-cols-3">
+          <Meta label={t.hero.authorLabel} value={t.hero.author} />
+          <Meta
+            label={t.hero.supervisorLabel}
+            value={t.hero.supervisor}
+            note={t.hero.supervisorAffil}
+          />
+          <Meta
+            label={t.hero.coSupervisorLabel}
+            value={t.hero.coSupervisor}
+            note={t.hero.coSupervisorAffil}
+          />
+          <Meta
+            label={t.hero.university}
+            value={t.hero.faculty}
+            note={t.hero.department}
+          />
+          <Meta label={t.hero.programLabel} value={t.hero.program} />
+          <Meta label={t.hero.submittedLabel} value={t.hero.submitted} />
+        </dl>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 pb-12">
-        <div className="border-y border-border-soft py-8">
-          <div className="flex items-baseline justify-between mb-4">
-            <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-muted inline-flex items-center gap-2">
-              <span
-                className="h-2 w-2 rounded-full bg-verify"
-                style={{ boxShadow: "0 0 0 4px var(--color-verify-soft)" }}
-              />
-              Trending research
-            </span>
-            <span className="text-xs text-ink-muted">
-              by 7d promise momentum
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {trendingVentures(ventures).map((v) => (
-              <TrendCard key={v.ensName} venture={v} />
+      {/* ── Section nav ──────────────────────────────────────── */}
+      <nav className="sticky top-14 z-20 border-y border-border bg-canvas/85 backdrop-blur-md">
+        <div className="mx-auto max-w-5xl overflow-x-auto px-6">
+          <ul className="flex items-center gap-1 py-2 text-sm whitespace-nowrap">
+            {navItems.map((item) => (
+              <li key={item.id}>
+                <a
+                  href={`#${item.id}`}
+                  className="rounded-md px-3 py-1.5 text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
+                >
+                  {item.label}
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
-      </section>
+      </nav>
 
-      <section className="mx-auto max-w-6xl px-6 pb-24">
-        <div className="flex items-center justify-between border-b border-border pb-3 mb-8">
-          <nav className="flex items-center gap-1 text-sm">
-            <StageTab label="All stages" count={ventures.length} active />
-            <StageTab label="Idea" count={stageCounts.idea} />
-            <StageTab label="Funding" count={stageCounts.auction} />
-            <StageTab label="Live" count={stageCounts.live} />
-            <StageTab label="Wound down" count={stageCounts.wound_down} />
-          </nav>
-          <span className="text-xs text-ink-subtle font-mono">
-            {ventures.length} projects · updated just now
+      {/* ── Abstract ─────────────────────────────────────────── */}
+      <Section id="abstract" title={t.abstract.heading}>
+        <p className="max-w-3xl text-base leading-relaxed text-ink-soft">
+          {t.abstract.body}
+        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
+            {t.abstract.keywordsLabel}
           </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {ventures.map((v) => (
-            <VentureCard key={v.ensName} venture={v} />
+          {t.abstract.keywords.map((k) => (
+            <span
+              key={k}
+              className="rounded-full border border-border bg-surface px-3 py-1 text-xs text-ink-soft"
+            >
+              {k}
+            </span>
           ))}
         </div>
-      </section>
+      </Section>
+
+      {/* ── Approach / pipeline ──────────────────────────────── */}
+      <Section id="pipeline" title={t.pipeline.heading}>
+        <div className="grid gap-8 lg:grid-cols-[1fr_minmax(320px,420px)] lg:items-start">
+          <p className="max-w-xl text-base leading-relaxed text-ink-soft">
+            {t.pipeline.intro}
+          </p>
+          <PipelineDiagram />
+        </div>
+      </Section>
+
+      {/* ── Contributions ────────────────────────────────────── */}
+      <Section id="contributions" title={t.contributions.heading}>
+        <p className="max-w-3xl text-base leading-relaxed text-ink-soft">
+          {t.contributions.intro}
+        </p>
+        <ol className="mt-8 grid gap-4 sm:grid-cols-2">
+          {t.contributions.items.map((c, i) => (
+            <li
+              key={c.section}
+              className="rounded-xl border border-border bg-surface p-5"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-mono text-2xl font-semibold tabular-nums text-verify">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="font-mono text-[11px] uppercase tracking-wider text-ink-subtle">
+                  {c.section}
+                </span>
+              </div>
+              <h3 className="mt-3 text-base font-semibold leading-snug text-ink">
+                {c.title}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+                {c.desc}
+              </p>
+            </li>
+          ))}
+        </ol>
+      </Section>
+
+      {/* ── Contents / chapters ──────────────────────────────── */}
+      <Section id="chapters" title={t.chapters.heading}>
+        <ol className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+          {t.chapters.items.map((ch) => (
+            <li key={ch.n} className="flex gap-4 px-5 py-4 sm:gap-6 sm:px-6">
+              <span className="w-10 shrink-0 font-mono text-lg font-semibold tabular-nums text-ink-subtle">
+                {ch.n}
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-base font-semibold text-ink">{ch.title}</h3>
+                {ch.sub.length > 0 ? (
+                  <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-muted">
+                    {ch.sub.map((s) => (
+                      <li key={s} className="flex items-center gap-1.5">
+                        <span className="text-ink-subtle">·</span>
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </Section>
+
+      {/* ── Findings ─────────────────────────────────────────── */}
+      <Section id="findings" title={t.findings.heading}>
+        <p className="max-w-3xl text-base leading-relaxed text-ink-soft">
+          {t.findings.intro}
+        </p>
+        <ul className="mt-6 max-w-3xl space-y-4">
+          {t.findings.items.map((f, i) => (
+            <li key={i} className="flex gap-3">
+              <span
+                className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-verify"
+                aria-hidden="true"
+              />
+              <span className="text-base leading-relaxed text-ink-soft">
+                {f}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      {/* ── Future work ──────────────────────────────────────── */}
+      <Section id="future" title={t.future.heading}>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {t.future.items.map((f) => (
+            <div
+              key={f.title}
+              className="rounded-xl border border-border bg-surface p-5"
+            >
+              <h3 className="text-base font-semibold text-ink">{f.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+                {f.desc}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ── References ───────────────────────────────────────── */}
+      <Section id="references" title={t.references.heading}>
+        <p className="text-sm text-ink-muted">{t.references.note}</p>
+        <ol className="mt-6 max-w-3xl space-y-3">
+          {t.references.items.map((r, i) => (
+            <li key={i} className="flex gap-4 text-sm leading-relaxed">
+              <span className="w-6 shrink-0 font-mono tabular-nums text-ink-subtle">
+                [{i + 1}]
+              </span>
+              <span className="text-ink-soft">{r}</span>
+            </li>
+          ))}
+        </ol>
+      </Section>
 
       <SiteFooter />
     </main>
   );
 }
 
-function TrendCard({ venture: v }: { venture: (typeof mockVentures)[number] }) {
-  const promise = v.promiseScore ?? 0;
-  const delta = v.promiseDelta7d ?? 0;
-  const trendUp = delta >= 0;
-  const series = promiseSeries(v.ensName, promise, delta);
-  const nick = v.title.split(/[ —:]/).slice(0, 3).join(" ");
-
-  return (
-    <a
-      href={`/v/${v.ensName}`}
-      className="group block rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-strong"
-    >
-      <div className="flex items-center gap-2.5">
-        <SeedAvatar seed={v.ensName} size={44} />
-        <div className="flex flex-col min-w-0 gap-0.5">
-          <span className="text-sm font-semibold text-ink truncate">
-            {nick}
-          </span>
-          <span className="font-mono text-[12px] text-ink-muted truncate">
-            {v.ensName}
-          </span>
-        </div>
-      </div>
-      <div className="mt-3 flex items-end justify-between gap-2">
-        <span className="font-mono text-[28px] font-semibold leading-none text-ink">
-          {promise || "—"}
-        </span>
-        <span
-          className={
-            "font-mono text-[12px] font-semibold px-1.5 py-0.5 rounded " +
-            (trendUp
-              ? "bg-verify-soft text-verify-ink"
-              : "bg-red-soft text-red")
-          }
-        >
-          {trendUp ? "+" : ""}
-          {delta}%
-        </span>
-      </div>
-      <div className="mt-2 h-9">
-        <MiniSpark data={series} trendUp={trendUp} />
-      </div>
-    </a>
-  );
-}
-
-function MiniSpark({
-  data,
-  trendUp,
+function Section({
+  id,
+  title,
+  children,
 }: {
-  data: number[];
-  trendUp: boolean;
+  id: string;
+  title: string;
+  children: React.ReactNode;
 }) {
-  const w = 260;
-  const h = 36;
-  const pad = 2;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const span = Math.max(0.5, max - min);
-  const pts = data.map((v, i) => {
-    const x = pad + (i / (data.length - 1)) * (w - pad * 2);
-    const y = h - pad - ((v - min) / span) * (h - pad * 2);
-    return [x, y] as const;
-  });
-  const linePath = "M " + pts.map((p) => p.join(",")).join(" L ");
-  const areaPath =
-    linePath + ` L ${pts[pts.length - 1][0]},${h} L ${pts[0][0]},${h} Z`;
-  const stroke = trendUp ? "var(--color-verify)" : "var(--color-red)";
-  const fill = trendUp ? "var(--color-verify-soft)" : "var(--color-red-soft)";
   return (
-    <svg
-      viewBox={`0 0 ${w} ${h}`}
-      preserveAspectRatio="none"
-      className="w-full h-full"
+    <section
+      id={id}
+      className="mx-auto max-w-5xl scroll-mt-28 border-t border-border-soft px-6 py-16"
     >
-      <path d={areaPath} fill={fill} />
-      <path
-        d={linePath}
-        fill="none"
-        stroke={stroke}
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
+      <h2 className="mb-8 text-2xl font-semibold tracking-tight text-ink">
+        {title}
+      </h2>
+      {children}
+    </section>
   );
 }
 
-function SeedAvatar({ seed, size = 44 }: { seed: string; size?: number }) {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619) >>> 0;
-  }
-  const hue1 = h % 360;
-  const hue2 = (hue1 + 40 + ((h >> 8) % 80)) % 360;
-  const initial = seed[0]?.toUpperCase() ?? "?";
-  return (
-    <div
-      className="rounded-md flex items-center justify-center text-white font-mono font-semibold flex-shrink-0"
-      style={{
-        width: size,
-        height: size,
-        background: `linear-gradient(135deg, hsl(${hue1} 60% 48%), hsl(${hue2} 55% 38%))`,
-        fontSize: size * 0.42,
-      }}
-      aria-hidden="true"
-    >
-      {initial}
-    </div>
-  );
-}
-
-function trendingVentures(ventures: MockVenture[]) {
-  return [...ventures]
-    .filter((v) => v.promiseScore != null)
-    .sort(
-      (a, b) =>
-        (b.promiseScore ?? 0) +
-        (b.promiseDelta7d ?? 0) * 2 -
-        ((a.promiseScore ?? 0) + (a.promiseDelta7d ?? 0) * 2),
-    )
-    .slice(0, 4);
-}
-
-function promiseSeries(seed: string, end: number, delta: number) {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++)
-    h = ((h * 31 + seed.charCodeAt(i)) >>> 0) || 1;
-  const start = Math.max(8, Math.min(98, end - delta * 3));
-  const pts: number[] = [];
-  const len = 14;
-  for (let i = 0; i < len; i++) {
-    const t = i / (len - 1);
-    h = (Math.imul(h, 1664525) + 1013904223) >>> 0;
-    const noise = ((h % 1000) / 1000 - 0.5) * 6;
-    pts.push(start + (end - start) * t + noise);
-  }
-  return pts;
-}
-
-function HeroStat({
+function Meta({
+  label,
   value,
-  label,
+  note,
 }: {
-  value: string | number;
   label: string;
+  value: string;
+  note?: string;
 }) {
   return (
-    <div className="flex flex-col gap-1 border-l border-border pl-4 first:pl-0 first:border-l-0">
-      <dt className="font-mono text-[22px] tabular-nums text-ink leading-none tracking-tight">
-        {value}
-      </dt>
-      <dd className="text-[11px] text-ink-muted uppercase tracking-wider">
+    <div>
+      <dt className="font-mono text-[11px] uppercase tracking-wider text-ink-muted">
         {label}
-      </dd>
+      </dt>
+      <dd className="mt-1 text-sm font-medium text-ink">{value}</dd>
+      {note ? <dd className="text-xs text-ink-muted">{note}</dd> : null}
     </div>
-  );
-}
-
-function StageTab({
-  label,
-  count,
-  active,
-}: {
-  label: string;
-  count: number;
-  active?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      className={
-        "px-3 py-1.5 rounded-md text-sm transition-colors " +
-        (active
-          ? "bg-surface-2 text-ink font-medium"
-          : "text-ink-muted hover:text-ink")
-      }
-    >
-      {label} <span className="font-mono text-ink-subtle">({count})</span>
-    </button>
-  );
-}
-
-function Ticker() {
-  return (
-    <div className="rounded-lg border border-border bg-surface overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <span className="text-[11px] uppercase tracking-wider text-ink-subtle">
-          Live attestations
-        </span>
-        <span className="flex items-center gap-1.5 text-[11px] text-verify-ink">
-          <span className="h-1.5 w-1.5 rounded-full bg-verify animate-heartbeat" />
-          live
-        </span>
-      </div>
-      <ul className="divide-y divide-border">
-        {mockTickerItems.map((t, i) => (
-          <li key={i} className="px-4 py-3 flex flex-col gap-1">
-            <EnsPill name={t.agentEns} size="sm" />
-            <span className="text-xs text-ink-muted leading-snug">
-              {t.summary}
-            </span>
-            <span className="font-mono text-[10px] text-ink-subtle">
-              {t.minutesAgo}m ago
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function countByStageOf(ventures: MockVenture[]) {
-  return ventures.reduce(
-    (acc, v) => {
-      acc[v.stage]++;
-      return acc;
-    },
-    { idea: 0, auction: 0, live: 0, wound_down: 0 } as Record<string, number>,
   );
 }
